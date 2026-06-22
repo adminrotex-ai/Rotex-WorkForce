@@ -64,7 +64,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Package size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-white text-lg font-bold tracking-tight">JOBWORK</h1>
+              <h1 className="text-white text-lg font-bold tracking-tight">Rotex WorkForce</h1>
               <p className="text-white/60 text-[10px] font-medium tracking-wider uppercase">Workflow Management</p>
             </div>
           </div>

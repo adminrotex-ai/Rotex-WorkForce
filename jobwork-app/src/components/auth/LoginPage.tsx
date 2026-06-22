@@ -57,7 +57,7 @@ export default function LoginPage() {
             <Package size={28} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
-          <p className="text-gray-400 mt-1 text-sm">Sign in to JOBWORK Management</p>
+          <p className="text-gray-400 mt-1 text-sm">Sign in to Rotex WorkForce</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
@@ -118,7 +118,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-300 mt-6">JOBWORK Manufacturing Workflow v1.0</p>
+        <p className="text-center text-xs text-gray-300 mt-6">Rotex WorkForce — Manufacturing Workflow v1.0</p>
       </div>
     </div>
   );
