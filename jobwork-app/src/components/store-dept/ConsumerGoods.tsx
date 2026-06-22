@@ -220,7 +220,7 @@ export default function ConsumerGoods() {
   }, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" >Consumer Goods</h1>
@@ -597,7 +597,7 @@ export default function ConsumerGoods() {
 
           {/* Selected items */}
           {issueForm.items.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {issueForm.items.map(item => (
                 <div key={item.consumerGoodId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
                   <div className="flex-1">

@@ -52,7 +52,7 @@ export default function Statistics() {
   const rejectRate = stats.totalPieces > 0 ? ((stats.totalRejected / stats.totalPieces) * 100).toFixed(1) : '0';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" >Statistics</h1>
@@ -77,7 +77,7 @@ export default function Statistics() {
       </div>
 
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Total Batches" value={stats.batchCount} icon={<Package size={20}  />} />
         <StatCard title="Total Pieces" value={stats.totalPieces} icon={<BarChart3 size={20} style={{ color: '#2196f3' }} />} color="#2196f3" />
         <StatCard
@@ -97,7 +97,7 @@ export default function Statistics() {
       </div>
 
       {/* Cost Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Cost</p>
           <p className="text-2xl font-bold mt-1" style={{ color: '#2196f3' }}>{formatCurrency(stats.totalConsumerCost)}</p>
@@ -191,7 +191,7 @@ export default function Statistics() {
               })}
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {users.map(u => (
                 <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl border border-gray-100">
                   <span className="text-sm font-medium">{u.firstName}</span>

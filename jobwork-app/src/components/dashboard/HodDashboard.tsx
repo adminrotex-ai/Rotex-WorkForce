@@ -35,13 +35,13 @@ export default function HodDashboard() {
   if (!currentUser) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">HOD Dashboard</h1>
         <p className="text-gray-400 text-sm mt-0.5">{currentUser.firstName} &bull; {DEPARTMENT_LABELS[currentUser.department]}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Active Batches"
           value={myBatches.length}
@@ -76,7 +76,7 @@ export default function HodDashboard() {
         {myBatches.length === 0 ? (
           <p className="text-gray-300 text-sm">No batches assigned to you currently</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {myBatches.map(({ batch, stageRecord }) => (
               <div
                 key={batch.id}

@@ -38,7 +38,7 @@ export default function UserStatReport() {
   const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
@@ -55,7 +55,7 @@ export default function UserStatReport() {
       </div>
 
       {/* Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard title="Total Pieces" value={stats.totalPieces} icon={<Package size={20}  />} />
         <StatCard title="Accepted" value={stats.totalAccepted} subtitle={`${stats.acceptanceRate.toFixed(1)}% rate`} icon={<CheckCircle size={20} style={{ color: '#4caf50' }} />} color="#4caf50" />
         <StatCard title="Rejected" value={stats.totalRejected} subtitle={`${stats.rejectionRate.toFixed(1)}% rate`} icon={<XCircle size={20} style={{ color: '#f44336' }} />} color="#f44336" />
@@ -63,7 +63,7 @@ export default function UserStatReport() {
       </div>
 
       {/* Cost Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Used</p>
           <p className="text-2xl font-bold mt-1" style={{ color: '#ff9800' }}>{formatCurrency(stats.totalConsumerCost)}</p>
@@ -173,7 +173,7 @@ export default function UserStatReport() {
       {user.role === 'hod' && subUsers.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-gray-100">
           <h2 className="text-lg font-semibold mb-4" >Team Members</h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {subUsers.map(u => (
               <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl border border-gray-100">
                 <div>

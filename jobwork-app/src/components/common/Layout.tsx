@@ -72,7 +72,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
+          <nav className="flex-1 px-3 overflow-y-auto space-y-1.5">
             {navItems.filter(i => i.show).map(item => {
               const Icon = item.icon;
               const active = location.pathname.startsWith(item.path);
@@ -80,7 +80,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${
                     active
                       ? 'bg-white text-[#0d47a1] shadow-lg shadow-black/10'
                       : 'text-white/80 hover:bg-white/10 hover:text-white'
@@ -144,7 +144,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="p-6 animate-fade-in">
+        <main className="p-8 animate-fade-in">
           {children}
         </main>
       </div>

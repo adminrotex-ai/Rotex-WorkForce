@@ -74,7 +74,7 @@ export default function BatchList() {
   const filtered = filter === 'all' ? batches : batches.filter(b => b.status === filter);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" >Batches</h1>

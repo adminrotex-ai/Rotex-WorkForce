@@ -252,7 +252,7 @@ export default function BatchDetail() {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/batches')} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
@@ -360,7 +360,7 @@ export default function BatchDetail() {
       )}
 
       {/* Stage Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {stages.map(stage => (
           <div key={stage.id} className="bg-white rounded-2xl p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
@@ -405,7 +405,7 @@ export default function BatchDetail() {
       {stats && (
         <div className="bg-white rounded-2xl p-6 border border-gray-100">
           <h2 className="text-lg font-semibold mb-4" >Cost Summary</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
             <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
               <p className="text-xs text-blue-600 uppercase font-medium">Consumer Goods</p>
               <p className="text-xl font-bold text-blue-700">{formatCurrency(stats.totalConsumerCost)}</p>
@@ -454,7 +454,7 @@ export default function BatchDetail() {
       {transfers.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-gray-100">
           <h2 className="text-lg font-semibold mb-4" >Transfer History</h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {transfers.map(t => (
               <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl text-sm">
                 <span className="font-medium">{t.piecesCount} pcs</span>

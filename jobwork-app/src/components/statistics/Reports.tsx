@@ -31,7 +31,7 @@ export default function Reports() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold" >Reports</h1>
         <p className="text-gray-500 text-sm">Generate detailed reports</p>
@@ -80,7 +80,7 @@ export default function Reports() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
               <p className="text-xs text-blue-600 uppercase font-medium">Consumer Goods Cost</p>
               <p className="text-lg font-bold text-blue-700">{formatCurrency(stats.totalConsumerCost)}</p>

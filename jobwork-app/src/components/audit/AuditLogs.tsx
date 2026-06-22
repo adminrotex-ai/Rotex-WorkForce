@@ -52,7 +52,7 @@ export default function AuditLogs() {
     : logs;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold" >Audit Logs</h1>
         <p className="text-gray-500 text-sm">Complete audit trail of all actions</p>
@@ -85,7 +85,7 @@ export default function AuditLogs() {
       />
 
       {/* Logs */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
             <ClipboardList size={48} className="mx-auto text-gray-300 mb-4" />

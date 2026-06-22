@@ -117,7 +117,7 @@ export default function UserManagement() {
                 {hods.length === 0 ? (
                   <p className="text-gray-400 text-sm">No HODs in this department</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {hods.map(hod => {
                       const hodUsers = usersByHod(hod.id);
                       return (
@@ -164,7 +164,7 @@ export default function UserManagement() {
                               {hodUsers.length === 0 ? (
                                 <p className="text-gray-400 text-xs">No users under this HOD</p>
                               ) : (
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                   {hodUsers.map(user => (
                                     <div key={user.id} className="flex items-center justify-between p-2 rounded-2xl hover:bg-gray-50">
                                       <div>
@@ -215,7 +215,7 @@ export default function UserManagement() {
         {myUsers.length === 0 ? (
           <p className="text-gray-400 text-sm">No users created yet</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {myUsers.map(user => (
               <div key={user.id} className="flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-gray-50">
                 <div>
@@ -246,7 +246,7 @@ export default function UserManagement() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" >User Management</h1>

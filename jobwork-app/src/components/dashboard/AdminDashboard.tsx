@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Active Batches"
           value={activeBatches.length}
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Batch Status Donut */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100/80">
           <h3 className="text-sm font-semibold text-gray-700 mb-4">Batch Overview</h3>
@@ -199,7 +199,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* HOD Accounting & Accounting Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Accounting Chart */}
         {accountingChartData.length > 0 && (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100/80">
@@ -289,7 +289,7 @@ export default function AdminDashboard() {
         {batches.length === 0 ? (
           <p className="text-gray-300 text-sm">No batches created yet</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {batches.slice(0, 5).map(batch => (
               <div
                 key={batch.id}

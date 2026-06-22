@@ -15,7 +15,7 @@ export default function StatCard({ title, value, subtitle, icon, color = '#1a237
   const dashOffset = progress !== undefined ? circumference - (progress / 100) * circumference : 0;
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100/80 hover-lift group">
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100/80 hover-lift group">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-gray-400 text-[11px] font-semibold uppercase tracking-wider">{title}</p>

@@ -70,10 +70,10 @@ function AdminAccounting() {
   const totalOwing = summary.reduce((s, a) => s + a.adminOwesHod, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h1 className="text-2xl font-bold" >Accounting</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl p-5 border border-green-100">
           <p className="text-xs text-green-600 uppercase font-medium">Total Owed to You</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(totalOwed)}</p>
@@ -138,7 +138,7 @@ function AdminAccounting() {
       {pendingPayments.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-yellow-100">
           <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Payment Confirmations</h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {pendingPayments.map(p => (
               <div key={p.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-2xl">
                 <div>
@@ -237,10 +237,10 @@ function HodAccounting() {
   if (!accounting) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h1 className="text-2xl font-bold" >My Accounting</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
           <p className="text-xs text-green-600 uppercase font-medium">Admin Owes You</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.adminOwesHod)}</p>
@@ -290,7 +290,7 @@ function HodAccounting() {
       {pendingPayments.length > 0 && (
         <div className="bg-white rounded-2xl p-6 border border-yellow-100">
           <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Confirmations</h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {pendingPayments.map(p => (
               <div key={p.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-2xl">
                 <div>
@@ -353,7 +353,7 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
   if (!accounting || !hod) return null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/accounting')} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
@@ -364,7 +364,7 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
           <p className="text-xs text-green-600 uppercase font-medium">Owes You</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
