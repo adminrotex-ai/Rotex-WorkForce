@@ -1,4 +1,4 @@
-import Dexie, { type Table } from 'dexie';
+import { supabase } from './supabaseClient';
 import type {
   User, Batch, BatchStageRecord, BatchTransfer, PieceEntry,
   ConsumerGoodItem, MaterialType, MaterialEntry, ConsumerGoodUsage,
@@ -7,78 +7,162 @@ import type {
   CustomDepartment, FinalProduct, FinalProductStockEntry,
 } from '../types';
 
-export class JobworkDB extends Dexie {
-  users!: Table<User>;
-  batches!: Table<Batch>;
-  batchStageRecords!: Table<BatchStageRecord>;
-  batchTransfers!: Table<BatchTransfer>;
-  pieceEntries!: Table<PieceEntry>;
-  consumerGoodItems!: Table<ConsumerGoodItem>;
-  materialTypes!: Table<MaterialType>;
-  materialEntries!: Table<MaterialEntry>;
-  consumerGoodUsages!: Table<ConsumerGoodUsage>;
-  serviceCosts!: Table<ServiceCost>;
-  accountingEntries!: Table<AccountingEntry>;
-  paymentRecords!: Table<PaymentRecord>;
-  auditLogs!: Table<AuditLog>;
-  consumerGoodInventory!: Table<ConsumerGoodInventory>;
-  consumerGoodReceipts!: Table<ConsumerGoodReceipt>;
-  syncQueue!: Table<SyncQueueItem>;
-  customDepartments!: Table<CustomDepartment>;
-  finalProducts!: Table<FinalProduct>;
-  finalProductStock!: Table<FinalProductStockEntry>;
+// ---------------------------------------------------------------------------
+// Shared cloud data layer (Supabase / Postgres).
+//
+// Every record is stored as a JSON document: each table is `id text` + `doc
+// jsonb`. This adapter exposes the small slice of the Dexie API the app relies
+// on (toArray / get / add / put / update / delete / where(...).equals() /
+// where({...}) / orderBy().reverse() / count), so data is now shared across
+// every device instead of living in each browser's IndexedDB.
+// ---------------------------------------------------------------------------
 
-  constructor() {
-    super('JobworkDB');
-    this.version(2).stores({
-      users: 'id, username, role, department, createdBy, isActive',
-      batches: 'id, batchNumber, status, currentStage, createdBy, isActive',
-      batchStageRecords: 'id, batchId, stage, assignedHodId, status',
-      batchTransfers: 'id, batchId, fromStage, toStage, transferredBy, createdAt',
-      pieceEntries: 'id, batchId, stageRecordId, userId',
-      consumerGoodItems: 'id, name, isActive',
-      materialTypes: 'id, name, isActive',
-      materialEntries: 'id, materialTypeId, enteredBy, createdAt',
-      consumerGoodUsages: 'id, batchId, consumerGoodId, department, userId',
-      serviceCosts: 'id, batchId, department, enteredBy',
-      accountingEntries: 'id, hodId, adminId, type, createdAt',
-      paymentRecords: 'id, payerId, payeeId, confirmed, createdAt',
-      auditLogs: 'id, action, category, entityType, userId, createdAt',
-      consumerGoodInventory: 'id, consumerGoodId, enteredBy, remainingQuantity',
-      consumerGoodReceipts: 'id, receiptNumber, hodId, department, createdAt',
-      syncQueue: 'id, synced, createdAt',
-    });
+// Fields stored as booleans but sometimes queried with 1/0. Normalising them
+// keeps `where('isActive').equals(1)` matching a stored `true`.
+const BOOLEAN_FIELDS = new Set(['isActive', 'confirmed', 'synced', 'isOpening']);
 
-    this.version(3).stores({
-      users: 'id, username, role, department, createdBy, isActive',
-      batches: 'id, batchNumber, status, currentStage, createdBy, isActive',
-      batchStageRecords: 'id, batchId, stage, assignedHodId, status',
-      batchTransfers: 'id, batchId, fromStage, toStage, transferredBy, createdAt',
-      pieceEntries: 'id, batchId, stageRecordId, userId',
-      consumerGoodItems: 'id, name, isActive',
-      materialTypes: 'id, name, isActive',
-      materialEntries: 'id, materialTypeId, enteredBy, createdAt, remainingQuantity',
-      consumerGoodUsages: 'id, batchId, consumerGoodId, department, userId',
-      serviceCosts: 'id, batchId, department, enteredBy',
-      accountingEntries: 'id, hodId, adminId, type, createdAt',
-      paymentRecords: 'id, payerId, payeeId, confirmed, createdAt',
-      auditLogs: 'id, action, category, entityType, userId, createdAt',
-      consumerGoodInventory: 'id, consumerGoodId, enteredBy, remainingQuantity',
-      consumerGoodReceipts: 'id, receiptNumber, hodId, department, createdAt',
-      syncQueue: 'id, synced, createdAt',
-      customDepartments: 'id, key, isActive, createdAt',
-      finalProducts: 'id, name, isActive',
-      finalProductStock: 'id, productId, batchId, enteredBy, createdAt',
-    }).upgrade(async tx => {
-      // Add remainingQuantity to existing material entries
-      const mats = await tx.table('materialEntries').toArray();
-      for (const m of mats) {
-        if (m.remainingQuantity === undefined) {
-          await tx.table('materialEntries').update(m.id, { remainingQuantity: m.quantity });
-        }
-      }
-    });
+function jsonCol(field: string): string {
+  return `doc->>${field}`;
+}
+
+function coerce(field: string, value: unknown): string {
+  if (BOOLEAN_FIELDS.has(field)) {
+    const truthy = value === true || value === 1 || value === '1' || value === 'true';
+    return truthy ? 'true' : 'false';
+  }
+  return String(value);
+}
+
+interface Filter { field: string; value: unknown }
+interface DocRow<T> { id: string; doc: T }
+
+class DocQuery<T> {
+  private table: string;
+  private filters: Filter[];
+  private orderField?: string;
+  private descending: boolean;
+
+  constructor(table: string, filters: Filter[] = [], orderField?: string, descending = false) {
+    this.table = table;
+    this.filters = filters;
+    this.orderField = orderField;
+    this.descending = descending;
+  }
+
+  reverse(): this {
+    this.descending = !this.descending;
+    return this;
+  }
+
+  private base() {
+    let q = supabase.from(this.table).select('id,doc');
+    for (const f of this.filters) q = q.eq(jsonCol(f.field), coerce(f.field, f.value));
+    if (this.orderField) q = q.order(jsonCol(this.orderField), { ascending: !this.descending });
+    return q;
+  }
+
+  async toArray(): Promise<T[]> {
+    const { data, error } = await this.base();
+    if (error) throw new Error(error.message);
+    return ((data ?? []) as DocRow<T>[]).map(r => r.doc);
+  }
+
+  async first(): Promise<T | undefined> {
+    const { data, error } = await this.base().limit(1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as DocRow<T>[];
+    return rows.length ? rows[0].doc : undefined;
+  }
+
+  async count(): Promise<number> {
+    let q = supabase.from(this.table).select('id', { count: 'exact', head: true });
+    for (const f of this.filters) q = q.eq(jsonCol(f.field), coerce(f.field, f.value));
+    const { count, error } = await q;
+    if (error) throw new Error(error.message);
+    return count ?? 0;
   }
 }
 
-export const db = new JobworkDB();
+class DocTable<T extends { id: string }> {
+  private table: string;
+
+  constructor(table: string) {
+    this.table = table;
+  }
+
+  where(field: string): { equals: (value: unknown) => DocQuery<T> };
+  where(criteria: Record<string, unknown>): DocQuery<T>;
+  where(arg: string | Record<string, unknown>): { equals: (value: unknown) => DocQuery<T> } | DocQuery<T> {
+    if (typeof arg === 'string') {
+      return { equals: (value: unknown) => new DocQuery<T>(this.table, [{ field: arg, value }]) };
+    }
+    const filters = Object.entries(arg).map(([field, value]) => ({ field, value }));
+    return new DocQuery<T>(this.table, filters);
+  }
+
+  orderBy(field: string): DocQuery<T> {
+    return new DocQuery<T>(this.table, [], field, false);
+  }
+
+  async toArray(): Promise<T[]> {
+    return new DocQuery<T>(this.table).toArray();
+  }
+
+  async get(id: string): Promise<T | undefined> {
+    const { data, error } = await supabase
+      .from(this.table)
+      .select('doc')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data ? (data as { doc: T }).doc : undefined;
+  }
+
+  async add(obj: T): Promise<string> {
+    const { error } = await supabase.from(this.table).insert({ id: obj.id, doc: obj });
+    if (error) throw new Error(error.message);
+    return obj.id;
+  }
+
+  async put(obj: T): Promise<string> {
+    const { error } = await supabase.from(this.table).upsert({ id: obj.id, doc: obj });
+    if (error) throw new Error(error.message);
+    return obj.id;
+  }
+
+  async update(id: string, changes: Partial<T>): Promise<number> {
+    const current = await this.get(id);
+    if (!current) return 0;
+    const merged = { ...current, ...changes };
+    const { error } = await supabase.from(this.table).update({ doc: merged }).eq('id', id);
+    if (error) throw new Error(error.message);
+    return 1;
+  }
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from(this.table).delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+}
+
+export const db = {
+  users: new DocTable<User>('users'),
+  batches: new DocTable<Batch>('batches'),
+  batchStageRecords: new DocTable<BatchStageRecord>('batchStageRecords'),
+  batchTransfers: new DocTable<BatchTransfer>('batchTransfers'),
+  pieceEntries: new DocTable<PieceEntry>('pieceEntries'),
+  consumerGoodItems: new DocTable<ConsumerGoodItem>('consumerGoodItems'),
+  materialTypes: new DocTable<MaterialType>('materialTypes'),
+  materialEntries: new DocTable<MaterialEntry>('materialEntries'),
+  consumerGoodUsages: new DocTable<ConsumerGoodUsage>('consumerGoodUsages'),
+  serviceCosts: new DocTable<ServiceCost>('serviceCosts'),
+  accountingEntries: new DocTable<AccountingEntry>('accountingEntries'),
+  paymentRecords: new DocTable<PaymentRecord>('paymentRecords'),
+  auditLogs: new DocTable<AuditLog>('auditLogs'),
+  consumerGoodInventory: new DocTable<ConsumerGoodInventory>('consumerGoodInventory'),
+  consumerGoodReceipts: new DocTable<ConsumerGoodReceipt>('consumerGoodReceipts'),
+  syncQueue: new DocTable<SyncQueueItem>('syncQueue'),
+  customDepartments: new DocTable<CustomDepartment>('customDepartments'),
+  finalProducts: new DocTable<FinalProduct>('finalProducts'),
+  finalProductStock: new DocTable<FinalProductStockEntry>('finalProductStock'),
+};
