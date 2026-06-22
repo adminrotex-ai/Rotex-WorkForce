@@ -7,7 +7,7 @@ import { DEPARTMENT_LABELS } from '../../types';
 import { getAccountingForHod, getHodBatchesInProgress, getUsersByCreator } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import StatCard from '../common/StatCard';
-import { Package, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { Package, Users, TrendingUp, TrendingDown, ChevronRight, ArrowRight } from 'lucide-react';
 
 export default function HodDashboard() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -37,64 +37,73 @@ export default function HodDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>HOD Dashboard</h1>
-        <p className="text-gray-500 text-sm">{currentUser.firstName} - {DEPARTMENT_LABELS[currentUser.department]}</p>
+        <h1 className="text-2xl font-bold text-gray-800">HOD Dashboard</h1>
+        <p className="text-gray-400 text-sm mt-0.5">{currentUser.firstName} &bull; {DEPARTMENT_LABELS[currentUser.department]}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Active Batches"
           value={myBatches.length}
-          icon={<Package size={20} style={{ color: '#001f3f' }} />}
+          icon={<Package size={20} className="text-[#009688]" />}
+          color="#009688"
         />
         <StatCard
           title="My Users"
           value={userCount}
-          icon={<Users size={20} style={{ color: '#0074d9' }} />}
-          color="#0074d9"
+          icon={<Users size={20} className="text-[#2196f3]" />}
+          color="#2196f3"
         />
         <StatCard
           title="Admin Owes You"
           value={formatCurrency(accounting?.adminOwesHod || 0)}
           subtitle="For services"
-          icon={<TrendingUp size={20} style={{ color: '#2ecc40' }} />}
-          color="#2ecc40"
+          icon={<TrendingUp size={20} className="text-[#4caf50]" />}
+          color="#4caf50"
         />
         <StatCard
           title="You Owe Admin"
           value={formatCurrency(accounting?.hodOwesAdmin || 0)}
           subtitle="For consumer goods"
-          icon={<TrendingDown size={20} style={{ color: '#ff851b' }} />}
-          color="#ff851b"
+          icon={<TrendingDown size={20} className="text-[#ff9800]" />}
+          color="#ff9800"
         />
       </div>
 
       {/* Current Batches */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100" style={{ borderRadius: '8px' }}>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Batches In Progress</h2>
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100/80">
+        <h3 className="text-sm font-semibold text-gray-700 mb-4">Batches In Progress</h3>
         {myBatches.length === 0 ? (
-          <p className="text-gray-400 text-sm">No batches assigned to you currently</p>
+          <p className="text-gray-300 text-sm">No batches assigned to you currently</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {myBatches.map(({ batch, stageRecord }) => (
               <div
                 key={batch.id}
-                className="flex items-center justify-between p-4 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                className="flex items-center justify-between p-4 rounded-xl border border-gray-100/60 hover:bg-gray-50/80 cursor-pointer transition-colors"
                 onClick={() => navigate(`/batches/${batch.id}`)}
               >
-                <div>
-                  <p className="font-medium">{batch.batchNumber}</p>
-                  <p className="text-xs text-gray-400">
-                    Received: {stageRecord.totalPiecesReceived} | Processed: {stageRecord.piecesProcessed} | Sent: {stageRecord.piecesSentForward}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#009688]/8 flex items-center justify-center">
+                    <Package size={16} className="text-[#009688]" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-gray-700">{batch.batchNumber}</p>
+                    <p className="text-[11px] text-gray-400">
+                      Received: {stageRecord.totalPiecesReceived} &bull; Processed: {stageRecord.piecesProcessed} &bull; Sent: {stageRecord.piecesSentForward}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium" style={{ color: '#001f3f' }}>
-                    {stageRecord.totalPiecesReceived - stageRecord.piecesProcessed} pending
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    {stageRecord.acceptedPieces} accepted / {stageRecord.rejectedPieces} rejected
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-[#009688]">
+                      {stageRecord.totalPiecesReceived - stageRecord.piecesProcessed} pending
+                    </p>
+                    <p className="text-[11px] text-gray-400">
+                      {stageRecord.acceptedPieces} accepted / {stageRecord.rejectedPieces} rejected
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="text-gray-300" />
                 </div>
               </div>
             ))}
@@ -104,27 +113,26 @@ export default function HodDashboard() {
 
       {/* Accounting Quick View */}
       {accounting && (
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100/80">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold" style={{ color: '#001f3f' }}>Accounting Summary</h2>
+            <h3 className="text-sm font-semibold text-gray-700">Accounting Summary</h3>
             <button
               onClick={() => navigate('/accounting')}
-              className="text-sm font-medium hover:underline"
-              style={{ color: '#0074d9' }}
+              className="text-xs font-medium text-[#009688] hover:underline flex items-center gap-1"
             >
-              View Details
+              View Details <ArrowRight size={12} />
             </button>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 rounded-lg bg-green-50 border border-green-100">
-              <p className="text-xs text-green-600 font-medium uppercase">Admin Owes You</p>
-              <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.adminOwesHod)}</p>
-              <p className="text-xs text-green-500 mt-1">For service costs</p>
+            <div className="p-4 rounded-xl bg-green-50/80 border border-green-100/50">
+              <p className="text-[10px] text-green-500 font-semibold uppercase tracking-wider">Admin Owes You</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(accounting.adminOwesHod)}</p>
+              <p className="text-[11px] text-green-400 mt-1">For service costs</p>
             </div>
-            <div className="p-4 rounded-lg bg-orange-50 border border-orange-100">
-              <p className="text-xs text-orange-600 font-medium uppercase">You Owe Admin</p>
-              <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
-              <p className="text-xs text-orange-500 mt-1">For consumer goods</p>
+            <div className="p-4 rounded-xl bg-orange-50/80 border border-orange-100/50">
+              <p className="text-[10px] text-orange-500 font-semibold uppercase tracking-wider">You Owe Admin</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{formatCurrency(accounting.hodOwesAdmin)}</p>
+              <p className="text-[11px] text-orange-400 mt-1">For consumer goods</p>
             </div>
           </div>
         </div>

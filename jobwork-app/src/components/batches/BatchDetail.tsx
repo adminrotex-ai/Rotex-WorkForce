@@ -254,11 +254,11 @@ export default function BatchDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/batches')} className="p-2 rounded-lg hover:bg-gray-100">
+        <button onClick={() => navigate('/batches')} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>{batch.batchNumber}</h1>
+          <h1 className="text-2xl font-bold" >{batch.batchNumber}</h1>
           <p className="text-gray-500 text-sm">
             {batch.totalPieces} pieces | Sizes: {batch.sizes.join(', ')} | Created: {formatDate(batch.createdAt)}
           </p>
@@ -273,8 +273,8 @@ export default function BatchDetail() {
       </div>
 
       {/* Stage Progress */}
-      <div className="bg-white rounded-lg p-6 border border-gray-100 overflow-x-auto" style={{ borderRadius: '8px' }}>
-        <h2 className="text-sm font-semibold mb-4" style={{ color: '#001f3f' }}>Workflow Progress</h2>
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 overflow-x-auto">
+        <h2 className="text-sm font-semibold mb-4" >Workflow Progress</h2>
         <div className="flex items-center gap-1 min-w-max">
           {STAGE_ORDER.map((stage, idx) => {
             const stageRecord = stages.find(s => s.stage === stage);
@@ -284,7 +284,7 @@ export default function BatchDetail() {
 
             return (
               <div key={stage} className="flex items-center">
-                <div className={`flex flex-col items-center px-2 py-1 rounded-lg text-center min-w-[80px] ${
+                <div className={`flex flex-col items-center px-2 py-1 rounded-2xl text-center min-w-[80px] ${
                   isCurrent ? 'bg-blue-50 border border-blue-200' :
                   isCompleted ? 'bg-green-50 border border-green-200' :
                   hasData ? 'bg-yellow-50 border border-yellow-200' :
@@ -312,8 +312,8 @@ export default function BatchDetail() {
           {canEnterPieces() && (
             <button
               onClick={() => setShowPieceEntry(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium hover:opacity-90"
-              style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl text-white text-sm font-medium hover:opacity-90"
+              style={{ backgroundColor: '#009688',  }}
             >
               <CheckCircle size={16} /> Record Pieces
             </button>
@@ -321,8 +321,8 @@ export default function BatchDetail() {
           {canTransfer() && availableForTransfer > 0 && getNextStage(currentStageRecord.stage) && (
             <button
               onClick={openTransferModal}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium hover:opacity-90"
-              style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl text-white text-sm font-medium hover:opacity-90"
+              style={{ backgroundColor: '#2196f3',  }}
             >
               <Send size={16} /> Transfer ({availableForTransfer} available)
             </button>
@@ -331,8 +331,8 @@ export default function BatchDetail() {
             <>
               <button
                 onClick={() => setShowServiceCost(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium hover:opacity-90 bg-green-600"
-                style={{ borderRadius: '8px' }}
+                className="flex items-center gap-2 px-4 py-2 rounded-2xl text-white text-sm font-medium hover:opacity-90 bg-green-600"
+               
               >
                 <DollarSign size={16} /> Service Cost
               </button>
@@ -341,8 +341,8 @@ export default function BatchDetail() {
           {(canEnterCosts() || (isHod && (currentUser?.department === 'welding' || currentUser?.department === 'buffing'))) && (
             <button
               onClick={() => setShowConsumerUsage(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium hover:opacity-90 bg-orange-500"
-              style={{ borderRadius: '8px' }}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl text-white text-sm font-medium hover:opacity-90 bg-orange-500"
+             
             >
               <Package size={16} /> Consumer Goods
             </button>
@@ -350,8 +350,8 @@ export default function BatchDetail() {
           {canTransfer() && currentStageRecord.rejectedPieces > 0 && currentStageRecord.stage !== 'welding' && (
             <button
               onClick={() => setShowReject(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium hover:opacity-90 bg-red-500"
-              style={{ borderRadius: '8px' }}
+              className="flex items-center gap-2 px-4 py-2 rounded-2xl text-white text-sm font-medium hover:opacity-90 bg-red-500"
+             
             >
               <AlertTriangle size={16} /> Send Rejected to Welding
             </button>
@@ -362,9 +362,9 @@ export default function BatchDetail() {
       {/* Stage Details */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {stages.map(stage => (
-          <div key={stage.id} className="bg-white rounded-lg p-5 border border-gray-100" style={{ borderRadius: '8px' }}>
+          <div key={stage.id} className="bg-white rounded-2xl p-5 border border-gray-100">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold" style={{ color: '#001f3f' }}>{STAGE_LABELS[stage.stage]}</h3>
+              <h3 className="text-sm font-semibold" >{STAGE_LABELS[stage.stage]}</h3>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
                 stage.status === 'completed' ? 'bg-green-100 text-green-700' :
                 stage.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
@@ -403,20 +403,20 @@ export default function BatchDetail() {
 
       {/* Cost Summary */}
       {stats && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Cost Summary</h2>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >Cost Summary</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
+            <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
               <p className="text-xs text-blue-600 uppercase font-medium">Consumer Goods</p>
               <p className="text-xl font-bold text-blue-700">{formatCurrency(stats.totalConsumerCost)}</p>
             </div>
-            <div className="p-4 rounded-lg bg-green-50 border border-green-100">
+            <div className="p-4 rounded-2xl bg-green-50 border border-green-100">
               <p className="text-xs text-green-600 uppercase font-medium">Service Costs</p>
               <p className="text-xl font-bold text-green-700">{formatCurrency(stats.totalServiceCost)}</p>
             </div>
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#001f3f10', border: '1px solid #001f3f20' }}>
-              <p className="text-xs uppercase font-medium" style={{ color: '#001f3f' }}>Total Cost</p>
-              <p className="text-xl font-bold" style={{ color: '#001f3f' }}>{formatCurrency(stats.totalCost)}</p>
+            <div className="p-4 rounded-2xl" style={{ backgroundColor: '#00968810', border: '1px solid #00968820' }}>
+              <p className="text-xs uppercase font-medium" >Total Cost</p>
+              <p className="text-xl font-bold" >{formatCurrency(stats.totalCost)}</p>
             </div>
           </div>
 
@@ -452,11 +452,11 @@ export default function BatchDetail() {
 
       {/* Transfer History */}
       {transfers.length > 0 && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Transfer History</h2>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >Transfer History</h2>
           <div className="space-y-2">
             {transfers.map(t => (
-              <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg text-sm">
+              <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl text-sm">
                 <span className="font-medium">{t.piecesCount} pcs</span>
                 <span className="text-gray-400">{STAGE_LABELS[t.fromStage]}</span>
                 <ArrowRight size={14} className="text-gray-400" />
@@ -484,7 +484,7 @@ export default function BatchDetail() {
               onChange={e => setTransferForm({ ...transferForm, pieces: e.target.value })}
               max={availableForTransfer}
               min="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           {batch?.sizes && batch.sizes.length > 0 && (
@@ -493,7 +493,7 @@ export default function BatchDetail() {
               <select
                 value={transferForm.size}
                 onChange={e => setTransferForm({ ...transferForm, size: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               >
                 <option value="">All sizes</option>
                 {batch.sizes.map(s => <option key={s} value={s}>{s}</option>)}
@@ -506,7 +506,7 @@ export default function BatchDetail() {
               <select
                 value={transferForm.targetHodId}
                 onChange={e => setTransferForm({ ...transferForm, targetHodId: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               >
                 <option value="">Select HOD</option>
                 {targetHods.map(h => (
@@ -518,7 +518,7 @@ export default function BatchDetail() {
             </div>
           )}
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleTransfer} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}>
+          <button onClick={handleTransfer} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3',  }}>
             Transfer Pieces
           </button>
         </div>
@@ -540,7 +540,7 @@ export default function BatchDetail() {
                 value={pieceForm.accepted}
                 onChange={e => setPieceForm({ ...pieceForm, accepted: e.target.value })}
                 min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               />
             </div>
             <div>
@@ -550,7 +550,7 @@ export default function BatchDetail() {
                 value={pieceForm.rejected}
                 onChange={e => setPieceForm({ ...pieceForm, rejected: e.target.value })}
                 min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               />
             </div>
           </div>
@@ -560,7 +560,7 @@ export default function BatchDetail() {
               <select
                 value={pieceForm.size}
                 onChange={e => setPieceForm({ ...pieceForm, size: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               >
                 <option value="">Select size</option>
                 {batch.sizes.map(s => <option key={s} value={s}>{s}</option>)}
@@ -572,12 +572,12 @@ export default function BatchDetail() {
             <textarea
               value={pieceForm.notes}
               onChange={e => setPieceForm({ ...pieceForm, notes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               rows={2}
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handlePieceEntry} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}>
+          <button onClick={handlePieceEntry} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#009688',  }}>
             Record Entry
           </button>
         </div>
@@ -593,7 +593,7 @@ export default function BatchDetail() {
               onChange={e => {
                 setConsumerForm({ ...consumerForm, goodId: e.target.value });
               }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             >
               <option value="">Select item</option>
               {consumerGoods.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
@@ -607,7 +607,7 @@ export default function BatchDetail() {
               onChange={e => setConsumerForm({ ...consumerForm, quantity: e.target.value })}
               min="0.01"
               step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           <div>
@@ -618,16 +618,16 @@ export default function BatchDetail() {
               onChange={e => setConsumerForm({ ...consumerForm, pricePerUnit: e.target.value })}
               min="0.01"
               step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           {consumerForm.quantity && consumerForm.pricePerUnit && (
-            <p className="text-sm font-medium" style={{ color: '#001f3f' }}>
+            <p className="text-sm font-medium" >
               Total: {formatCurrency(parseFloat(consumerForm.quantity) * parseFloat(consumerForm.pricePerUnit))}
             </p>
           )}
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleConsumerUsage} className="w-full py-2 text-white rounded-lg text-sm bg-orange-500" style={{ borderRadius: '8px' }}>
+          <button onClick={handleConsumerUsage} className="w-full py-2 text-white rounded-2xl text-sm bg-orange-500">
             Record Usage
           </button>
         </div>
@@ -644,7 +644,7 @@ export default function BatchDetail() {
               onChange={e => setServiceForm({ ...serviceForm, costPerPiece: e.target.value })}
               min="0.01"
               step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           <div>
@@ -654,7 +654,7 @@ export default function BatchDetail() {
               value={serviceForm.pieces}
               onChange={e => setServiceForm({ ...serviceForm, pieces: e.target.value })}
               min="1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           {batch?.sizes && batch.sizes.length > 0 && (
@@ -663,7 +663,7 @@ export default function BatchDetail() {
               <select
                 value={serviceForm.size}
                 onChange={e => setServiceForm({ ...serviceForm, size: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               >
                 <option value="">All sizes</option>
                 {batch.sizes.map(s => <option key={s} value={s}>{s}</option>)}
@@ -671,12 +671,12 @@ export default function BatchDetail() {
             </div>
           )}
           {serviceForm.costPerPiece && serviceForm.pieces && (
-            <p className="text-sm font-medium" style={{ color: '#001f3f' }}>
+            <p className="text-sm font-medium" >
               Total: {formatCurrency(parseFloat(serviceForm.costPerPiece) * parseInt(serviceForm.pieces))}
             </p>
           )}
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleServiceCost} className="w-full py-2 text-white rounded-lg text-sm bg-green-600" style={{ borderRadius: '8px' }}>
+          <button onClick={handleServiceCost} className="w-full py-2 text-white rounded-2xl text-sm bg-green-600">
             Record Service Cost
           </button>
         </div>
@@ -685,7 +685,7 @@ export default function BatchDetail() {
       {/* Reject to Welding Modal */}
       <Modal isOpen={showReject} onClose={() => setShowReject(false)} title="Send Rejected Pieces to Welding">
         <div className="space-y-4">
-          <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
+          <div className="p-3 bg-red-50 border border-red-100 rounded-2xl">
             <p className="text-sm text-red-700">
               Rejected pieces will be sent back to the Welding Department for rework.
             </p>
@@ -698,11 +698,11 @@ export default function BatchDetail() {
               onChange={e => setRejectForm({ pieces: e.target.value })}
               min="1"
               max={currentStageRecord?.rejectedPieces || 0}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleReject} className="w-full py-2 text-white rounded-lg text-sm bg-red-500" style={{ borderRadius: '8px' }}>
+          <button onClick={handleReject} className="w-full py-2 text-white rounded-2xl text-sm bg-red-500">
             Send to Welding
           </button>
         </div>

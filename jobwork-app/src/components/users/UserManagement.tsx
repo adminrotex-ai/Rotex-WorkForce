@@ -95,13 +95,13 @@ export default function UserManagement() {
         const hods = hodsByDept(dept);
         const isExpanded = expandedDept === dept;
         return (
-          <div key={dept} className="bg-white rounded-lg border border-gray-100 overflow-hidden" style={{ borderRadius: '8px' }}>
+          <div key={dept} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
             <button
               onClick={() => setExpandedDept(isExpanded ? null : dept)}
               className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#001f3f' }}>
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#009688] to-[#00796b]">
                   <Users size={18} className="text-white" />
                 </div>
                 <div className="text-left">
@@ -121,7 +121,7 @@ export default function UserManagement() {
                     {hods.map(hod => {
                       const hodUsers = usersByHod(hod.id);
                       return (
-                        <div key={hod.id} className="border border-gray-100 rounded-lg overflow-hidden">
+                        <div key={hod.id} className="border border-gray-100 rounded-2xl overflow-hidden">
                           <div className="flex items-center justify-between p-3 bg-gray-50">
                             <div>
                               <p className="font-medium text-sm">{hod.firstName} <span className="text-xs text-blue-500">(HOD)</span></p>
@@ -135,14 +135,14 @@ export default function UserManagement() {
                             <div className="flex gap-2">
                               <button
                                 onClick={() => navigate(`/statistics/user/${hod.id}`)}
-                                className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
+                                className="p-1.5 rounded-2xl hover:bg-blue-50 text-blue-500 transition-colors"
                                 title="Inspect HOD"
                               >
                                 <BarChart3 size={16} />
                               </button>
                               <button
                                 onClick={() => setExpandedHod(expandedHod === hod.id ? null : hod.id)}
-                                className="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500 transition-colors"
+                                className="p-1.5 rounded-2xl hover:bg-gray-200 text-gray-500 transition-colors"
                                 title="View Users"
                               >
                                 <Eye size={16} />
@@ -150,7 +150,7 @@ export default function UserManagement() {
                               {(isAdmin || isHod) && (
                                 <button
                                   onClick={() => setShowDelete(hod)}
-                                  className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                                  className="p-1.5 rounded-2xl hover:bg-red-50 text-red-500 transition-colors"
                                   title="Delete"
                                 >
                                   <Trash2 size={16} />
@@ -166,7 +166,7 @@ export default function UserManagement() {
                               ) : (
                                 <div className="space-y-2">
                                   {hodUsers.map(user => (
-                                    <div key={user.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
+                                    <div key={user.id} className="flex items-center justify-between p-2 rounded-2xl hover:bg-gray-50">
                                       <div>
                                         <p className="text-sm font-medium">{user.firstName}</p>
                                         {isAdmin && (
@@ -176,14 +176,14 @@ export default function UserManagement() {
                                       <div className="flex gap-2">
                                         <button
                                           onClick={() => navigate(`/statistics/user/${user.id}`)}
-                                          className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors text-xs"
+                                          className="p-1.5 rounded-2xl hover:bg-blue-50 text-blue-500 transition-colors text-xs"
                                           title="Inspect User"
                                         >
                                           <BarChart3 size={14} />
                                         </button>
                                         <button
                                           onClick={() => setShowDelete(user)}
-                                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                                          className="p-1.5 rounded-2xl hover:bg-red-50 text-red-500 transition-colors"
                                         >
                                           <Trash2 size={14} />
                                         </button>
@@ -210,14 +210,14 @@ export default function UserManagement() {
   const renderHodView = () => {
     const myUsers = allUsers.filter(u => u.createdBy === currentUser?.id);
     return (
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-100" style={{ borderRadius: '8px' }}>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>My Team Members</h2>
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <h2 className="text-lg font-semibold mb-4" >My Team Members</h2>
         {myUsers.length === 0 ? (
           <p className="text-gray-400 text-sm">No users created yet</p>
         ) : (
           <div className="space-y-2">
             {myUsers.map(user => (
-              <div key={user.id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
+              <div key={user.id} className="flex items-center justify-between p-3 rounded-2xl border border-gray-100 hover:bg-gray-50">
                 <div>
                   <p className="font-medium text-sm">{user.firstName}</p>
                   <p className="text-xs text-gray-400">Username: {user.username} | Role: {user.role}</p>
@@ -225,14 +225,14 @@ export default function UserManagement() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => navigate(`/statistics/user/${user.id}`)}
-                    className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500 transition-colors"
+                    className="p-1.5 rounded-2xl hover:bg-blue-50 text-blue-500 transition-colors"
                     title="Inspect User"
                   >
                     <BarChart3 size={16} />
                   </button>
                   <button
                     onClick={() => setShowDelete(user)}
-                    className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                    className="p-1.5 rounded-2xl hover:bg-red-50 text-red-500 transition-colors"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -249,13 +249,13 @@ export default function UserManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>User Management</h1>
+          <h1 className="text-2xl font-bold" >User Management</h1>
           <p className="text-gray-500 text-sm">Create and manage user accounts</p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-all hover:opacity-90"
-          style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}
+          className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl transition-all hover:opacity-90"
+          style={{ backgroundColor: '#009688',  }}
         >
           <UserPlus size={18} />
           <span className="text-sm font-medium">Create User</span>
@@ -273,7 +273,7 @@ export default function UserManagement() {
               type="text"
               value={form.firstName}
               onChange={e => setForm({ ...form, firstName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
               placeholder="Enter first name"
             />
           </div>
@@ -283,7 +283,7 @@ export default function UserManagement() {
               type="text"
               value={form.username}
               onChange={e => setForm({ ...form, username: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
               placeholder="Enter username"
             />
           </div>
@@ -293,7 +293,7 @@ export default function UserManagement() {
               type="password"
               value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
               placeholder="Enter password"
             />
           </div>
@@ -302,7 +302,7 @@ export default function UserManagement() {
             <select
               value={form.role}
               onChange={e => setForm({ ...form, role: e.target.value as 'hod' | 'user' })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
             >
               {isAdmin && <option value="hod">Head of Department (HOD)</option>}
               <option value="user">User</option>
@@ -314,7 +314,7 @@ export default function UserManagement() {
               <select
                 value={form.department}
                 onChange={e => setForm({ ...form, department: e.target.value as Department })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
               >
                 {DEPARTMENTS.map(d => (
                   <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
@@ -329,7 +329,7 @@ export default function UserManagement() {
                 type="tel"
                 value={form.phone}
                 onChange={e => setForm({ ...form, phone: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
                 placeholder="Enter phone number"
               />
             </div>
@@ -339,8 +339,8 @@ export default function UserManagement() {
 
           <button
             onClick={handleCreate}
-            className="w-full py-2 text-white font-medium rounded-lg transition-all hover:opacity-90 text-sm"
-            style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}
+            className="w-full py-2 text-white font-medium rounded-2xl transition-all hover:opacity-90 text-sm"
+            style={{ backgroundColor: '#009688',  }}
           >
             Create User
           </button>
@@ -358,7 +358,7 @@ export default function UserManagement() {
             <textarea
               value={deleteReason}
               onChange={e => setDeleteReason(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-red-500 text-sm"
               rows={3}
               placeholder="Enter reason for deletion"
             />
@@ -367,13 +367,13 @@ export default function UserManagement() {
           <div className="flex gap-3">
             <button
               onClick={() => { setShowDelete(null); setDeleteReason(''); }}
-              className="flex-1 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+              className="flex-1 py-2 border border-gray-300 rounded-2xl text-sm hover:bg-gray-50"
             >
               Cancel
             </button>
             <button
               onClick={handleDelete}
-              className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
+              className="flex-1 py-2 bg-red-500 text-white rounded-2xl text-sm hover:bg-red-600"
             >
               Delete
             </button>

@@ -33,7 +33,7 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>Reports</h1>
+        <h1 className="text-2xl font-bold" >Reports</h1>
         <p className="text-gray-500 text-sm">Generate detailed reports</p>
       </div>
 
@@ -43,10 +43,10 @@ export default function Reports() {
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               period === p ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'
             }`}
-            style={period === p ? { backgroundColor: '#001f3f' } : {}}
+            style={period === p ? { backgroundColor: '#009688' } : {}}
           >
             {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -55,8 +55,8 @@ export default function Reports() {
 
       {/* Period Summary */}
       {stats && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >
             {period === 'all' ? 'All Time' : period.charAt(0).toUpperCase() + period.slice(1)} Report
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -76,24 +76,24 @@ export default function Reports() {
             </div>
             <div>
               <p className="text-xs text-gray-500">Total Cost</p>
-              <p className="text-xl font-bold" style={{ color: '#001f3f' }}>{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
+              <p className="text-xl font-bold" >{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
               <p className="text-xs text-blue-600 uppercase font-medium">Consumer Goods Cost</p>
               <p className="text-lg font-bold text-blue-700">{formatCurrency(stats.totalConsumerCost)}</p>
             </div>
-            <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+            <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
               <p className="text-xs text-green-600 uppercase font-medium">Service Cost</p>
               <p className="text-lg font-bold text-green-700">{formatCurrency(stats.totalServiceCost)}</p>
             </div>
           </div>
 
           {/* Raw Material vs Finished Product */}
-          <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: '#001f3f10', border: '1px solid #001f3f20' }}>
-            <h3 className="text-sm font-semibold mb-3" style={{ color: '#001f3f' }}>Raw Material to Finished Product Ratio</h3>
+          <div className="mt-6 p-4 rounded-2xl" style={{ backgroundColor: '#00968810', border: '1px solid #00968820' }}>
+            <h3 className="text-sm font-semibold mb-3" >Raw Material to Finished Product Ratio</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-gray-500">Raw Material (from Foundry)</p>
@@ -105,7 +105,7 @@ export default function Reports() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Yield Rate</p>
-                <p className="text-lg font-bold" style={{ color: '#001f3f' }}>
+                <p className="text-lg font-bold" >
                   {stats.totalPieces > 0 ? ((stats.totalAccepted / stats.totalPieces) * 100).toFixed(1) : 0}%
                 </p>
               </div>
@@ -115,12 +115,12 @@ export default function Reports() {
       )}
 
       {/* Batch-wise Report */}
-      <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Batch-wise Report</h2>
+      <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <h2 className="text-lg font-semibold mb-4" >Batch-wise Report</h2>
         <select
           value={selectedBatch}
           onChange={e => setSelectedBatch(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-4"
+          className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm mb-4"
         >
           <option value="">Select a batch</option>
           {batches.map(b => (
@@ -131,19 +131,19 @@ export default function Reports() {
         {batchStats && (
           <div className="space-y-4 animate-fade-in">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="p-3 bg-gray-50 rounded-2xl">
                 <p className="text-xs text-gray-500">Total Pieces</p>
                 <p className="text-lg font-bold">{batchStats.batch?.totalPieces}</p>
               </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="p-3 bg-gray-50 rounded-2xl">
                 <p className="text-xs text-gray-500">Current Stage</p>
                 <p className="text-sm font-bold">{STAGE_LABELS[batchStats.batch?.currentStage as BatchStage]}</p>
               </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="p-3 bg-gray-50 rounded-2xl">
                 <p className="text-xs text-gray-500">Consumer Goods</p>
                 <p className="text-lg font-bold text-blue-600">{formatCurrency(batchStats.totalConsumerCost)}</p>
               </div>
-              <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="p-3 bg-gray-50 rounded-2xl">
                 <p className="text-xs text-gray-500">Service Cost</p>
                 <p className="text-lg font-bold text-green-600">{formatCurrency(batchStats.totalServiceCost)}</p>
               </div>

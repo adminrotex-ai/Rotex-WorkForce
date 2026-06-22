@@ -55,7 +55,7 @@ export default function Statistics() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>Statistics</h1>
+          <h1 className="text-2xl font-bold" >Statistics</h1>
           <p className="text-gray-500 text-sm">Performance and production reports</p>
         </div>
       </div>
@@ -66,10 +66,10 @@ export default function Statistics() {
           <button
             key={p}
             onClick={() => setPeriod(p)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               period === p ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={period === p ? { backgroundColor: '#001f3f' } : {}}
+            style={period === p ? { backgroundColor: '#009688' } : {}}
           >
             {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -78,44 +78,44 @@ export default function Statistics() {
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Batches" value={stats.batchCount} icon={<Package size={20} style={{ color: '#001f3f' }} />} />
-        <StatCard title="Total Pieces" value={stats.totalPieces} icon={<BarChart3 size={20} style={{ color: '#0074d9' }} />} color="#0074d9" />
+        <StatCard title="Total Batches" value={stats.batchCount} icon={<Package size={20}  />} />
+        <StatCard title="Total Pieces" value={stats.totalPieces} icon={<BarChart3 size={20} style={{ color: '#2196f3' }} />} color="#2196f3" />
         <StatCard
           title="Acceptance Rate"
           value={`${acceptRate}%`}
           subtitle={`${stats.totalAccepted} accepted`}
-          icon={<CheckCircle size={20} style={{ color: '#2ecc40' }} />}
-          color="#2ecc40"
+          icon={<CheckCircle size={20} style={{ color: '#4caf50' }} />}
+          color="#4caf50"
         />
         <StatCard
           title="Rejection Rate"
           value={`${rejectRate}%`}
           subtitle={`${stats.totalRejected} rejected`}
-          icon={<XCircle size={20} style={{ color: '#ff4136' }} />}
-          color="#ff4136"
+          icon={<XCircle size={20} style={{ color: '#f44336' }} />}
+          color="#f44336"
         />
       </div>
 
       {/* Cost Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg p-5 border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Cost</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#0074d9' }}>{formatCurrency(stats.totalConsumerCost)}</p>
+          <p className="text-2xl font-bold mt-1" style={{ color: '#2196f3' }}>{formatCurrency(stats.totalConsumerCost)}</p>
         </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <p className="text-xs text-gray-500 uppercase font-medium">Service Cost</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#2ecc40' }}>{formatCurrency(stats.totalServiceCost)}</p>
+          <p className="text-2xl font-bold mt-1" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
         </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <p className="text-xs text-gray-500 uppercase font-medium">Total Cost</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#001f3f' }}>{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
+          <p className="text-2xl font-bold mt-1" >{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
         </div>
       </div>
 
       {/* User Statistics - Department Hierarchy */}
       {(isAdmin || isHod) && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >
             {isAdmin ? 'Department Statistics' : 'Team Statistics'}
           </h2>
 
@@ -125,13 +125,13 @@ export default function Statistics() {
                 const deptHods = hodsByDept(dept);
                 const isExpanded = expandedDept === dept;
                 return (
-                  <div key={dept} className="border border-gray-100 rounded-lg overflow-hidden">
+                  <div key={dept} className="border border-gray-100 rounded-2xl overflow-hidden">
                     <button
                       onClick={() => setExpandedDept(isExpanded ? null : dept)}
                       className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#001f3f' }}>
+                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#009688] to-[#00796b]">
                           <Users size={14} className="text-white" />
                         </div>
                         <span className="font-medium text-sm">{DEPARTMENT_LABELS[dept]}</span>
@@ -146,19 +146,19 @@ export default function Statistics() {
                         ) : deptHods.map(hod => {
                           const hodUsers = usersByHod(hod.id);
                           return (
-                            <div key={hod.id} className="border border-gray-100 rounded-lg">
+                            <div key={hod.id} className="border border-gray-100 rounded-2xl">
                               <div className="flex items-center justify-between p-3">
                                 <span className="font-medium text-sm">{hod.firstName} (HOD)</span>
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => navigate(`/statistics/user/${hod.id}`)}
-                                    className="text-xs px-3 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                    className="text-xs px-3 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100"
                                   >
                                     <BarChart3 size={12} className="inline mr-1" />Report
                                   </button>
                                   <button
                                     onClick={() => setExpandedHod(expandedHod === hod.id ? null : hod.id)}
-                                    className="text-xs px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200"
+                                    className="text-xs px-3 py-1 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200"
                                   >
                                     Users ({hodUsers.length})
                                   </button>
@@ -169,11 +169,11 @@ export default function Statistics() {
                                   {hodUsers.length === 0 ? (
                                     <p className="text-gray-400 text-xs">No users</p>
                                   ) : hodUsers.map(u => (
-                                    <div key={u.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                                    <div key={u.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-2xl">
                                       <span className="text-sm">{u.firstName}</span>
                                       <button
                                         onClick={() => navigate(`/statistics/user/${u.id}`)}
-                                        className="text-xs px-2 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                        className="text-xs px-2 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100"
                                       >
                                         <BarChart3 size={12} className="inline mr-1" />Report
                                       </button>
@@ -193,11 +193,11 @@ export default function Statistics() {
           ) : (
             <div className="space-y-2">
               {users.map(u => (
-                <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border border-gray-100">
+                <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl border border-gray-100">
                   <span className="text-sm font-medium">{u.firstName}</span>
                   <button
                     onClick={() => navigate(`/statistics/user/${u.id}`)}
-                    className="text-xs px-3 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+                    className="text-xs px-3 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100"
                   >
                     <BarChart3 size={12} className="inline mr-1" />Report
                   </button>

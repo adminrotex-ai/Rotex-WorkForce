@@ -40,11 +40,11 @@ export default function UserStatReport() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-lg hover:bg-gray-100">
+        <button onClick={() => navigate(-1)} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>
+          <h1 className="text-2xl font-bold" >
             {user.firstName}'s Report
           </h1>
           <p className="text-gray-500 text-sm">
@@ -56,28 +56,28 @@ export default function UserStatReport() {
 
       {/* Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Pieces" value={stats.totalPieces} icon={<Package size={20} style={{ color: '#001f3f' }} />} />
-        <StatCard title="Accepted" value={stats.totalAccepted} subtitle={`${stats.acceptanceRate.toFixed(1)}% rate`} icon={<CheckCircle size={20} style={{ color: '#2ecc40' }} />} color="#2ecc40" />
-        <StatCard title="Rejected" value={stats.totalRejected} subtitle={`${stats.rejectionRate.toFixed(1)}% rate`} icon={<XCircle size={20} style={{ color: '#ff4136' }} />} color="#ff4136" />
-        <StatCard title="Batches Worked" value={stats.batchCount} icon={<Package size={20} style={{ color: '#0074d9' }} />} color="#0074d9" />
+        <StatCard title="Total Pieces" value={stats.totalPieces} icon={<Package size={20}  />} />
+        <StatCard title="Accepted" value={stats.totalAccepted} subtitle={`${stats.acceptanceRate.toFixed(1)}% rate`} icon={<CheckCircle size={20} style={{ color: '#4caf50' }} />} color="#4caf50" />
+        <StatCard title="Rejected" value={stats.totalRejected} subtitle={`${stats.rejectionRate.toFixed(1)}% rate`} icon={<XCircle size={20} style={{ color: '#f44336' }} />} color="#f44336" />
+        <StatCard title="Batches Worked" value={stats.batchCount} icon={<Package size={20} style={{ color: '#2196f3' }} />} color="#2196f3" />
       </div>
 
       {/* Cost Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg p-5 border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Used</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#ff851b' }}>{formatCurrency(stats.totalConsumerCost)}</p>
+          <p className="text-2xl font-bold mt-1" style={{ color: '#ff9800' }}>{formatCurrency(stats.totalConsumerCost)}</p>
         </div>
-        <div className="bg-white rounded-lg p-5 border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <p className="text-xs text-gray-500 uppercase font-medium">Service Cost</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#2ecc40' }}>{formatCurrency(stats.totalServiceCost)}</p>
+          <p className="text-2xl font-bold mt-1" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
         </div>
       </div>
 
       {/* Piece Entries */}
       {stats.pieceEntries.length > 0 && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Piece Entry History</h2>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >Piece Entry History</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -107,8 +107,8 @@ export default function UserStatReport() {
 
       {/* Consumer Goods Usage */}
       {stats.consumerUsages.length > 0 && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Consumer Goods Usage</h2>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >Consumer Goods Usage</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -138,8 +138,8 @@ export default function UserStatReport() {
 
       {/* Service Costs */}
       {stats.serviceCosts.length > 0 && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Service Costs</h2>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >Service Costs</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -171,18 +171,18 @@ export default function UserStatReport() {
 
       {/* Sub-Users (for HODs) */}
       {user.role === 'hod' && subUsers.length > 0 && (
-        <div className="bg-white rounded-lg p-6 border border-gray-100" style={{ borderRadius: '8px' }}>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#001f3f' }}>Team Members</h2>
+        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+          <h2 className="text-lg font-semibold mb-4" >Team Members</h2>
           <div className="space-y-2">
             {subUsers.map(u => (
-              <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border border-gray-100">
+              <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl border border-gray-100">
                 <div>
                   <p className="font-medium text-sm">{u.firstName}</p>
                   <p className="text-xs text-gray-400">{u.role}</p>
                 </div>
                 <button
                   onClick={() => navigate(`/statistics/user/${u.id}`)}
-                  className="text-xs px-3 py-1 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100"
+                  className="text-xs px-3 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100"
                 >
                   <BarChart3 size={12} className="inline mr-1" />View Report
                 </button>

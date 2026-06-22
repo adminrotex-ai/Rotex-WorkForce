@@ -13,16 +13,16 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = '50
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/50" />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
       <div
-        className="relative bg-white rounded-lg shadow-2xl w-full animate-fade-in max-h-[90vh] overflow-y-auto"
-        style={{ maxWidth, borderRadius: '8px' }}
+        className="relative bg-white rounded-2xl shadow-2xl w-full animate-scale-in max-h-[90vh] overflow-y-auto"
+        style={{ maxWidth }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-gray-200 sticky top-0 bg-white z-10" style={{ borderRadius: '8px 8px 0 0' }}>
-          <h2 className="text-lg font-semibold" style={{ color: '#001f3f' }}>{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
-            <X size={20} />
+        <div className="flex items-center justify-between p-5 border-b border-gray-100 sticky top-0 bg-white z-10 rounded-t-2xl">
+          <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-gray-100 transition-colors">
+            <X size={18} className="text-gray-400" />
           </button>
         </div>
         <div className="p-5">

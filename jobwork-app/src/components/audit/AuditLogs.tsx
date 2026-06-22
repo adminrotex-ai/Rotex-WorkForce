@@ -54,7 +54,7 @@ export default function AuditLogs() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>Audit Logs</h1>
+        <h1 className="text-2xl font-bold" >Audit Logs</h1>
         <p className="text-gray-500 text-sm">Complete audit trail of all actions</p>
       </div>
 
@@ -65,10 +65,10 @@ export default function AuditLogs() {
           <button
             key={c.value}
             onClick={() => setFilter(c.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-colors ${
               filter === c.value ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={filter === c.value ? { backgroundColor: '#001f3f' } : {}}
+            style={filter === c.value ? { backgroundColor: '#009688' } : {}}
           >
             {c.label}
           </button>
@@ -81,19 +81,19 @@ export default function AuditLogs() {
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search audit logs..."
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-[#001f3f]"
+        className="w-full px-4 py-2 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#009688]"
       />
 
       {/* Logs */}
       <div className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-lg p-12 text-center border border-gray-100" style={{ borderRadius: '8px' }}>
+          <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
             <ClipboardList size={48} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-400">No audit logs found</p>
           </div>
         ) : (
           filtered.map(log => (
-            <div key={log.id} className="bg-white rounded-lg p-4 border border-gray-100 animate-fade-in" style={{ borderRadius: '8px' }}>
+            <div key={log.id} className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">

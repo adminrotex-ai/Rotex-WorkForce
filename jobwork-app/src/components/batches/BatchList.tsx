@@ -77,14 +77,14 @@ export default function BatchList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>Batches</h1>
+          <h1 className="text-2xl font-bold" >Batches</h1>
           <p className="text-gray-500 text-sm">{batches.length} total batches</p>
         </div>
         {canCreateBatch && (
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90"
-            style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl hover:opacity-90"
+            style={{ backgroundColor: '#009688',  }}
           >
             <Plus size={18} /><span className="text-sm font-medium">Create Batch</span>
           </button>
@@ -97,10 +97,10 @@ export default function BatchList() {
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               filter === f ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={filter === f ? { backgroundColor: '#001f3f' } : {}}
+            style={filter === f ? { backgroundColor: '#009688' } : {}}
           >
             {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </button>
@@ -109,7 +109,7 @@ export default function BatchList() {
 
       {/* Batch List */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-lg p-12 text-center border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
           <Package size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-400">No batches found</p>
         </div>
@@ -118,13 +118,13 @@ export default function BatchList() {
           {filtered.map(batch => (
             <div
               key={batch.id}
-              className="bg-white rounded-lg p-4 border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer"
-              style={{ borderRadius: '8px' }}
+              className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer"
+             
               onClick={() => navigate(`/batches/${batch.id}`)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#001f3f' }}>
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#009688] to-[#00796b]">
                     <Package size={22} className="text-white" />
                   </div>
                   <div>
@@ -148,14 +148,14 @@ export default function BatchList() {
                   <div className="flex gap-1" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => navigate(`/batches/${batch.id}`)}
-                      className="p-2 rounded-lg hover:bg-blue-50 text-blue-500"
+                      className="p-2 rounded-2xl hover:bg-blue-50 text-blue-500"
                     >
                       <Eye size={16} />
                     </button>
                     {canDeleteBatch && (
                       <button
                         onClick={() => setShowDelete(batch)}
-                        className="p-2 rounded-lg hover:bg-red-50 text-red-500"
+                        className="p-2 rounded-2xl hover:bg-red-50 text-red-500"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -177,7 +177,7 @@ export default function BatchList() {
               type="number"
               value={form.totalPieces}
               onChange={e => setForm({ ...form, totalPieces: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
               placeholder="Enter total number of pieces"
               min="1"
             />
@@ -188,15 +188,15 @@ export default function BatchList() {
               type="text"
               value={form.sizes}
               onChange={e => setForm({ ...form, sizes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#001f3f] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
               placeholder="e.g. Small, Medium, Large"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             onClick={handleCreate}
-            className="w-full py-2 text-white font-medium rounded-lg hover:opacity-90 text-sm"
-            style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}
+            className="w-full py-2 text-white font-medium rounded-2xl hover:opacity-90 text-sm"
+            style={{ backgroundColor: '#009688',  }}
           >
             Create Batch
           </button>
@@ -214,15 +214,15 @@ export default function BatchList() {
             <textarea
               value={deleteReason}
               onChange={e => setDeleteReason(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-red-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-red-500 text-sm"
               rows={3}
               placeholder="Enter reason for deletion"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex gap-3">
-            <button onClick={() => { setShowDelete(null); setDeleteReason(''); }} className="flex-1 py-2 border border-gray-300 rounded-lg text-sm">Cancel</button>
-            <button onClick={handleDelete} className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600">Delete</button>
+            <button onClick={() => { setShowDelete(null); setDeleteReason(''); }} className="flex-1 py-2 border border-gray-300 rounded-2xl text-sm">Cancel</button>
+            <button onClick={handleDelete} className="flex-1 py-2 bg-red-500 text-white rounded-2xl text-sm hover:bg-red-600">Delete</button>
           </div>
         </div>
       </Modal>

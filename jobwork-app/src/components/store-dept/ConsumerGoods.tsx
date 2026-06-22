@@ -223,15 +223,15 @@ export default function ConsumerGoods() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>Consumer Goods</h1>
+          <h1 className="text-2xl font-bold" >Consumer Goods</h1>
           <p className="text-gray-500 text-sm">Manage consumer goods, stock, and issuance</p>
         </div>
         <div className="flex gap-2">
           {canManage && (
             <button
               onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90"
-              style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}
+              className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
+              style={{ backgroundColor: '#009688',  }}
             >
               <Plus size={16} /> Add Item
             </button>
@@ -239,8 +239,8 @@ export default function ConsumerGoods() {
           {canAddStock && (
             <button
               onClick={() => setShowInventory(true)}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90"
-              style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}
+              className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
+              style={{ backgroundColor: '#2196f3',  }}
             >
               <Package size={16} /> Add Stock
             </button>
@@ -248,8 +248,8 @@ export default function ConsumerGoods() {
           {canAddStock && (
             <button
               onClick={() => { setShowIssue(true); setError(''); }}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90 bg-green-600"
-              style={{ borderRadius: '8px' }}
+              className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90 bg-green-600"
+             
             >
               <Send size={16} /> Issue to HOD
             </button>
@@ -262,14 +262,14 @@ export default function ConsumerGoods() {
         <button
           onClick={() => setTab('items')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'items' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'items' ? { backgroundColor: '#001f3f' } : {}}
+          style={tab === 'items' ? { backgroundColor: '#009688' } : {}}
         >
           Items & Stock
         </button>
         <button
           onClick={() => setTab('receipts')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'receipts' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'receipts' ? { backgroundColor: '#001f3f' } : {}}
+          style={tab === 'receipts' ? { backgroundColor: '#009688' } : {}}
         >
           Receipts ({receipts.length})
         </button>
@@ -278,7 +278,7 @@ export default function ConsumerGoods() {
       {tab === 'items' && (
         <div className="space-y-3">
           {items.length === 0 ? (
-            <div className="bg-white rounded-lg p-12 text-center border border-gray-100" style={{ borderRadius: '8px' }}>
+            <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
               <Package size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="text-gray-400">No consumer goods added yet</p>
             </div>
@@ -290,13 +290,13 @@ export default function ConsumerGoods() {
             const isExpanded = expandedItem === item.id;
 
             return (
-              <div key={item.id} className="bg-white rounded-lg border border-gray-100 overflow-hidden" style={{ borderRadius: '8px' }}>
+              <div key={item.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
                 <div
                   className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
                   onClick={() => setExpandedItem(isExpanded ? null : item.id)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-100">
+                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-orange-100">
                       <Package size={18} className="text-orange-600" />
                     </div>
                     <div>
@@ -312,13 +312,13 @@ export default function ConsumerGoods() {
                       <>
                         <button
                           onClick={e => { e.stopPropagation(); setShowEdit(item); setEditName(item.name); }}
-                          className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500"
+                          className="p-1.5 rounded-2xl hover:bg-blue-50 text-blue-500"
                         >
                           <Edit size={14} />
                         </button>
                         <button
                           onClick={e => { e.stopPropagation(); setShowDelete(item); }}
-                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+                          className="p-1.5 rounded-2xl hover:bg-red-50 text-red-500"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -369,15 +369,15 @@ export default function ConsumerGoods() {
       {tab === 'receipts' && (
         <div className="space-y-3">
           {receipts.length === 0 ? (
-            <div className="bg-white rounded-lg p-12 text-center border border-gray-100" style={{ borderRadius: '8px' }}>
+            <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
               <FileText size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="text-gray-400">No receipts yet</p>
             </div>
           ) : receipts.map(receipt => (
             <div
               key={receipt.id}
-              className="bg-white rounded-lg p-4 border border-gray-100 hover:shadow-sm cursor-pointer transition-shadow"
-              style={{ borderRadius: '8px' }}
+              className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-sm cursor-pointer transition-shadow"
+             
               onClick={() => setSelectedReceipt(receipt)}
             >
               <div className="flex items-center justify-between">
@@ -388,7 +388,7 @@ export default function ConsumerGoods() {
                   </p>
                   <p className="text-xs text-gray-400">{formatDate(receipt.createdAt)} | By: {receipt.issuedByName}</p>
                 </div>
-                <p className="font-bold text-sm" style={{ color: '#001f3f' }}>{formatCurrency(receipt.totalAmount)}</p>
+                <p className="font-bold text-sm" >{formatCurrency(receipt.totalAmount)}</p>
               </div>
             </div>
           ))}
@@ -399,7 +399,7 @@ export default function ConsumerGoods() {
       <Modal isOpen={!!selectedReceipt} onClose={() => setSelectedReceipt(null)} title={`Receipt ${selectedReceipt?.receiptNumber || ''}`} maxWidth="600px">
         {selectedReceipt && (
           <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="bg-gray-50 rounded-2xl p-4">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-xs text-gray-500">Receipt No.</p>
@@ -444,12 +444,12 @@ export default function ConsumerGoods() {
               <tfoot>
                 <tr className="border-t-2 border-gray-200">
                   <td colSpan={4} className="py-3 text-right font-semibold">Total Amount:</td>
-                  <td className="py-3 text-right font-bold text-lg" style={{ color: '#001f3f' }}>{formatCurrency(selectedReceipt.totalAmount)}</td>
+                  <td className="py-3 text-right font-bold text-lg" >{formatCurrency(selectedReceipt.totalAmount)}</td>
                 </tr>
               </tfoot>
             </table>
 
-            <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-xs text-orange-700">
+            <div className="p-3 bg-orange-50 border border-orange-100 rounded-2xl text-xs text-orange-700">
               This amount ({formatCurrency(selectedReceipt.totalAmount)}) has been added to {selectedReceipt.hodName}'s account as owed to admin.
             </div>
           </div>
@@ -463,11 +463,11 @@ export default function ConsumerGoods() {
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             placeholder="Item name"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAdd} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}>
+          <button onClick={handleAdd} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#009688',  }}>
             Add Item
           </button>
         </div>
@@ -480,10 +480,10 @@ export default function ConsumerGoods() {
             type="text"
             value={editName}
             onChange={e => setEditName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleEdit} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}>
+          <button onClick={handleEdit} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3',  }}>
             Update
           </button>
         </div>
@@ -496,19 +496,19 @@ export default function ConsumerGoods() {
           <textarea
             value={deleteReason}
             onChange={e => setDeleteReason(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             rows={3}
             placeholder="Reason for deletion (required)"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleDelete} className="w-full py-2 bg-red-500 text-white rounded-lg text-sm">Delete</button>
+          <button onClick={handleDelete} className="w-full py-2 bg-red-500 text-white rounded-2xl text-sm">Delete</button>
         </div>
       </Modal>
 
       {/* Add Stock Modal (Store HOD / Admin only) */}
       <Modal isOpen={showInventory} onClose={() => { setShowInventory(false); setError(''); }} title="Add Consumer Goods to Stock">
         <div className="space-y-4">
-          <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+          <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-xs text-blue-700">
             Enter the supplier's price per unit. This exact price will be charged when goods are issued to department HODs.
           </div>
           <div>
@@ -516,7 +516,7 @@ export default function ConsumerGoods() {
             <select
               value={invForm.goodId}
               onChange={e => setInvForm({ ...invForm, goodId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             >
               <option value="">Select item</option>
               {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
@@ -525,31 +525,31 @@ export default function ConsumerGoods() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <input type="number" value={invForm.quantity} onChange={e => setInvForm({ ...invForm, quantity: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" min="0.01" step="0.01" />
+              <input type="number" value={invForm.quantity} onChange={e => setInvForm({ ...invForm, quantity: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm" min="0.01" step="0.01" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Price/Unit (₹)</label>
-              <input type="number" value={invForm.pricePerUnit} onChange={e => setInvForm({ ...invForm, pricePerUnit: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" min="0.01" step="0.01" />
+              <input type="number" value={invForm.pricePerUnit} onChange={e => setInvForm({ ...invForm, pricePerUnit: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm" min="0.01" step="0.01" />
             </div>
           </div>
           {invForm.quantity && invForm.pricePerUnit && (
-            <p className="text-sm font-medium" style={{ color: '#001f3f' }}>
+            <p className="text-sm font-medium" >
               Total value: {formatCurrency(parseFloat(invForm.quantity) * parseFloat(invForm.pricePerUnit))}
             </p>
           )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
-            <input type="text" value={invForm.supplierName} onChange={e => setInvForm({ ...invForm, supplierName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Enter supplier name" />
+            <input type="text" value={invForm.supplierName} onChange={e => setInvForm({ ...invForm, supplierName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm" placeholder="Enter supplier name" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Bill Photo (optional)</label>
-            <input type="file" accept="image/*" onChange={handleBillUpload} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <input type="file" accept="image/*" onChange={handleBillUpload} className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm" />
             {invForm.billPhoto && (
-              <img src={invForm.billPhoto} alt="Bill" className="mt-2 rounded-lg max-h-32 object-cover" />
+              <img src={invForm.billPhoto} alt="Bill" className="mt-2 rounded-2xl max-h-32 object-cover" />
             )}
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddInventory} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}>
+          <button onClick={handleAddInventory} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3',  }}>
             Add to Stock
           </button>
         </div>
@@ -558,7 +558,7 @@ export default function ConsumerGoods() {
       {/* Issue to HOD Modal */}
       <Modal isOpen={showIssue} onClose={() => { setShowIssue(false); setError(''); setIssueForm({ hodId: '', batchId: '', items: [] }); }} title="Issue Consumer Goods to HOD" maxWidth="600px">
         <div className="space-y-4">
-          <div className="p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700">
+          <div className="p-3 bg-green-50 border border-green-100 rounded-2xl text-xs text-green-700">
             Items will be issued at the exact supplier price. A receipt will be generated automatically.
           </div>
 
@@ -567,7 +567,7 @@ export default function ConsumerGoods() {
             <select
               value={issueForm.hodId}
               onChange={e => setIssueForm({ ...issueForm, hodId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             >
               <option value="">Select HOD</option>
               {hods.map(h => (
@@ -581,7 +581,7 @@ export default function ConsumerGoods() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Add Items</label>
             <select
               onChange={e => { if (e.target.value) addIssueItem(e.target.value); e.target.value = ''; }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             >
               <option value="">Select consumer good to add</option>
               {items.filter(i => !issueForm.items.some(ii => ii.consumerGoodId === i.id)).map(i => {
@@ -599,7 +599,7 @@ export default function ConsumerGoods() {
           {issueForm.items.length > 0 && (
             <div className="space-y-2">
               {issueForm.items.map(item => (
-                <div key={item.consumerGoodId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div key={item.consumerGoodId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-2xl">
                   <div className="flex-1">
                     <p className="text-sm font-medium">{item.name}</p>
                     <p className="text-xs text-gray-400">
@@ -614,7 +614,7 @@ export default function ConsumerGoods() {
                       max={item.stockQty}
                       min="0.01"
                       step="0.01"
-                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-right"
+                      className="w-full px-2 py-1 border border-gray-300 rounded-2xl text-sm text-right"
                       placeholder="Qty"
                     />
                   </div>
@@ -627,9 +627,9 @@ export default function ConsumerGoods() {
                 </div>
               ))}
 
-              <div className="flex justify-between items-center p-3 bg-gray-100 rounded-lg">
+              <div className="flex justify-between items-center p-3 bg-gray-100 rounded-2xl">
                 <span className="text-sm font-semibold">Total Amount:</span>
-                <span className="text-lg font-bold" style={{ color: '#001f3f' }}>{formatCurrency(issueTotal)}</span>
+                <span className="text-lg font-bold" >{formatCurrency(issueTotal)}</span>
               </div>
             </div>
           )}
@@ -638,8 +638,8 @@ export default function ConsumerGoods() {
           <button
             onClick={handleIssue}
             disabled={issueForm.items.length === 0 || !issueForm.hodId}
-            className="w-full py-2 text-white rounded-lg text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50"
-            style={{ borderRadius: '8px' }}
+            className="w-full py-2 text-white rounded-2xl text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50"
+           
           >
             Issue Goods & Generate Receipt
           </button>

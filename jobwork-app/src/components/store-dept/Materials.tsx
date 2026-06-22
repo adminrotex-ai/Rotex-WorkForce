@@ -96,21 +96,21 @@ export default function Materials() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>Materials & Inventory</h1>
+          <h1 className="text-2xl font-bold" >Materials & Inventory</h1>
           <p className="text-gray-500 text-sm">Manage raw materials and supplier entries</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setShowAddType(true)}
-            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90"
-            style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
+            style={{ backgroundColor: '#009688',  }}
           >
             <FolderOpen size={16} /> Add Material Type
           </button>
           <button
             onClick={() => setShowAddEntry(true)}
-            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90"
-            style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}
+            className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
+            style={{ backgroundColor: '#2196f3',  }}
           >
             <Plus size={16} /> Add Entry
           </button>
@@ -121,8 +121,8 @@ export default function Materials() {
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setSelectedType(null)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium ${!selectedType ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-          style={!selectedType ? { backgroundColor: '#001f3f' } : {}}
+          className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${!selectedType ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+          style={!selectedType ? { backgroundColor: '#009688' } : {}}
         >
           All Types
         </button>
@@ -130,8 +130,8 @@ export default function Materials() {
           <button
             key={mt.id}
             onClick={() => setSelectedType(mt.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium ${selectedType === mt.id ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-            style={selectedType === mt.id ? { backgroundColor: '#001f3f' } : {}}
+            className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${selectedType === mt.id ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+            style={selectedType === mt.id ? { backgroundColor: '#009688' } : {}}
           >
             {mt.name}
           </button>
@@ -140,7 +140,7 @@ export default function Materials() {
 
       {/* Entries */}
       {filteredEntries.length === 0 ? (
-        <div className="bg-white rounded-lg p-12 text-center border border-gray-100" style={{ borderRadius: '8px' }}>
+        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
           <Package size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-400">No material entries found</p>
         </div>
@@ -149,7 +149,7 @@ export default function Materials() {
           {filteredEntries.map(entry => {
             const type = materialTypes.find(t => t.id === entry.materialTypeId);
             return (
-              <div key={entry.id} className="bg-white rounded-lg p-4 border border-gray-100" style={{ borderRadius: '8px' }}>
+              <div key={entry.id} className="bg-white rounded-2xl p-4 border border-gray-100">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium text-sm">{type?.name || 'Unknown'}</p>
@@ -158,7 +158,7 @@ export default function Materials() {
                     <p className="text-xs text-gray-400">{formatDate(entry.createdAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold" style={{ color: '#001f3f' }}>{formatCurrency(entry.price * entry.quantity)}</p>
+                    <p className="font-semibold" >{formatCurrency(entry.price * entry.quantity)}</p>
                     {entry.billPhoto && (
                       <button
                         onClick={() => window.open(entry.billPhoto, '_blank')}
@@ -184,12 +184,12 @@ export default function Materials() {
               type="text"
               value={typeName}
               onChange={e => setTypeName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               placeholder="e.g. Raw Steel, Copper Wire"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddType} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#001f3f', borderRadius: '8px' }}>
+          <button onClick={handleAddType} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#009688',  }}>
             Add Type
           </button>
         </div>
@@ -203,7 +203,7 @@ export default function Materials() {
             <select
               value={entryForm.materialTypeId}
               onChange={e => setEntryForm({ ...entryForm, materialTypeId: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             >
               <option value="">Select type</option>
               {materialTypes.map(mt => <option key={mt.id} value={mt.id}>{mt.name}</option>)}
@@ -215,7 +215,7 @@ export default function Materials() {
               type="text"
               value={entryForm.supplierName}
               onChange={e => setEntryForm({ ...entryForm, supplierName: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -225,7 +225,7 @@ export default function Materials() {
                 type="number"
                 value={entryForm.quantity}
                 onChange={e => setEntryForm({ ...entryForm, quantity: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               />
             </div>
             <div>
@@ -233,7 +233,7 @@ export default function Materials() {
               <select
                 value={entryForm.unit}
                 onChange={e => setEntryForm({ ...entryForm, unit: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
               >
                 <option value="kg">kg</option>
                 <option value="pcs">pieces</option>
@@ -249,7 +249,7 @@ export default function Materials() {
               type="number"
               value={entryForm.price}
               onChange={e => setEntryForm({ ...entryForm, price: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
           </div>
           <div>
@@ -258,14 +258,14 @@ export default function Materials() {
               type="file"
               accept="image/*"
               onChange={handleBillUpload}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
             />
             {entryForm.billPhoto && (
-              <img src={entryForm.billPhoto} alt="Bill" className="mt-2 rounded-lg max-h-32 object-cover" />
+              <img src={entryForm.billPhoto} alt="Bill" className="mt-2 rounded-2xl max-h-32 object-cover" />
             )}
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddEntry} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}>
+          <button onClick={handleAddEntry} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3',  }}>
             Add Entry
           </button>
         </div>
