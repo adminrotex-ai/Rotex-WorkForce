@@ -38,3 +38,7 @@ node_modules/
 dist/
 .env
 .env.local
+
+# Screenshots and temp scripts
+screenshots/
+sp.mjs
