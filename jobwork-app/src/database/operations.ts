@@ -5,7 +5,8 @@ import type {
   User, Batch, BatchStageRecord, BatchTransfer, PieceEntry,
   ConsumerGoodItem, MaterialType, MaterialEntry, ConsumerGoodUsage,
   ServiceCost, AccountingEntry, PaymentRecord, AuditLog,
-  ConsumerGoodInventory, Department, BatchStage, UserRole,
+  ConsumerGoodInventory, ConsumerGoodReceipt, ConsumerGoodReceiptItem,
+  Department, BatchStage, UserRole,
 } from '../types';
 
 function now(): string {
@@ -683,6 +684,7 @@ export async function addConsumerGoodToInventory(
     id: generateId(),
     consumerGoodId,
     quantity,
+    remainingQuantity: quantity,
     pricePerUnit,
     enteredBy,
     supplierName,
@@ -701,6 +703,116 @@ export async function getConsumerGoodInventory(consumerGoodId?: string): Promise
     return db.consumerGoodInventory.where('consumerGoodId').equals(consumerGoodId).toArray();
   }
   return db.consumerGoodInventory.toArray();
+}
+
+export async function getAvailableStock(consumerGoodId: string): Promise<ConsumerGoodInventory[]> {
+  const all = await db.consumerGoodInventory.where('consumerGoodId').equals(consumerGoodId).toArray();
+  return all.filter(inv => inv.remainingQuantity > 0).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function getAvailableStockTotal(consumerGoodId: string): Promise<{ totalQty: number; latestPrice: number }> {
+  const stock = await getAvailableStock(consumerGoodId);
+  const totalQty = stock.reduce((s, inv) => s + inv.remainingQuantity, 0);
+  const latestPrice = stock.length > 0 ? stock[stock.length - 1].pricePerUnit : 0;
+  return { totalQty, latestPrice };
+}
+
+// ---- CONSUMER GOODS RECEIPT / ISSUANCE ----
+
+function generateReceiptNumber(): string {
+  const chars = '0123456789';
+  let result = '';
+  for (let i = 0; i < 8; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
+  return `RCT-${result}`;
+}
+
+export async function issueConsumerGoodsToHod(
+  hodId: string,
+  hodName: string,
+  department: Department,
+  items: Array<{ consumerGoodId: string; quantity: number }>,
+  issuedBy: string,
+  issuedByName: string,
+  batchId?: string,
+): Promise<ConsumerGoodReceipt> {
+  const receiptItems: ConsumerGoodReceiptItem[] = [];
+  let totalAmount = 0;
+
+  for (const item of items) {
+    const good = await db.consumerGoodItems.get(item.consumerGoodId);
+    if (!good) throw new Error(`Consumer good not found`);
+
+    const stock = await getAvailableStock(item.consumerGoodId);
+    const totalAvailable = stock.reduce((s, inv) => s + inv.remainingQuantity, 0);
+    if (totalAvailable < item.quantity) {
+      throw new Error(`Insufficient stock for "${good.name}". Available: ${totalAvailable}, Requested: ${item.quantity}`);
+    }
+
+    let remaining = item.quantity;
+    let totalCostForItem = 0;
+    const inventoryEntries: Array<{ entryId: string; qty: number; price: number; supplier?: string }> = [];
+
+    for (const inv of stock) {
+      if (remaining <= 0) break;
+      const take = Math.min(remaining, inv.remainingQuantity);
+      await db.consumerGoodInventory.update(inv.id, {
+        remainingQuantity: inv.remainingQuantity - take,
+      });
+      totalCostForItem += take * inv.pricePerUnit;
+      inventoryEntries.push({ entryId: inv.id, qty: take, price: inv.pricePerUnit, supplier: inv.supplierName });
+      remaining -= take;
+    }
+
+    for (const entry of inventoryEntries) {
+      receiptItems.push({
+        consumerGoodId: item.consumerGoodId,
+        consumerGoodName: good.name,
+        quantity: entry.qty,
+        pricePerUnit: entry.price,
+        totalCost: entry.qty * entry.price,
+        inventoryEntryId: entry.entryId,
+        supplierName: entry.supplier,
+      });
+    }
+    totalAmount += totalCostForItem;
+  }
+
+  const receipt: ConsumerGoodReceipt = {
+    id: generateId(),
+    receiptNumber: generateReceiptNumber(),
+    hodId,
+    hodName,
+    department,
+    issuedBy,
+    issuedByName,
+    items: receiptItems,
+    totalAmount,
+    batchId,
+    createdAt: now(),
+  };
+  await db.consumerGoodReceipts.add(receipt);
+
+  const admin = await db.users.where('role').equals('admin').first();
+  if (admin) {
+    await addAccountingEntry(hodId, admin.id, 'hod_owes_admin', totalAmount,
+      `Consumer goods receipt ${receipt.receiptNumber}: ${receiptItems.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}`,
+      batchId, receipt.id);
+  }
+
+  const batch = batchId ? await db.batches.get(batchId) : null;
+  await addAudit('CONSUMER_GOODS_ISSUED', 'consumer_goods', 'receipt', receipt.id, issuedBy, issuedByName,
+    `Issued consumer goods to ${hodName} (${department}) - Receipt ${receipt.receiptNumber}, Total: ₹${totalAmount}${batch ? ` for batch ${batch.batchNumber}` : ''}`,
+    JSON.stringify(receipt));
+
+  return receipt;
+}
+
+export async function getReceiptsForHod(hodId: string): Promise<ConsumerGoodReceipt[]> {
+  return db.consumerGoodReceipts.where('hodId').equals(hodId).toArray();
+}
+
+export async function getAllReceipts(): Promise<ConsumerGoodReceipt[]> {
+  return db.consumerGoodReceipts.orderBy('createdAt').reverse().toArray();
 }
 
 // ---- AUDIT OPERATIONS ----

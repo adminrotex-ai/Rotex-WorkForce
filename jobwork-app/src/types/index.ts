@@ -233,11 +233,36 @@ export interface ConsumerGoodInventory {
   id: string;
   consumerGoodId: string;
   quantity: number;
+  remainingQuantity: number;
   pricePerUnit: number;
   enteredBy: string;
   supplierName?: string;
   billPhoto?: string;
   createdAt: string;
+}
+
+export interface ConsumerGoodReceipt {
+  id: string;
+  receiptNumber: string;
+  hodId: string;
+  hodName: string;
+  department: Department;
+  issuedBy: string;
+  issuedByName: string;
+  items: ConsumerGoodReceiptItem[];
+  totalAmount: number;
+  batchId?: string;
+  createdAt: string;
+}
+
+export interface ConsumerGoodReceiptItem {
+  consumerGoodId: string;
+  consumerGoodName: string;
+  quantity: number;
+  pricePerUnit: number;
+  totalCost: number;
+  inventoryEntryId: string;
+  supplierName?: string;
 }
 
 export interface SyncQueueItem {

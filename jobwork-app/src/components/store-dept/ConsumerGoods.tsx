@@ -1,28 +1,37 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store';
-import type { ConsumerGoodItem, ConsumerGoodInventory } from '../../types';
+import type { ConsumerGoodItem, ConsumerGoodInventory, ConsumerGoodReceipt, User } from '../../types';
+import { DEPARTMENT_LABELS } from '../../types';
 import {
   getActiveConsumerGoods, createConsumerGoodItem, updateConsumerGoodItem,
   deleteConsumerGoodItem, addConsumerGoodToInventory, getConsumerGoodInventory,
+  getAvailableStockTotal, issueConsumerGoodsToHod, getAllReceipts,
+  getReceiptsForHod, getActiveUsers,
 } from '../../database/operations';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { Plus, Edit, Trash2, Package, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, ChevronRight, Send, FileText } from 'lucide-react';
 
 export default function ConsumerGoods() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
   const [items, setItems] = useState<ConsumerGoodItem[]>([]);
   const [inventory, setInventory] = useState<ConsumerGoodInventory[]>([]);
+  const [receipts, setReceipts] = useState<ConsumerGoodReceipt[]>([]);
+  const [hods, setHods] = useState<User[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState<ConsumerGoodItem | null>(null);
   const [showDelete, setShowDelete] = useState<ConsumerGoodItem | null>(null);
   const [showInventory, setShowInventory] = useState(false);
+  const [showIssue, setShowIssue] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<ConsumerGoodReceipt | null>(null);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [editName, setEditName] = useState('');
   const [deleteReason, setDeleteReason] = useState('');
   const [error, setError] = useState('');
+  const [stockInfo, setStockInfo] = useState<Record<string, { totalQty: number; latestPrice: number }>>({});
+  const [tab, setTab] = useState<'items' | 'receipts'>('items');
 
   const [invForm, setInvForm] = useState({
     goodId: '',
@@ -32,17 +41,42 @@ export default function ConsumerGoods() {
     billPhoto: '',
   });
 
+  const [issueForm, setIssueForm] = useState({
+    hodId: '',
+    batchId: '',
+    items: [] as Array<{ consumerGoodId: string; quantity: string; stockQty: number; price: number; name: string }>,
+  });
+
   const isAdmin = currentUser?.role === 'admin';
   const isStoreHod = currentUser?.role === 'hod' && currentUser.department === 'store';
   const canManage = isAdmin || isStoreHod;
+  const canAddStock = isAdmin || isStoreHod;
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    setItems(await getActiveConsumerGoods());
-    setInventory(await getConsumerGoodInventory());
+    const [itemsData, invData, hodsData] = await Promise.all([
+      getActiveConsumerGoods(),
+      getConsumerGoodInventory(),
+      getActiveUsers(),
+    ]);
+    setItems(itemsData);
+    setInventory(invData);
+    setHods(hodsData.filter(u => u.role === 'hod' && u.department !== 'store'));
+
+    if (isAdmin) {
+      setReceipts(await getAllReceipts());
+    } else if (currentUser?.role === 'hod') {
+      setReceipts(await getReceiptsForHod(currentUser.id));
+    }
+
+    const info: Record<string, { totalQty: number; latestPrice: number }> = {};
+    for (const item of itemsData) {
+      info[item.id] = await getAvailableStockTotal(item.id);
+    }
+    setStockInfo(info);
   };
 
   const handleAdd = async () => {
@@ -51,6 +85,7 @@ export default function ConsumerGoods() {
       await createConsumerGoodItem(name, currentUser.id, currentUser.firstName);
       setShowAdd(false);
       setName('');
+      setError('');
       loadData();
     } catch (e: any) {
       setError(e.message);
@@ -63,6 +98,7 @@ export default function ConsumerGoods() {
       await updateConsumerGoodItem(showEdit.id, editName, currentUser.id, currentUser.firstName);
       setShowEdit(null);
       setEditName('');
+      setError('');
       loadData();
     } catch (e: any) {
       setError(e.message);
@@ -75,6 +111,7 @@ export default function ConsumerGoods() {
       await deleteConsumerGoodItem(showDelete.id, deleteReason, currentUser.id, currentUser.firstName);
       setShowDelete(null);
       setDeleteReason('');
+      setError('');
       loadData();
     } catch (e: any) {
       setError(e.message);
@@ -83,9 +120,10 @@ export default function ConsumerGoods() {
 
   const handleAddInventory = async () => {
     if (!currentUser) return;
+    setError('');
     const qty = parseFloat(invForm.quantity);
     const price = parseFloat(invForm.pricePerUnit);
-    if (!invForm.goodId || !qty || !price) { setError('Fill all fields'); return; }
+    if (!invForm.goodId || !qty || qty <= 0 || !price || price <= 0) { setError('Fill all fields with valid values'); return; }
     try {
       await addConsumerGoodToInventory(
         invForm.goodId, qty, price, currentUser.id, currentUser.firstName,
@@ -110,12 +148,83 @@ export default function ConsumerGoods() {
     }
   };
 
+  const addIssueItem = async (goodId: string) => {
+    if (issueForm.items.some(i => i.consumerGoodId === goodId)) return;
+    const stock = stockInfo[goodId];
+    const item = items.find(i => i.id === goodId);
+    if (!stock || !item) return;
+    setIssueForm({
+      ...issueForm,
+      items: [...issueForm.items, {
+        consumerGoodId: goodId,
+        quantity: '',
+        stockQty: stock.totalQty,
+        price: stock.latestPrice,
+        name: item.name,
+      }],
+    });
+  };
+
+  const removeIssueItem = (goodId: string) => {
+    setIssueForm({
+      ...issueForm,
+      items: issueForm.items.filter(i => i.consumerGoodId !== goodId),
+    });
+  };
+
+  const updateIssueItemQty = (goodId: string, qty: string) => {
+    setIssueForm({
+      ...issueForm,
+      items: issueForm.items.map(i =>
+        i.consumerGoodId === goodId ? { ...i, quantity: qty } : i
+      ),
+    });
+  };
+
+  const handleIssue = async () => {
+    if (!currentUser) return;
+    setError('');
+    if (!issueForm.hodId) { setError('Select an HOD'); return; }
+    if (issueForm.items.length === 0) { setError('Add at least one item'); return; }
+
+    const parsedItems = issueForm.items.map(i => ({
+      consumerGoodId: i.consumerGoodId,
+      quantity: parseFloat(i.quantity),
+    }));
+    for (const item of parsedItems) {
+      if (!item.quantity || item.quantity <= 0) {
+        setError('All quantities must be positive'); return;
+      }
+    }
+
+    const hod = hods.find(h => h.id === issueForm.hodId);
+    if (!hod) { setError('HOD not found'); return; }
+
+    try {
+      const receipt = await issueConsumerGoodsToHod(
+        hod.id, hod.firstName, hod.department, parsedItems,
+        currentUser.id, currentUser.firstName, issueForm.batchId || undefined
+      );
+      setShowIssue(false);
+      setIssueForm({ hodId: '', batchId: '', items: [] });
+      setSelectedReceipt(receipt);
+      loadData();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const issueTotal = issueForm.items.reduce((sum, i) => {
+    const qty = parseFloat(i.quantity) || 0;
+    return sum + qty * i.price;
+  }, 0);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: '#001f3f' }}>Consumer Goods</h1>
-          <p className="text-gray-500 text-sm">Manage consumer goods items and inventory</p>
+          <p className="text-gray-500 text-sm">Manage consumer goods, stock, and issuance</p>
         </div>
         <div className="flex gap-2">
           {canManage && (
@@ -127,92 +236,228 @@ export default function ConsumerGoods() {
               <Plus size={16} /> Add Item
             </button>
           )}
-          <button
-            onClick={() => setShowInventory(true)}
-            className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90"
-            style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}
-          >
-            <Package size={16} /> Add to Inventory
-          </button>
+          {canAddStock && (
+            <button
+              onClick={() => setShowInventory(true)}
+              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90"
+              style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}
+            >
+              <Package size={16} /> Add Stock
+            </button>
+          )}
+          {canAddStock && (
+            <button
+              onClick={() => { setShowIssue(true); setError(''); }}
+              className="flex items-center gap-2 px-4 py-2 text-white rounded-lg text-sm hover:opacity-90 bg-green-600"
+              style={{ borderRadius: '8px' }}
+            >
+              <Send size={16} /> Issue to HOD
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Items List */}
-      <div className="space-y-3">
-        {items.map(item => {
-          const itemInv = inventory.filter(i => i.consumerGoodId === item.id);
-          const totalQty = itemInv.reduce((s, i) => s + i.quantity, 0);
-          const isExpanded = expandedItem === item.id;
-
-          return (
-            <div key={item.id} className="bg-white rounded-lg border border-gray-100 overflow-hidden" style={{ borderRadius: '8px' }}>
-              <div
-                className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
-                onClick={() => setExpandedItem(isExpanded ? null : item.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-100">
-                    <Package size={18} className="text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-sm">{item.name}</p>
-                    <p className="text-xs text-gray-400">{itemInv.length} entries | Total: {totalQty} units</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {canManage && (
-                    <>
-                      <button
-                        onClick={e => { e.stopPropagation(); setShowEdit(item); setEditName(item.name); }}
-                        className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500"
-                      >
-                        <Edit size={14} />
-                      </button>
-                      <button
-                        onClick={e => { e.stopPropagation(); setShowDelete(item); }}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </>
-                  )}
-                  <ChevronRight size={16} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                </div>
-              </div>
-
-              {isExpanded && itemInv.length > 0 && (
-                <div className="border-t border-gray-100 p-4 animate-fade-in">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-left text-gray-500 border-b">
-                        <th className="pb-2 font-medium">Date</th>
-                        <th className="pb-2 font-medium">Supplier</th>
-                        <th className="pb-2 font-medium text-right">Qty</th>
-                        <th className="pb-2 font-medium text-right">Price/Unit</th>
-                        <th className="pb-2 font-medium text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itemInv.map(inv => (
-                        <tr key={inv.id} className="border-b border-gray-50">
-                          <td className="py-2">{formatDate(inv.createdAt)}</td>
-                          <td className="py-2">{inv.supplierName || '-'}</td>
-                          <td className="py-2 text-right">{inv.quantity}</td>
-                          <td className="py-2 text-right">{formatCurrency(inv.pricePerUnit)}</td>
-                          <td className="py-2 text-right font-medium">{formatCurrency(inv.quantity * inv.pricePerUnit)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          );
-        })}
+      {/* Tabs */}
+      <div className="flex gap-2 border-b border-gray-200 pb-2">
+        <button
+          onClick={() => setTab('items')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'items' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+          style={tab === 'items' ? { backgroundColor: '#001f3f' } : {}}
+        >
+          Items & Stock
+        </button>
+        <button
+          onClick={() => setTab('receipts')}
+          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'receipts' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+          style={tab === 'receipts' ? { backgroundColor: '#001f3f' } : {}}
+        >
+          Receipts ({receipts.length})
+        </button>
       </div>
 
+      {tab === 'items' && (
+        <div className="space-y-3">
+          {items.length === 0 ? (
+            <div className="bg-white rounded-lg p-12 text-center border border-gray-100" style={{ borderRadius: '8px' }}>
+              <Package size={48} className="mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-400">No consumer goods added yet</p>
+            </div>
+          ) : items.map(item => {
+            const itemInv = inventory.filter(i => i.consumerGoodId === item.id);
+            const stock = stockInfo[item.id];
+            const totalQty = itemInv.reduce((s, i) => s + i.quantity, 0);
+            const remainingQty = stock?.totalQty || 0;
+            const isExpanded = expandedItem === item.id;
+
+            return (
+              <div key={item.id} className="bg-white rounded-lg border border-gray-100 overflow-hidden" style={{ borderRadius: '8px' }}>
+                <div
+                  className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setExpandedItem(isExpanded ? null : item.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-100">
+                      <Package size={18} className="text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">{item.name}</p>
+                      <p className="text-xs text-gray-400">
+                        Total purchased: {totalQty} | <span className={remainingQty > 0 ? 'text-green-600' : 'text-red-500'}>Available: {remainingQty}</span>
+                        {stock?.latestPrice ? ` | Latest price: ${formatCurrency(stock.latestPrice)}/unit` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {canManage && (
+                      <>
+                        <button
+                          onClick={e => { e.stopPropagation(); setShowEdit(item); setEditName(item.name); }}
+                          className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-500"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button
+                          onClick={e => { e.stopPropagation(); setShowDelete(item); }}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
+                    <ChevronRight size={16} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </div>
+                </div>
+
+                {isExpanded && itemInv.length > 0 && (
+                  <div className="border-t border-gray-100 p-4 animate-fade-in">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 border-b">
+                          <th className="pb-2 font-medium">Date</th>
+                          <th className="pb-2 font-medium">Supplier</th>
+                          <th className="pb-2 font-medium text-right">Purchased</th>
+                          <th className="pb-2 font-medium text-right">Remaining</th>
+                          <th className="pb-2 font-medium text-right">Price/Unit</th>
+                          <th className="pb-2 font-medium text-right">Total Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {itemInv.map(inv => (
+                          <tr key={inv.id} className="border-b border-gray-50">
+                            <td className="py-2">{formatDate(inv.createdAt)}</td>
+                            <td className="py-2">{inv.supplierName || '-'}</td>
+                            <td className="py-2 text-right">{inv.quantity}</td>
+                            <td className="py-2 text-right">
+                              <span className={inv.remainingQuantity > 0 ? 'text-green-600' : 'text-gray-400'}>
+                                {inv.remainingQuantity}
+                              </span>
+                            </td>
+                            <td className="py-2 text-right">{formatCurrency(inv.pricePerUnit)}</td>
+                            <td className="py-2 text-right font-medium">{formatCurrency(inv.quantity * inv.pricePerUnit)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === 'receipts' && (
+        <div className="space-y-3">
+          {receipts.length === 0 ? (
+            <div className="bg-white rounded-lg p-12 text-center border border-gray-100" style={{ borderRadius: '8px' }}>
+              <FileText size={48} className="mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-400">No receipts yet</p>
+            </div>
+          ) : receipts.map(receipt => (
+            <div
+              key={receipt.id}
+              className="bg-white rounded-lg p-4 border border-gray-100 hover:shadow-sm cursor-pointer transition-shadow"
+              style={{ borderRadius: '8px' }}
+              onClick={() => setSelectedReceipt(receipt)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-sm">{receipt.receiptNumber}</p>
+                  <p className="text-xs text-gray-400">
+                    Issued to: {receipt.hodName} ({DEPARTMENT_LABELS[receipt.department]}) | {receipt.items.length} items
+                  </p>
+                  <p className="text-xs text-gray-400">{formatDate(receipt.createdAt)} | By: {receipt.issuedByName}</p>
+                </div>
+                <p className="font-bold text-sm" style={{ color: '#001f3f' }}>{formatCurrency(receipt.totalAmount)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Receipt Detail Modal */}
+      <Modal isOpen={!!selectedReceipt} onClose={() => setSelectedReceipt(null)} title={`Receipt ${selectedReceipt?.receiptNumber || ''}`} maxWidth="600px">
+        {selectedReceipt && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-gray-500">Receipt No.</p>
+                  <p className="font-semibold">{selectedReceipt.receiptNumber}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Date</p>
+                  <p className="font-medium">{formatDate(selectedReceipt.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Issued To</p>
+                  <p className="font-medium">{selectedReceipt.hodName} ({DEPARTMENT_LABELS[selectedReceipt.department]})</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Issued By</p>
+                  <p className="font-medium">{selectedReceipt.issuedByName}</p>
+                </div>
+              </div>
+            </div>
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b">
+                  <th className="pb-2 font-medium">Item</th>
+                  <th className="pb-2 font-medium">Supplier</th>
+                  <th className="pb-2 font-medium text-right">Qty</th>
+                  <th className="pb-2 font-medium text-right">Price/Unit</th>
+                  <th className="pb-2 font-medium text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedReceipt.items.map((item, idx) => (
+                  <tr key={idx} className="border-b border-gray-50">
+                    <td className="py-2 font-medium">{item.consumerGoodName}</td>
+                    <td className="py-2 text-gray-500">{item.supplierName || '-'}</td>
+                    <td className="py-2 text-right">{item.quantity}</td>
+                    <td className="py-2 text-right">{formatCurrency(item.pricePerUnit)}</td>
+                    <td className="py-2 text-right font-medium">{formatCurrency(item.totalCost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-gray-200">
+                  <td colSpan={4} className="py-3 text-right font-semibold">Total Amount:</td>
+                  <td className="py-3 text-right font-bold text-lg" style={{ color: '#001f3f' }}>{formatCurrency(selectedReceipt.totalAmount)}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-xs text-orange-700">
+              This amount ({formatCurrency(selectedReceipt.totalAmount)}) has been added to {selectedReceipt.hodName}'s account as owed to admin.
+            </div>
+          </div>
+        )}
+      </Modal>
+
       {/* Add Item Modal */}
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Consumer Good Item">
+      <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setError(''); }} title="Add Consumer Good Item">
         <div className="space-y-4">
           <input
             type="text"
@@ -229,7 +474,7 @@ export default function ConsumerGoods() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={!!showEdit} onClose={() => setShowEdit(null)} title="Edit Consumer Good">
+      <Modal isOpen={!!showEdit} onClose={() => { setShowEdit(null); setError(''); }} title="Edit Consumer Good">
         <div className="space-y-4">
           <input
             type="text"
@@ -245,7 +490,7 @@ export default function ConsumerGoods() {
       </Modal>
 
       {/* Delete Modal */}
-      <Modal isOpen={!!showDelete} onClose={() => { setShowDelete(null); setDeleteReason(''); }} title="Delete Consumer Good">
+      <Modal isOpen={!!showDelete} onClose={() => { setShowDelete(null); setDeleteReason(''); setError(''); }} title="Delete Consumer Good">
         <div className="space-y-4">
           <p className="text-sm">Delete <strong>{showDelete?.name}</strong>?</p>
           <textarea
@@ -260,9 +505,12 @@ export default function ConsumerGoods() {
         </div>
       </Modal>
 
-      {/* Add Inventory Modal */}
-      <Modal isOpen={showInventory} onClose={() => setShowInventory(false)} title="Add to Inventory">
+      {/* Add Stock Modal (Store HOD / Admin only) */}
+      <Modal isOpen={showInventory} onClose={() => { setShowInventory(false); setError(''); }} title="Add Consumer Goods to Stock">
         <div className="space-y-4">
+          <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+            Enter the supplier's price per unit. This exact price will be charged when goods are issued to department HODs.
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Consumer Good</label>
             <select
@@ -277,24 +525,123 @@ export default function ConsumerGoods() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-              <input type="number" value={invForm.quantity} onChange={e => setInvForm({ ...invForm, quantity: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              <input type="number" value={invForm.quantity} onChange={e => setInvForm({ ...invForm, quantity: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" min="0.01" step="0.01" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Price/Unit (INR)</label>
-              <input type="number" value={invForm.pricePerUnit} onChange={e => setInvForm({ ...invForm, pricePerUnit: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Price/Unit (₹)</label>
+              <input type="number" value={invForm.pricePerUnit} onChange={e => setInvForm({ ...invForm, pricePerUnit: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" min="0.01" step="0.01" />
             </div>
           </div>
+          {invForm.quantity && invForm.pricePerUnit && (
+            <p className="text-sm font-medium" style={{ color: '#001f3f' }}>
+              Total value: {formatCurrency(parseFloat(invForm.quantity) * parseFloat(invForm.pricePerUnit))}
+            </p>
+          )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-            <input type="text" value={invForm.supplierName} onChange={e => setInvForm({ ...invForm, supplierName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+            <input type="text" value={invForm.supplierName} onChange={e => setInvForm({ ...invForm, supplierName: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Enter supplier name" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Bill Photo</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bill Photo (optional)</label>
             <input type="file" accept="image/*" onChange={handleBillUpload} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            {invForm.billPhoto && (
+              <img src={invForm.billPhoto} alt="Bill" className="mt-2 rounded-lg max-h-32 object-cover" />
+            )}
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button onClick={handleAddInventory} className="w-full py-2 text-white rounded-lg text-sm" style={{ backgroundColor: '#0074d9', borderRadius: '8px' }}>
-            Add to Inventory
+            Add to Stock
+          </button>
+        </div>
+      </Modal>
+
+      {/* Issue to HOD Modal */}
+      <Modal isOpen={showIssue} onClose={() => { setShowIssue(false); setError(''); setIssueForm({ hodId: '', batchId: '', items: [] }); }} title="Issue Consumer Goods to HOD" maxWidth="600px">
+        <div className="space-y-4">
+          <div className="p-3 bg-green-50 border border-green-100 rounded-lg text-xs text-green-700">
+            Items will be issued at the exact supplier price. A receipt will be generated automatically.
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Issue To (HOD)</label>
+            <select
+              value={issueForm.hodId}
+              onChange={e => setIssueForm({ ...issueForm, hodId: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">Select HOD</option>
+              {hods.map(h => (
+                <option key={h.id} value={h.id}>{h.firstName} - {DEPARTMENT_LABELS[h.department]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Add items */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Add Items</label>
+            <select
+              onChange={e => { if (e.target.value) addIssueItem(e.target.value); e.target.value = ''; }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">Select consumer good to add</option>
+              {items.filter(i => !issueForm.items.some(ii => ii.consumerGoodId === i.id)).map(i => {
+                const s = stockInfo[i.id];
+                return (
+                  <option key={i.id} value={i.id} disabled={!s || s.totalQty <= 0}>
+                    {i.name} (Available: {s?.totalQty || 0} | ₹{s?.latestPrice || 0}/unit)
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Selected items */}
+          {issueForm.items.length > 0 && (
+            <div className="space-y-2">
+              {issueForm.items.map(item => (
+                <div key={item.consumerGoodId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-gray-400">
+                      Available: {item.stockQty} | Price: {formatCurrency(item.price)}/unit
+                    </p>
+                  </div>
+                  <div className="w-24">
+                    <input
+                      type="number"
+                      value={item.quantity}
+                      onChange={e => updateIssueItemQty(item.consumerGoodId, e.target.value)}
+                      max={item.stockQty}
+                      min="0.01"
+                      step="0.01"
+                      className="w-full px-2 py-1 border border-gray-300 rounded-lg text-sm text-right"
+                      placeholder="Qty"
+                    />
+                  </div>
+                  <p className="text-sm font-medium w-24 text-right">
+                    {formatCurrency((parseFloat(item.quantity) || 0) * item.price)}
+                  </p>
+                  <button onClick={() => removeIssueItem(item.consumerGoodId)} className="p-1 text-red-500 hover:bg-red-50 rounded">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+
+              <div className="flex justify-between items-center p-3 bg-gray-100 rounded-lg">
+                <span className="text-sm font-semibold">Total Amount:</span>
+                <span className="text-lg font-bold" style={{ color: '#001f3f' }}>{formatCurrency(issueTotal)}</span>
+              </div>
+            </div>
+          )}
+
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <button
+            onClick={handleIssue}
+            disabled={issueForm.items.length === 0 || !issueForm.hodId}
+            className="w-full py-2 text-white rounded-lg text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50"
+            style={{ borderRadius: '8px' }}
+          >
+            Issue Goods & Generate Receipt
           </button>
         </div>
       </Modal>

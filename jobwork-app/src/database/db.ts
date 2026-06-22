@@ -3,7 +3,7 @@ import type {
   User, Batch, BatchStageRecord, BatchTransfer, PieceEntry,
   ConsumerGoodItem, MaterialType, MaterialEntry, ConsumerGoodUsage,
   ServiceCost, AccountingEntry, PaymentRecord, AuditLog,
-  ConsumerGoodInventory, SyncQueueItem,
+  ConsumerGoodInventory, ConsumerGoodReceipt, SyncQueueItem,
 } from '../types';
 
 export class JobworkDB extends Dexie {
@@ -21,11 +21,12 @@ export class JobworkDB extends Dexie {
   paymentRecords!: Table<PaymentRecord>;
   auditLogs!: Table<AuditLog>;
   consumerGoodInventory!: Table<ConsumerGoodInventory>;
+  consumerGoodReceipts!: Table<ConsumerGoodReceipt>;
   syncQueue!: Table<SyncQueueItem>;
 
   constructor() {
     super('JobworkDB');
-    this.version(1).stores({
+    this.version(2).stores({
       users: 'id, username, role, department, createdBy, isActive',
       batches: 'id, batchNumber, status, currentStage, createdBy, isActive',
       batchStageRecords: 'id, batchId, stage, assignedHodId, status',
@@ -39,7 +40,8 @@ export class JobworkDB extends Dexie {
       accountingEntries: 'id, hodId, adminId, type, createdAt',
       paymentRecords: 'id, payerId, payeeId, confirmed, createdAt',
       auditLogs: 'id, action, category, entityType, userId, createdAt',
-      consumerGoodInventory: 'id, consumerGoodId, enteredBy',
+      consumerGoodInventory: 'id, consumerGoodId, enteredBy, remainingQuantity',
+      consumerGoodReceipts: 'id, receiptNumber, hodId, department, createdAt',
       syncQueue: 'id, synced, createdAt',
     });
   }
