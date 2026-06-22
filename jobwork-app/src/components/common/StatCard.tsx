@@ -10,7 +10,7 @@ interface StatCardProps {
   progress?: number;
 }
 
-export default function StatCard({ title, value, subtitle, icon, color = '#009688', trend, progress }: StatCardProps) {
+export default function StatCard({ title, value, subtitle, icon, color = '#1a237e', trend, progress }: StatCardProps) {
   const circumference = 2 * Math.PI * 28;
   const dashOffset = progress !== undefined ? circumference - (progress / 100) * circumference : 0;
 

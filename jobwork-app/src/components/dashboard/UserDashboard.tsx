@@ -37,8 +37,8 @@ export default function UserDashboard() {
         <StatCard
           title="Total Pieces Worked"
           value={total}
-          icon={<Package size={20} className="text-[#009688]" />}
-          color="#009688"
+          icon={<Package size={20} className="text-[#1a237e]" />}
+          color="#1a237e"
         />
         <StatCard
           title="Accepted Pieces"
@@ -60,10 +60,10 @@ export default function UserDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <button
             onClick={() => navigate('/batches')}
-            className="p-5 rounded-xl border border-gray-100 hover:bg-gray-50/80 hover:border-[#009688]/20 transition-all text-left group"
+            className="p-5 rounded-xl border border-gray-100 hover:bg-gray-50/80 hover:border-[#1a237e]/20 transition-all text-left group"
           >
-            <div className="w-10 h-10 rounded-xl bg-[#009688]/8 flex items-center justify-center mb-3 group-hover:bg-[#009688]/15 transition-colors">
-              <Package size={20} className="text-[#009688]" />
+            <div className="w-10 h-10 rounded-xl bg-[#1a237e]/8 flex items-center justify-center mb-3 group-hover:bg-[#1a237e]/15 transition-colors">
+              <Package size={20} className="text-[#1a237e]" />
             </div>
             <p className="font-semibold text-sm text-gray-700">View Batches</p>
             <p className="text-xs text-gray-400 mt-1">Input piece data for assigned batches</p>

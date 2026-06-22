@@ -103,7 +103,7 @@ export default function Materials() {
           <button
             onClick={() => setShowAddType(true)}
             className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
-            style={{ backgroundColor: '#009688',  }}
+            style={{ backgroundColor: '#1a237e',  }}
           >
             <FolderOpen size={16} /> Add Material Type
           </button>
@@ -122,7 +122,7 @@ export default function Materials() {
         <button
           onClick={() => setSelectedType(null)}
           className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${!selectedType ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-          style={!selectedType ? { backgroundColor: '#009688' } : {}}
+          style={!selectedType ? { backgroundColor: '#1a237e' } : {}}
         >
           All Types
         </button>
@@ -131,7 +131,7 @@ export default function Materials() {
             key={mt.id}
             onClick={() => setSelectedType(mt.id)}
             className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${selectedType === mt.id ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-            style={selectedType === mt.id ? { backgroundColor: '#009688' } : {}}
+            style={selectedType === mt.id ? { backgroundColor: '#1a237e' } : {}}
           >
             {mt.name}
           </button>
@@ -189,7 +189,7 @@ export default function Materials() {
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddType} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#009688',  }}>
+          <button onClick={handleAddType} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#1a237e',  }}>
             Add Type
           </button>
         </div>

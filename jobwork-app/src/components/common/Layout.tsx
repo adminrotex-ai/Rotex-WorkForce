@@ -44,7 +44,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 h-full z-40 transition-all duration-300 ${sidebarOpen ? 'w-[260px]' : 'w-0 overflow-hidden'}`}
-        style={{ background: 'linear-gradient(180deg, #009688 0%, #00796b 100%)' }}
+        style={{ background: 'linear-gradient(180deg, #1a237e 0%, #0d47a1 100%)' }}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -82,7 +82,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   onClick={() => navigate(item.path)}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
                     active
-                      ? 'bg-white text-[#00796b] shadow-lg shadow-black/10'
+                      ? 'bg-white text-[#0d47a1] shadow-lg shadow-black/10'
                       : 'text-white/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
@@ -138,7 +138,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <Bell size={18} className="text-gray-500" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br from-[#009688] to-[#00796b]">
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br from-[#1a237e] to-[#0d47a1]">
               {currentUser.firstName[0]}
             </div>
           </div>

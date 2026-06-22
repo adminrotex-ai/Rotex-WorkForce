@@ -45,8 +45,8 @@ export default function HodDashboard() {
         <StatCard
           title="Active Batches"
           value={myBatches.length}
-          icon={<Package size={20} className="text-[#009688]" />}
-          color="#009688"
+          icon={<Package size={20} className="text-[#1a237e]" />}
+          color="#1a237e"
         />
         <StatCard
           title="My Users"
@@ -84,8 +84,8 @@ export default function HodDashboard() {
                 onClick={() => navigate(`/batches/${batch.id}`)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#009688]/8 flex items-center justify-center">
-                    <Package size={16} className="text-[#009688]" />
+                  <div className="w-9 h-9 rounded-xl bg-[#1a237e]/8 flex items-center justify-center">
+                    <Package size={16} className="text-[#1a237e]" />
                   </div>
                   <div>
                     <p className="font-medium text-sm text-gray-700">{batch.batchNumber}</p>
@@ -96,7 +96,7 @@ export default function HodDashboard() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-[#009688]">
+                    <p className="text-sm font-semibold text-[#1a237e]">
                       {stageRecord.totalPiecesReceived - stageRecord.piecesProcessed} pending
                     </p>
                     <p className="text-[11px] text-gray-400">
@@ -118,7 +118,7 @@ export default function HodDashboard() {
             <h3 className="text-sm font-semibold text-gray-700">Accounting Summary</h3>
             <button
               onClick={() => navigate('/accounting')}
-              className="text-xs font-medium text-[#009688] hover:underline flex items-center gap-1"
+              className="text-xs font-medium text-[#1a237e] hover:underline flex items-center gap-1"
             >
               View Details <ArrowRight size={12} />
             </button>

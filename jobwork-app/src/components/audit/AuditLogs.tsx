@@ -68,7 +68,7 @@ export default function AuditLogs() {
             className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-colors ${
               filter === c.value ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={filter === c.value ? { backgroundColor: '#009688' } : {}}
+            style={filter === c.value ? { backgroundColor: '#1a237e' } : {}}
           >
             {c.label}
           </button>
@@ -81,7 +81,7 @@ export default function AuditLogs() {
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search audit logs..."
-        className="w-full px-4 py-2 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#009688]"
+        className="w-full px-4 py-2 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#1a237e]"
       />
 
       {/* Logs */}

@@ -231,7 +231,7 @@ export default function ConsumerGoods() {
             <button
               onClick={() => setShowAdd(true)}
               className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
-              style={{ backgroundColor: '#009688',  }}
+              style={{ backgroundColor: '#1a237e',  }}
             >
               <Plus size={16} /> Add Item
             </button>
@@ -262,14 +262,14 @@ export default function ConsumerGoods() {
         <button
           onClick={() => setTab('items')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'items' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'items' ? { backgroundColor: '#009688' } : {}}
+          style={tab === 'items' ? { backgroundColor: '#1a237e' } : {}}
         >
           Items & Stock
         </button>
         <button
           onClick={() => setTab('receipts')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'receipts' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'receipts' ? { backgroundColor: '#009688' } : {}}
+          style={tab === 'receipts' ? { backgroundColor: '#1a237e' } : {}}
         >
           Receipts ({receipts.length})
         </button>
@@ -467,7 +467,7 @@ export default function ConsumerGoods() {
             placeholder="Item name"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAdd} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#009688',  }}>
+          <button onClick={handleAdd} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#1a237e',  }}>
             Add Item
           </button>
         </div>

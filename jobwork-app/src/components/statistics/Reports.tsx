@@ -46,7 +46,7 @@ export default function Reports() {
             className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               period === p ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'
             }`}
-            style={period === p ? { backgroundColor: '#009688' } : {}}
+            style={period === p ? { backgroundColor: '#1a237e' } : {}}
           >
             {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -92,7 +92,7 @@ export default function Reports() {
           </div>
 
           {/* Raw Material vs Finished Product */}
-          <div className="mt-6 p-4 rounded-2xl" style={{ backgroundColor: '#00968810', border: '1px solid #00968820' }}>
+          <div className="mt-6 p-4 rounded-2xl" style={{ backgroundColor: '#1a237e10', border: '1px solid #1a237e20' }}>
             <h3 className="text-sm font-semibold mb-3" >Raw Material to Finished Product Ratio</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>

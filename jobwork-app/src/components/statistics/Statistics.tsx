@@ -69,7 +69,7 @@ export default function Statistics() {
             className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               period === p ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={period === p ? { backgroundColor: '#009688' } : {}}
+            style={period === p ? { backgroundColor: '#1a237e' } : {}}
           >
             {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -131,7 +131,7 @@ export default function Statistics() {
                       className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#009688] to-[#00796b]">
+                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#1a237e] to-[#0d47a1]">
                           <Users size={14} className="text-white" />
                         </div>
                         <span className="font-medium text-sm">{DEPARTMENT_LABELS[dept]}</span>

@@ -50,7 +50,7 @@ export default function AdminDashboard() {
   })).filter(d => d.users > 0);
 
   const batchStatusData = [
-    { name: 'Active', value: activeBatches.length, color: '#009688' },
+    { name: 'Active', value: activeBatches.length, color: '#1a237e' },
     { name: 'Completed', value: completedBatches.length, color: '#4caf50' },
   ].filter(d => d.value > 0);
 
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
         </div>
         <button
           onClick={() => navigate('/batches')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#009688] to-[#00796b] text-white rounded-xl text-sm font-medium hover:shadow-lg hover:shadow-teal-200 transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#1a237e] to-[#0d47a1] text-white rounded-xl text-sm font-medium hover:shadow-lg hover:shadow-indigo-200 transition-all"
         >
           <Package size={16} />
           New Batch
@@ -83,8 +83,8 @@ export default function AdminDashboard() {
           title="Active Batches"
           value={activeBatches.length}
           subtitle={`${completedBatches.length} completed`}
-          icon={<Package size={20} className="text-[#009688]" />}
-          color="#009688"
+          icon={<Package size={20} className="text-[#1a237e]" />}
+          color="#1a237e"
         />
         <StatCard
           title="Total Users"
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
                 ))}
                 <div className="pt-1 border-t border-gray-100">
                   <span className="text-xs text-gray-400">Completion</span>
-                  <p className="text-lg font-bold text-[#009688]">{completionRate.toFixed(0)}%</p>
+                  <p className="text-lg font-bold text-[#1a237e]">{completionRate.toFixed(0)}%</p>
                 </div>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
                 <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                 />
-                <Bar dataKey="users" fill="#009688" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="users" fill="#1a237e" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-semibold text-gray-700">HOD Balances</h3>
             <button
               onClick={() => navigate('/accounting')}
-              className="text-xs font-medium text-[#009688] hover:underline flex items-center gap-1"
+              className="text-xs font-medium text-[#1a237e] hover:underline flex items-center gap-1"
             >
               View All <ArrowRight size={12} />
             </button>
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
                       <tr key={a.hodId} className="border-t border-gray-50 hover:bg-gray-50/50 cursor-pointer" onClick={() => navigate(`/accounting/${a.hodId}`)}>
                         <td className="py-3">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-[#009688]/10 flex items-center justify-center text-[#009688] text-xs font-bold">
+                            <div className="w-7 h-7 rounded-full bg-[#1a237e]/10 flex items-center justify-center text-[#1a237e] text-xs font-bold">
                               {a.hodName[0]}
                             </div>
                             <div>
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
           <h3 className="text-sm font-semibold text-gray-700">Recent Batches</h3>
           <button
             onClick={() => navigate('/batches')}
-            className="text-xs font-medium text-[#009688] hover:underline flex items-center gap-1"
+            className="text-xs font-medium text-[#1a237e] hover:underline flex items-center gap-1"
           >
             View All <ArrowRight size={12} />
           </button>
@@ -297,8 +297,8 @@ export default function AdminDashboard() {
                 onClick={() => navigate(`/batches/${batch.id}`)}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#009688]/8 flex items-center justify-center">
-                    <Package size={16} className="text-[#009688]" />
+                  <div className="w-9 h-9 rounded-xl bg-[#1a237e]/8 flex items-center justify-center">
+                    <Package size={16} className="text-[#1a237e]" />
                   </div>
                   <div>
                     <p className="font-medium text-sm text-gray-700">{batch.batchNumber}</p>

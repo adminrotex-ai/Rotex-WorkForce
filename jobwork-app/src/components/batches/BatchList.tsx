@@ -84,7 +84,7 @@ export default function BatchList() {
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl hover:opacity-90"
-            style={{ backgroundColor: '#009688',  }}
+            style={{ backgroundColor: '#1a237e',  }}
           >
             <Plus size={18} /><span className="text-sm font-medium">Create Batch</span>
           </button>
@@ -100,7 +100,7 @@ export default function BatchList() {
             className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               filter === f ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={filter === f ? { backgroundColor: '#009688' } : {}}
+            style={filter === f ? { backgroundColor: '#1a237e' } : {}}
           >
             {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </button>
@@ -124,7 +124,7 @@ export default function BatchList() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#009688] to-[#00796b]">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#1a237e] to-[#0d47a1]">
                     <Package size={22} className="text-white" />
                   </div>
                   <div>
@@ -177,7 +177,7 @@ export default function BatchList() {
               type="number"
               value={form.totalPieces}
               onChange={e => setForm({ ...form, totalPieces: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
               placeholder="Enter total number of pieces"
               min="1"
             />
@@ -188,7 +188,7 @@ export default function BatchList() {
               type="text"
               value={form.sizes}
               onChange={e => setForm({ ...form, sizes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#009688] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
               placeholder="e.g. Small, Medium, Large"
             />
           </div>
@@ -196,7 +196,7 @@ export default function BatchList() {
           <button
             onClick={handleCreate}
             className="w-full py-2 text-white font-medium rounded-2xl hover:opacity-90 text-sm"
-            style={{ backgroundColor: '#009688',  }}
+            style={{ backgroundColor: '#1a237e',  }}
           >
             Create Batch
           </button>

@@ -42,7 +42,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #009688 0%, #00695c 50%, #004d40 100%)' }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a237e 0%, #00695c 50%, #004d40 100%)' }}>
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-white/5" />
@@ -53,7 +53,7 @@ export default function LoginPage() {
       <div className="animate-fade-in bg-white rounded-2xl p-10 w-full max-w-md shadow-2xl relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#009688] to-[#00796b] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-teal-200">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1a237e] to-[#0d47a1] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
             <Package size={28} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
@@ -104,7 +104,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 text-white font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-teal-200 disabled:opacity-50 text-sm bg-gradient-to-r from-[#009688] to-[#00796b]"
+            className="w-full py-3.5 text-white font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-200 disabled:opacity-50 text-sm bg-gradient-to-r from-[#1a237e] to-[#0d47a1]"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

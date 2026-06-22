@@ -313,7 +313,7 @@ export default function BatchDetail() {
             <button
               onClick={() => setShowPieceEntry(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-2xl text-white text-sm font-medium hover:opacity-90"
-              style={{ backgroundColor: '#009688',  }}
+              style={{ backgroundColor: '#1a237e',  }}
             >
               <CheckCircle size={16} /> Record Pieces
             </button>
@@ -414,7 +414,7 @@ export default function BatchDetail() {
               <p className="text-xs text-green-600 uppercase font-medium">Service Costs</p>
               <p className="text-xl font-bold text-green-700">{formatCurrency(stats.totalServiceCost)}</p>
             </div>
-            <div className="p-4 rounded-2xl" style={{ backgroundColor: '#00968810', border: '1px solid #00968820' }}>
+            <div className="p-4 rounded-2xl" style={{ backgroundColor: '#1a237e10', border: '1px solid #1a237e20' }}>
               <p className="text-xs uppercase font-medium" >Total Cost</p>
               <p className="text-xl font-bold" >{formatCurrency(stats.totalCost)}</p>
             </div>
@@ -577,7 +577,7 @@ export default function BatchDetail() {
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handlePieceEntry} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#009688',  }}>
+          <button onClick={handlePieceEntry} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#1a237e',  }}>
             Record Entry
           </button>
         </div>
