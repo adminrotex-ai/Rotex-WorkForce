@@ -1,0 +1,854 @@
+import { db } from './db';
+import { generateId, generateBatchNumber, getDateRange } from '../utils/helpers';
+import { hashPassword } from '../utils/crypto';
+import type {
+  User, Batch, BatchStageRecord, BatchTransfer, PieceEntry,
+  ConsumerGoodItem, MaterialType, MaterialEntry, ConsumerGoodUsage,
+  ServiceCost, AccountingEntry, PaymentRecord, AuditLog,
+  ConsumerGoodInventory, Department, BatchStage, UserRole,
+} from '../types';
+
+function now(): string {
+  return new Date().toISOString();
+}
+
+async function addAudit(
+  action: string,
+  category: AuditLog['category'],
+  entityType: string,
+  entityId: string,
+  userId: string,
+  userName: string,
+  details: string,
+  metadata?: string,
+) {
+  await db.auditLogs.add({
+    id: generateId(),
+    action,
+    category,
+    entityType,
+    entityId,
+    userId,
+    userName,
+    details,
+    metadata,
+    createdAt: now(),
+  });
+}
+
+// ---- USER OPERATIONS ----
+
+export async function createUser(
+  username: string,
+  password: string,
+  firstName: string,
+  role: UserRole,
+  department: Department,
+  createdBy: string,
+  creatorName: string,
+  phone?: string,
+): Promise<User> {
+  const existing = await db.users.where('username').equals(username).first();
+  if (existing) throw new Error('Username already exists');
+
+  const user: User = {
+    id: generateId(),
+    username,
+    passwordHash: hashPassword(password),
+    firstName,
+    role,
+    department,
+    phone: role === 'hod' ? phone : undefined,
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.users.add(user);
+  await addAudit('USER_CREATED', 'user', 'user', user.id, createdBy, creatorName,
+    `Created ${role} user "${firstName}" in ${department} department`);
+  return user;
+}
+
+export async function deleteUser(userId: string, reason: string, deletedBy: string, deleterName: string) {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  await db.users.update(userId, { isActive: false, deletedAt: now(), deleteReason: reason });
+  const user = await db.users.get(userId);
+  await addAudit('USER_DELETED', 'deletion', 'user', userId, deletedBy, deleterName,
+    `Deleted user "${user?.firstName}" (${user?.role}) from ${user?.department}. Reason: ${reason}`);
+}
+
+export async function getActiveUsers(): Promise<User[]> {
+  return db.users.where('isActive').equals(1).toArray();
+}
+
+export async function getUsersByDepartment(department: Department): Promise<User[]> {
+  return db.users.where({ department, isActive: 1 }).toArray();
+}
+
+export async function getUsersByCreator(creatorId: string): Promise<User[]> {
+  return db.users.where({ createdBy: creatorId, isActive: 1 }).toArray();
+}
+
+export async function getHodsByDepartment(department: Department): Promise<User[]> {
+  return db.users.where({ department, role: 'hod', isActive: 1 }).toArray();
+}
+
+export async function getUserById(userId: string): Promise<User | undefined> {
+  return db.users.get(userId);
+}
+
+export async function authenticateUser(username: string, passwordHash: string): Promise<User | null> {
+  const user = await db.users.where('username').equals(username).first();
+  if (!user || !user.isActive) return null;
+  if (user.passwordHash !== passwordHash) return null;
+  return user;
+}
+
+// ---- BATCH OPERATIONS ----
+
+export async function createBatch(
+  totalPieces: number,
+  sizes: string[],
+  createdBy: string,
+  creatorName: string,
+): Promise<Batch> {
+  const batch: Batch = {
+    id: generateId(),
+    batchNumber: generateBatchNumber(),
+    totalPieces,
+    currentStage: 'store_raw',
+    status: 'created',
+    sizes,
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.batches.add(batch);
+
+  const stageRecord: BatchStageRecord = {
+    id: generateId(),
+    batchId: batch.id,
+    stage: 'store_raw',
+    totalPiecesReceived: totalPieces,
+    acceptedPieces: totalPieces,
+    rejectedPieces: 0,
+    piecesProcessed: 0,
+    piecesSentForward: 0,
+    status: 'in_progress',
+    startedAt: now(),
+    createdAt: now(),
+  };
+  await db.batchStageRecords.add(stageRecord);
+
+  await addAudit('BATCH_CREATED', 'batch', 'batch', batch.id, createdBy, creatorName,
+    `Created batch ${batch.batchNumber} with ${totalPieces} pieces. Sizes: ${sizes.join(', ')}`);
+  return batch;
+}
+
+export async function deleteBatch(batchId: string, reason: string, deletedBy: string, deleterName: string) {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  const batch = await db.batches.get(batchId);
+  await db.batches.update(batchId, { isActive: false, deletedAt: now(), deleteReason: reason, deletedBy });
+  await addAudit('BATCH_DELETED', 'deletion', 'batch', batchId, deletedBy, deleterName,
+    `Deleted batch ${batch?.batchNumber}. Reason: ${reason}`);
+}
+
+export async function getActiveBatches(): Promise<Batch[]> {
+  return db.batches.where('isActive').equals(1).toArray();
+}
+
+export async function getBatchById(batchId: string): Promise<Batch | undefined> {
+  return db.batches.get(batchId);
+}
+
+export async function getBatchesAtStage(stage: BatchStage): Promise<Batch[]> {
+  return db.batches.where({ currentStage: stage, isActive: 1 }).toArray();
+}
+
+export async function getBatchStageRecords(batchId: string): Promise<BatchStageRecord[]> {
+  return db.batchStageRecords.where('batchId').equals(batchId).toArray();
+}
+
+export async function getBatchStageRecord(batchId: string, stage: BatchStage): Promise<BatchStageRecord | undefined> {
+  return db.batchStageRecords.where({ batchId, stage }).first();
+}
+
+// ---- TRANSFER OPERATIONS ----
+
+export async function transferPieces(
+  batchId: string,
+  fromStage: BatchStage,
+  toStage: BatchStage,
+  piecesCount: number,
+  transferredBy: string,
+  transferrerName: string,
+  targetHodId?: string,
+  size?: string,
+): Promise<BatchTransfer> {
+  const batch = await db.batches.get(batchId);
+  if (!batch) throw new Error('Batch not found');
+
+  const fromRecord = await getBatchStageRecord(batchId, fromStage);
+  if (!fromRecord) throw new Error('Stage record not found');
+
+  const availablePieces = fromRecord.acceptedPieces - fromRecord.piecesSentForward;
+  if (piecesCount > availablePieces) {
+    throw new Error(`Only ${availablePieces} pieces available for transfer`);
+  }
+  if (piecesCount <= 0) throw new Error('Transfer count must be positive');
+
+  await db.batchStageRecords.update(fromRecord.id, {
+    piecesSentForward: fromRecord.piecesSentForward + piecesCount,
+  });
+
+  let toRecord = await getBatchStageRecord(batchId, toStage);
+  if (!toRecord) {
+    toRecord = {
+      id: generateId(),
+      batchId,
+      stage: toStage,
+      assignedHodId: targetHodId,
+      totalPiecesReceived: piecesCount,
+      acceptedPieces: 0,
+      rejectedPieces: 0,
+      piecesProcessed: 0,
+      piecesSentForward: 0,
+      status: 'in_progress',
+      startedAt: now(),
+      createdAt: now(),
+    };
+    await db.batchStageRecords.add(toRecord);
+  } else {
+    await db.batchStageRecords.update(toRecord.id, {
+      totalPiecesReceived: toRecord.totalPiecesReceived + piecesCount,
+      assignedHodId: targetHodId || toRecord.assignedHodId,
+    });
+  }
+
+  if (fromRecord.piecesSentForward + piecesCount >= fromRecord.acceptedPieces) {
+    await db.batchStageRecords.update(fromRecord.id, { status: 'completed', completedAt: now() });
+  }
+
+  await db.batches.update(batchId, { status: 'in_progress', currentStage: toStage });
+
+  const transfer: BatchTransfer = {
+    id: generateId(),
+    batchId,
+    fromStage,
+    toStage,
+    piecesCount,
+    transferredBy,
+    targetHodId,
+    size,
+    createdAt: now(),
+  };
+  await db.batchTransfers.add(transfer);
+
+  await addAudit('BATCH_TRANSFER', 'transfer', 'batch', batchId, transferredBy, transferrerName,
+    `Transferred ${piecesCount} pieces from ${fromStage} to ${toStage} in batch ${batch.batchNumber}${targetHodId ? ` (assigned to HOD)` : ''}`,
+    JSON.stringify({ fromStage, toStage, piecesCount, targetHodId, size }));
+  return transfer;
+}
+
+export async function recordPieceEntry(
+  batchId: string,
+  stageRecordId: string,
+  userId: string,
+  userName: string,
+  acceptedPieces: number,
+  rejectedPieces: number,
+  size?: string,
+  notes?: string,
+): Promise<PieceEntry> {
+  const stageRecord = await db.batchStageRecords.get(stageRecordId);
+  if (!stageRecord) throw new Error('Stage record not found');
+
+  const totalNew = acceptedPieces + rejectedPieces;
+  const alreadyProcessed = stageRecord.piecesProcessed;
+  if (alreadyProcessed + totalNew > stageRecord.totalPiecesReceived) {
+    throw new Error(`Cannot process more pieces than received. Remaining: ${stageRecord.totalPiecesReceived - alreadyProcessed}`);
+  }
+
+  const entry: PieceEntry = {
+    id: generateId(),
+    batchId,
+    stageRecordId,
+    userId,
+    acceptedPieces,
+    rejectedPieces,
+    totalPieces: totalNew,
+    size,
+    notes,
+    createdAt: now(),
+  };
+  await db.pieceEntries.add(entry);
+
+  await db.batchStageRecords.update(stageRecordId, {
+    acceptedPieces: stageRecord.acceptedPieces + acceptedPieces,
+    rejectedPieces: stageRecord.rejectedPieces + rejectedPieces,
+    piecesProcessed: stageRecord.piecesProcessed + totalNew,
+  });
+
+  await addAudit('PIECE_ENTRY', 'batch', 'piece_entry', entry.id, userId, userName,
+    `Recorded ${acceptedPieces} accepted, ${rejectedPieces} rejected pieces in batch stage`,
+    JSON.stringify({ batchId, stage: stageRecord.stage, accepted: acceptedPieces, rejected: rejectedPieces }));
+  return entry;
+}
+
+export async function sendRejectedToWelding(
+  batchId: string,
+  rejectedPieces: number,
+  fromStage: BatchStage,
+  transferredBy: string,
+  transferrerName: string,
+) {
+  return transferPieces(batchId, fromStage, 'welding', rejectedPieces, transferredBy, transferrerName);
+}
+
+export async function getBatchTransfers(batchId: string): Promise<BatchTransfer[]> {
+  return db.batchTransfers.where('batchId').equals(batchId).toArray();
+}
+
+// ---- CONSUMER GOODS OPERATIONS ----
+
+export async function createConsumerGoodItem(
+  name: string,
+  createdBy: string,
+  creatorName: string,
+): Promise<ConsumerGoodItem> {
+  const item: ConsumerGoodItem = {
+    id: generateId(),
+    name,
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.consumerGoodItems.add(item);
+  await addAudit('CONSUMER_GOOD_CREATED', 'consumer_goods', 'consumer_good', item.id, createdBy, creatorName,
+    `Created consumer good item: ${name}`);
+  return item;
+}
+
+export async function updateConsumerGoodItem(
+  itemId: string,
+  name: string,
+  updatedBy: string,
+  updaterName: string,
+) {
+  const old = await db.consumerGoodItems.get(itemId);
+  await db.consumerGoodItems.update(itemId, { name });
+  await addAudit('CONSUMER_GOOD_UPDATED', 'consumer_goods', 'consumer_good', itemId, updatedBy, updaterName,
+    `Updated consumer good from "${old?.name}" to "${name}"`);
+}
+
+export async function deleteConsumerGoodItem(
+  itemId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+) {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  const item = await db.consumerGoodItems.get(itemId);
+  await db.consumerGoodItems.update(itemId, { isActive: false, deletedAt: now(), deleteReason: reason });
+  await addAudit('CONSUMER_GOOD_DELETED', 'deletion', 'consumer_good', itemId, deletedBy, deleterName,
+    `Deleted consumer good "${item?.name}". Reason: ${reason}`);
+}
+
+export async function getActiveConsumerGoods(): Promise<ConsumerGoodItem[]> {
+  return db.consumerGoodItems.where('isActive').equals(1).toArray();
+}
+
+// ---- MATERIAL TYPE OPERATIONS ----
+
+export async function createMaterialType(
+  name: string,
+  createdBy: string,
+  creatorName: string,
+): Promise<MaterialType> {
+  const mt: MaterialType = {
+    id: generateId(),
+    name,
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.materialTypes.add(mt);
+  await addAudit('MATERIAL_TYPE_CREATED', 'material', 'material_type', mt.id, createdBy, creatorName,
+    `Created material type: ${name}`);
+  return mt;
+}
+
+export async function getActiveMaterialTypes(): Promise<MaterialType[]> {
+  return db.materialTypes.where('isActive').equals(1).toArray();
+}
+
+export async function addMaterialEntry(
+  materialTypeId: string,
+  supplierName: string,
+  price: number,
+  quantity: number,
+  unit: string,
+  enteredBy: string,
+  entererName: string,
+  billPhoto?: string,
+): Promise<MaterialEntry> {
+  const entry: MaterialEntry = {
+    id: generateId(),
+    materialTypeId,
+    supplierName,
+    billPhoto,
+    price,
+    quantity,
+    unit,
+    enteredBy,
+    createdAt: now(),
+  };
+  await db.materialEntries.add(entry);
+  const mt = await db.materialTypes.get(materialTypeId);
+  await addAudit('MATERIAL_ENTRY_ADDED', 'material', 'material_entry', entry.id, enteredBy, entererName,
+    `Added material entry: ${mt?.name} from ${supplierName}, qty: ${quantity} ${unit}, price: ₹${price}`,
+    JSON.stringify({ materialTypeId, supplierName, price, quantity }));
+  return entry;
+}
+
+export async function getMaterialEntries(materialTypeId?: string): Promise<MaterialEntry[]> {
+  if (materialTypeId) {
+    return db.materialEntries.where('materialTypeId').equals(materialTypeId).toArray();
+  }
+  return db.materialEntries.toArray();
+}
+
+// ---- CONSUMER GOODS USAGE ----
+
+export async function recordConsumerGoodUsage(
+  batchId: string,
+  consumerGoodId: string,
+  quantity: number,
+  pricePerUnit: number,
+  department: Department,
+  userId: string,
+  userName: string,
+  stageRecordId?: string,
+): Promise<ConsumerGoodUsage> {
+  const usage: ConsumerGoodUsage = {
+    id: generateId(),
+    batchId,
+    stageRecordId,
+    consumerGoodId,
+    quantity,
+    pricePerUnit,
+    totalCost: quantity * pricePerUnit,
+    department,
+    userId,
+    createdAt: now(),
+  };
+  await db.consumerGoodUsages.add(usage);
+
+  const good = await db.consumerGoodItems.get(consumerGoodId);
+  const batch = await db.batches.get(batchId);
+  await addAudit('CONSUMER_GOOD_USED', 'consumer_goods', 'consumer_good_usage', usage.id, userId, userName,
+    `Used ${quantity} units of "${good?.name}" (₹${pricePerUnit}/unit = ₹${usage.totalCost}) for batch ${batch?.batchNumber} in ${department}`,
+    JSON.stringify({ batchId, consumerGoodId, quantity, pricePerUnit, totalCost: usage.totalCost }));
+
+  const user = await db.users.get(userId);
+  if (user) {
+    const admin = await db.users.where('role').equals('admin').first();
+    if (admin) {
+      await addAccountingEntry(userId, admin.id, 'hod_owes_admin', usage.totalCost,
+        `Consumer goods: ${good?.name} (${quantity} x ₹${pricePerUnit}) for batch ${batch?.batchNumber}`, batchId, usage.id);
+    }
+  }
+
+  return usage;
+}
+
+export async function getConsumerGoodUsages(filters: {
+  batchId?: string;
+  department?: Department;
+  userId?: string;
+}): Promise<ConsumerGoodUsage[]> {
+  let query = db.consumerGoodUsages.toCollection();
+  const results = await query.toArray();
+  return results.filter(u => {
+    if (filters.batchId && u.batchId !== filters.batchId) return false;
+    if (filters.department && u.department !== filters.department) return false;
+    if (filters.userId && u.userId !== filters.userId) return false;
+    return true;
+  });
+}
+
+// ---- SERVICE COST OPERATIONS ----
+
+export async function recordServiceCost(
+  batchId: string,
+  department: Department,
+  costPerPiece: number,
+  totalPieces: number,
+  enteredBy: string,
+  entererName: string,
+  size?: string,
+  stageRecordId?: string,
+): Promise<ServiceCost> {
+  const cost: ServiceCost = {
+    id: generateId(),
+    batchId,
+    stageRecordId,
+    department,
+    costPerPiece,
+    totalPieces,
+    totalCost: costPerPiece * totalPieces,
+    size,
+    enteredBy,
+    createdAt: now(),
+  };
+  await db.serviceCosts.add(cost);
+
+  const batch = await db.batches.get(batchId);
+  await addAudit('SERVICE_COST_RECORDED', 'cost', 'service_cost', cost.id, enteredBy, entererName,
+    `Service cost for ${department}: ₹${costPerPiece}/piece x ${totalPieces} = ₹${cost.totalCost} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
+    JSON.stringify({ batchId, department, costPerPiece, totalPieces, totalCost: cost.totalCost, size }));
+
+  const admin = await db.users.where('role').equals('admin').first();
+  if (admin) {
+    await addAccountingEntry(enteredBy, admin.id, 'admin_owes_hod', cost.totalCost,
+      `Service cost: ${department} - ₹${costPerPiece}/piece x ${totalPieces} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
+      batchId, cost.id);
+  }
+
+  return cost;
+}
+
+export async function updateServiceCost(
+  costId: string,
+  costPerPiece: number,
+  updatedBy: string,
+  updaterName: string,
+) {
+  const old = await db.serviceCosts.get(costId);
+  if (!old) throw new Error('Service cost not found');
+  const newTotal = costPerPiece * old.totalPieces;
+  await db.serviceCosts.update(costId, { costPerPiece, totalCost: newTotal });
+  await addAudit('SERVICE_COST_UPDATED', 'cost', 'service_cost', costId, updatedBy, updaterName,
+    `Updated service cost from ₹${old.costPerPiece}/piece to ₹${costPerPiece}/piece (total: ₹${old.totalCost} → ₹${newTotal})`);
+}
+
+export async function getServiceCosts(filters: {
+  batchId?: string;
+  department?: Department;
+  enteredBy?: string;
+}): Promise<ServiceCost[]> {
+  const results = await db.serviceCosts.toArray();
+  return results.filter(s => {
+    if (filters.batchId && s.batchId !== filters.batchId) return false;
+    if (filters.department && s.department !== filters.department) return false;
+    if (filters.enteredBy && s.enteredBy !== filters.enteredBy) return false;
+    return true;
+  });
+}
+
+// ---- ACCOUNTING OPERATIONS ----
+
+async function addAccountingEntry(
+  hodId: string,
+  adminId: string,
+  type: AccountingEntry['type'],
+  amount: number,
+  description: string,
+  batchId?: string,
+  relatedCostId?: string,
+) {
+  const entry: AccountingEntry = {
+    id: generateId(),
+    hodId,
+    adminId,
+    type,
+    amount,
+    description,
+    batchId,
+    relatedCostId,
+    createdAt: now(),
+  };
+  await db.accountingEntries.add(entry);
+}
+
+export async function getAccountingForHod(hodId: string): Promise<{
+  hodOwesAdmin: number;
+  adminOwesHod: number;
+  entries: AccountingEntry[];
+}> {
+  const entries = await db.accountingEntries.where('hodId').equals(hodId).toArray();
+  const payments = await db.paymentRecords.toArray();
+  const relevantPayments = payments.filter(p =>
+    (p.payerId === hodId || p.payeeId === hodId) && p.confirmed);
+
+  let hodOwesAdmin = 0;
+  let adminOwesHod = 0;
+
+  for (const e of entries) {
+    if (e.type === 'hod_owes_admin') hodOwesAdmin += e.amount;
+    if (e.type === 'admin_owes_hod') adminOwesHod += e.amount;
+  }
+
+  for (const p of relevantPayments) {
+    if (p.payerId === hodId) hodOwesAdmin -= p.amount;
+    else adminOwesHod -= p.amount;
+  }
+
+  return { hodOwesAdmin: Math.max(0, hodOwesAdmin), adminOwesHod: Math.max(0, adminOwesHod), entries };
+}
+
+export async function getAllAccountingSummary(): Promise<Array<{
+  hodId: string;
+  hodName: string;
+  department: Department;
+  hodOwesAdmin: number;
+  adminOwesHod: number;
+}>> {
+  const hods = await db.users.where({ role: 'hod', isActive: 1 }).toArray();
+  const results = [];
+  for (const hod of hods) {
+    const acc = await getAccountingForHod(hod.id);
+    results.push({
+      hodId: hod.id,
+      hodName: hod.firstName,
+      department: hod.department,
+      hodOwesAdmin: acc.hodOwesAdmin,
+      adminOwesHod: acc.adminOwesHod,
+    });
+  }
+  return results;
+}
+
+export async function makePayment(
+  payerId: string,
+  payerName: string,
+  payeeId: string,
+  amount: number,
+  description: string,
+): Promise<PaymentRecord> {
+  if (amount <= 0) throw new Error('Payment amount must be positive');
+  const payment: PaymentRecord = {
+    id: generateId(),
+    payerId,
+    payeeId,
+    amount,
+    confirmed: false,
+    description,
+    createdAt: now(),
+  };
+  await db.paymentRecords.add(payment);
+  await addAudit('PAYMENT_MADE', 'payment', 'payment', payment.id, payerId, payerName,
+    `Payment of ₹${amount}: ${description}`);
+  return payment;
+}
+
+export async function confirmPayment(
+  paymentId: string,
+  confirmedBy: string,
+  confirmerName: string,
+) {
+  const payment = await db.paymentRecords.get(paymentId);
+  if (!payment) throw new Error('Payment not found');
+  await db.paymentRecords.update(paymentId, {
+    confirmed: true,
+    confirmedBy,
+    confirmedAt: now(),
+  });
+  await addAudit('PAYMENT_CONFIRMED', 'payment', 'payment', paymentId, confirmedBy, confirmerName,
+    `Confirmed payment of ₹${payment.amount} from ${payment.payerId}`);
+}
+
+export async function getPendingPayments(userId: string): Promise<PaymentRecord[]> {
+  const all = await db.paymentRecords.toArray();
+  return all.filter(p => (p.payeeId === userId || p.payerId === userId) && !p.confirmed);
+}
+
+export async function getConfirmedPayments(userId: string): Promise<PaymentRecord[]> {
+  const all = await db.paymentRecords.toArray();
+  return all.filter(p => (p.payeeId === userId || p.payerId === userId) && p.confirmed);
+}
+
+// ---- CONSUMER GOODS INVENTORY ----
+
+export async function addConsumerGoodToInventory(
+  consumerGoodId: string,
+  quantity: number,
+  pricePerUnit: number,
+  enteredBy: string,
+  entererName: string,
+  supplierName?: string,
+  billPhoto?: string,
+): Promise<ConsumerGoodInventory> {
+  const inv: ConsumerGoodInventory = {
+    id: generateId(),
+    consumerGoodId,
+    quantity,
+    pricePerUnit,
+    enteredBy,
+    supplierName,
+    billPhoto,
+    createdAt: now(),
+  };
+  await db.consumerGoodInventory.add(inv);
+  const good = await db.consumerGoodItems.get(consumerGoodId);
+  await addAudit('INVENTORY_ADDED', 'consumer_goods', 'inventory', inv.id, enteredBy, entererName,
+    `Added ${quantity} units of "${good?.name}" to inventory at ₹${pricePerUnit}/unit from ${supplierName || 'unknown'}`);
+  return inv;
+}
+
+export async function getConsumerGoodInventory(consumerGoodId?: string): Promise<ConsumerGoodInventory[]> {
+  if (consumerGoodId) {
+    return db.consumerGoodInventory.where('consumerGoodId').equals(consumerGoodId).toArray();
+  }
+  return db.consumerGoodInventory.toArray();
+}
+
+// ---- AUDIT OPERATIONS ----
+
+export async function getAuditLogs(filters?: {
+  category?: AuditLog['category'];
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<AuditLog[]> {
+  let results = await db.auditLogs.orderBy('createdAt').reverse().toArray();
+  if (filters) {
+    results = results.filter(log => {
+      if (filters.category && log.category !== filters.category) return false;
+      if (filters.userId && log.userId !== filters.userId) return false;
+      if (filters.startDate && log.createdAt < filters.startDate) return false;
+      if (filters.endDate && log.createdAt > filters.endDate) return false;
+      return true;
+    });
+  }
+  return results;
+}
+
+// ---- STATISTICS ----
+
+export async function getBatchStatistics(batchId: string) {
+  const batch = await db.batches.get(batchId);
+  const stages = await db.batchStageRecords.where('batchId').equals(batchId).toArray();
+  const transfers = await db.batchTransfers.where('batchId').equals(batchId).toArray();
+  const pieceEntries = await db.pieceEntries.where('batchId').equals(batchId).toArray();
+  const consumerUsages = await db.consumerGoodUsages.where('batchId').equals(batchId).toArray();
+  const serviceCosts = await db.serviceCosts.where('batchId').equals(batchId).toArray();
+
+  const totalConsumerCost = consumerUsages.reduce((sum, u) => sum + u.totalCost, 0);
+  const totalServiceCost = serviceCosts.reduce((sum, s) => sum + s.totalCost, 0);
+
+  const costBreakdown: Record<string, { consumerGoods: number; serviceCost: number }> = {};
+  for (const u of consumerUsages) {
+    if (!costBreakdown[u.department]) costBreakdown[u.department] = { consumerGoods: 0, serviceCost: 0 };
+    costBreakdown[u.department].consumerGoods += u.totalCost;
+  }
+  for (const s of serviceCosts) {
+    if (!costBreakdown[s.department]) costBreakdown[s.department] = { consumerGoods: 0, serviceCost: 0 };
+    costBreakdown[s.department].serviceCost += s.totalCost;
+  }
+
+  return {
+    batch,
+    stages,
+    transfers,
+    pieceEntries,
+    consumerUsages,
+    serviceCosts,
+    totalConsumerCost,
+    totalServiceCost,
+    totalCost: totalConsumerCost + totalServiceCost,
+    costBreakdown,
+  };
+}
+
+export async function getUserStatistics(userId: string) {
+  const user = await db.users.get(userId);
+  const pieceEntries = await db.pieceEntries.where('userId').equals(userId).toArray();
+  const consumerUsages = await db.consumerGoodUsages.where('userId').equals(userId).toArray();
+  const serviceCosts = await db.serviceCosts.where('enteredBy').equals(userId).toArray();
+
+  const totalAccepted = pieceEntries.reduce((sum, e) => sum + e.acceptedPieces, 0);
+  const totalRejected = pieceEntries.reduce((sum, e) => sum + e.rejectedPieces, 0);
+  const totalConsumerCost = consumerUsages.reduce((sum, u) => sum + u.totalCost, 0);
+  const totalServiceCost = serviceCosts.reduce((sum, s) => sum + s.totalCost, 0);
+
+  const batchIds = [...new Set(pieceEntries.map(e => e.batchId))];
+  const batches = await Promise.all(batchIds.map(id => db.batches.get(id)));
+
+  return {
+    user,
+    pieceEntries,
+    consumerUsages,
+    serviceCosts,
+    totalAccepted,
+    totalRejected,
+    totalPieces: totalAccepted + totalRejected,
+    acceptanceRate: totalAccepted + totalRejected > 0 ? (totalAccepted / (totalAccepted + totalRejected)) * 100 : 0,
+    rejectionRate: totalAccepted + totalRejected > 0 ? (totalRejected / (totalAccepted + totalRejected)) * 100 : 0,
+    totalConsumerCost,
+    totalServiceCost,
+    batchCount: batchIds.length,
+    batches: batches.filter(Boolean),
+  };
+}
+
+export async function getPeriodStatistics(period: 'week' | 'month' | 'year' | 'all') {
+  const { start, end } = getDateRange(period);
+  const startStr = start.toISOString();
+  const endStr = end.toISOString();
+
+  const allBatches = await db.batches.where('isActive').equals(1).toArray();
+  const batches = period === 'all' ? allBatches : allBatches.filter(b => b.createdAt >= startStr && b.createdAt <= endStr);
+
+  const batchIds = batches.map(b => b.id);
+
+  const allPieceEntries = await db.pieceEntries.toArray();
+  const pieceEntries = allPieceEntries.filter(e => batchIds.includes(e.batchId));
+
+  const allConsumerUsages = await db.consumerGoodUsages.toArray();
+  const consumerUsages = allConsumerUsages.filter(u => batchIds.includes(u.batchId));
+
+  const allServiceCosts = await db.serviceCosts.toArray();
+  const serviceCosts = allServiceCosts.filter(s => batchIds.includes(s.batchId));
+
+  return {
+    period,
+    batchCount: batches.length,
+    totalPieces: batches.reduce((sum, b) => sum + b.totalPieces, 0),
+    totalAccepted: pieceEntries.reduce((sum, e) => sum + e.acceptedPieces, 0),
+    totalRejected: pieceEntries.reduce((sum, e) => sum + e.rejectedPieces, 0),
+    totalConsumerCost: consumerUsages.reduce((sum, u) => sum + u.totalCost, 0),
+    totalServiceCost: serviceCosts.reduce((sum, s) => sum + s.totalCost, 0),
+    batches,
+  };
+}
+
+export async function getHodBatchesInProgress(hodId: string): Promise<{ batch: Batch; stageRecord: BatchStageRecord }[]> {
+  const records = await db.batchStageRecords.where({ assignedHodId: hodId, status: 'in_progress' }).toArray();
+  const results = [];
+  for (const record of records) {
+    const batch = await db.batches.get(record.batchId);
+    if (batch && batch.isActive) {
+      results.push({ batch, stageRecord: record });
+    }
+  }
+  return results;
+}
+
+export async function getDepartmentConsumerUsageTotal(department: Department, hodId: string): Promise<number> {
+  const hodUsers = await getUsersByCreator(hodId);
+  const userIds = [hodId, ...hodUsers.map(u => u.id)];
+
+  const allUsages = await db.consumerGoodUsages.where('department').equals(department).toArray();
+  return allUsages
+    .filter(u => userIds.includes(u.userId))
+    .reduce((sum, u) => sum + u.totalCost, 0);
+}
+
+export async function getPieceEntriesByUser(userId: string): Promise<PieceEntry[]> {
+  return db.pieceEntries.where('userId').equals(userId).toArray();
+}
+
+export async function getAllBatches(): Promise<Batch[]> {
+  return db.batches.toArray();
+}
