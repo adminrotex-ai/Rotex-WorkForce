@@ -39,6 +39,7 @@ export default function ConsumerGoods() {
     pricePerUnit: '',
     supplierName: '',
     billPhoto: '',
+    isOpening: false,
   });
 
   const [issueForm, setIssueForm] = useState({
@@ -123,14 +124,18 @@ export default function ConsumerGoods() {
     setError('');
     const qty = parseFloat(invForm.quantity);
     const price = parseFloat(invForm.pricePerUnit);
-    if (!invForm.goodId || !qty || qty <= 0 || !price || price <= 0) { setError('Fill all fields with valid values'); return; }
+    if (!invForm.goodId) { setError('Select an item'); return; }
+    if (!Number.isFinite(qty) || qty <= 0) { setError('Quantity must be positive'); return; }
+    if (!Number.isFinite(price) || price <= 0) { setError('Price must be positive'); return; }
     try {
       await addConsumerGoodToInventory(
         invForm.goodId, qty, price, currentUser.id, currentUser.firstName,
-        invForm.supplierName || undefined, invForm.billPhoto || undefined
+        invForm.supplierName || (invForm.isOpening ? 'Opening Stock' : undefined),
+        invForm.billPhoto || undefined,
+        invForm.isOpening,
       );
       setShowInventory(false);
-      setInvForm({ goodId: '', quantity: '', pricePerUnit: '', supplierName: '', billPhoto: '' });
+      setInvForm({ goodId: '', quantity: '', pricePerUnit: '', supplierName: '', billPhoto: '', isOpening: false });
       loadData();
     } catch (e: any) {
       setError(e.message);
@@ -220,7 +225,7 @@ export default function ConsumerGoods() {
   }, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" >Consumer Goods</h1>
@@ -511,6 +516,14 @@ export default function ConsumerGoods() {
           <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-xs text-blue-700">
             Enter the supplier's price per unit. This exact price will be charged when goods are issued to department HODs.
           </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={invForm.isOpening}
+              onChange={e => setInvForm({ ...invForm, isOpening: e.target.checked })}
+            />
+            This is opening stock (existed before system was deployed)
+          </label>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Consumer Good</label>
             <select

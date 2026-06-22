@@ -70,16 +70,16 @@ function AdminAccounting() {
   const totalOwing = summary.reduce((s, a) => s + a.adminOwesHod, 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <h1 className="text-2xl font-bold" >Accounting</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">Total Owed to You</p>
+          <p className="text-xs text-green-600 uppercase font-medium">Total to Collect</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(totalOwed)}</p>
         </div>
         <div className="bg-white rounded-2xl p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">Total You Owe</p>
+          <p className="text-xs text-orange-600 uppercase font-medium">Total to Pay</p>
           <p className="text-2xl font-bold text-orange-700">{formatCurrency(totalOwing)}</p>
         </div>
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
@@ -99,8 +99,8 @@ function AdminAccounting() {
               <tr className="text-left text-gray-500 border-b">
                 <th className="pb-3 font-medium">HOD</th>
                 <th className="pb-3 font-medium">Department</th>
-                <th className="pb-3 font-medium text-right">Owes You</th>
-                <th className="pb-3 font-medium text-right">You Owe</th>
+                <th className="pb-3 font-medium text-right">To Collect</th>
+                <th className="pb-3 font-medium text-right">To Pay</th>
                 <th className="pb-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -237,19 +237,19 @@ function HodAccounting() {
   if (!accounting) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <h1 className="text-2xl font-bold" >My Accounting</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">Admin Owes You</p>
+          <p className="text-xs text-green-600 uppercase font-medium">Admin To Collect</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.adminOwesHod)}</p>
           <p className="text-xs text-green-500 mt-1">For service costs</p>
         </div>
         <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">You Owe Admin</p>
+          <p className="text-xs text-orange-600 uppercase font-medium">To Pay Admin</p>
           <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
-          <p className="text-xs text-orange-500 mt-1">For consumer goods</p>
+          <p className="text-xs text-orange-500 mt-1">For consumer goods &amp; opening balance</p>
           <button
             onClick={() => setShowPayment(true)}
             className="mt-3 text-xs px-3 py-1.5 bg-orange-500 text-white rounded-2xl hover:bg-orange-600"
@@ -275,7 +275,7 @@ function HodAccounting() {
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     e.type === 'admin_owes_hod' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                   }`}>
-                    {e.type === 'admin_owes_hod' ? 'Admin owes you' : 'You owe admin'}
+                    {e.type === 'admin_owes_hod' ? 'To collect from admin' : 'To pay admin'}
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{e.description}</p>
@@ -353,7 +353,7 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
   if (!accounting || !hod) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate('/accounting')} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
@@ -366,11 +366,11 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">Owes You</p>
+          <p className="text-xs text-green-600 uppercase font-medium">To Collect</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
         </div>
         <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">You Owe</p>
+          <p className="text-xs text-orange-600 uppercase font-medium">To Pay</p>
           <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.adminOwesHod)}</p>
         </div>
       </div>
@@ -387,7 +387,7 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   e.type === 'hod_owes_admin' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                 }`}>
-                  {e.type === 'hod_owes_admin' ? 'HOD owes you' : 'You owe HOD'}
+                  {e.type === 'hod_owes_admin' ? 'To collect from HOD' : 'To pay HOD'}
                 </span>
               </div>
               <p className="text-xs text-gray-500 mt-1">{e.description}</p>

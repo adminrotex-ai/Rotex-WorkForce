@@ -1,7 +1,12 @@
 import { v4 as uuid } from 'uuid';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import type { BatchStage, Department } from '../types';
-import { STAGE_ORDER, STAGE_TO_DEPARTMENT } from '../types';
+import { STAGE_ORDER, STAGE_TO_DEPARTMENT, DEPARTMENT_LABELS } from '../types';
+
+export function deptLabel(key: string | undefined | null): string {
+  if (!key) return '';
+  return DEPARTMENT_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, m => m.toUpperCase());
+}
 
 export function generateBatchNumber(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -24,12 +29,38 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+const IST_FORMATTER = new Intl.DateTimeFormat('en-IN', {
+  timeZone: 'Asia/Kolkata',
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true,
+});
+
+const IST_SHORT_FORMATTER = new Intl.DateTimeFormat('en-IN', {
+  timeZone: 'Asia/Kolkata',
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+});
+
 export function formatDate(date: string): string {
-  return format(new Date(date), 'dd MMM yyyy, hh:mm a');
+  return `${IST_FORMATTER.format(new Date(date))} IST`;
 }
 
 export function formatDateShort(date: string): string {
-  return format(new Date(date), 'dd MMM yyyy');
+  return IST_SHORT_FORMATTER.format(new Date(date));
+}
+
+export function nowISO(): string {
+  return new Date().toISOString();
+}
+
+export function currentISTString(): string {
+  return `${IST_FORMATTER.format(new Date())} IST`;
 }
 
 export function getNextStage(currentStage: BatchStage): BatchStage | null {
@@ -70,4 +101,8 @@ export function getRejectionWeldingStage(): BatchStage {
 
 export function canUserAccessBatch(userDept: Department, batchStage: BatchStage): boolean {
   return STAGE_TO_DEPARTMENT[batchStage] === userDept;
+}
+
+export function deptKeyFromLabel(label: string): string {
+  return label.toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 }

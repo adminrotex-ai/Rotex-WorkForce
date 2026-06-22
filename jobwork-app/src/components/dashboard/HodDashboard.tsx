@@ -35,10 +35,10 @@ export default function HodDashboard() {
   if (!currentUser) return null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">HOD Dashboard</h1>
-        <p className="text-gray-400 text-sm mt-0.5">{currentUser.firstName} &bull; {DEPARTMENT_LABELS[currentUser.department]}</p>
+        <p className="text-gray-400 text-sm mt-0.5">{currentUser.firstName} &bull; {DEPARTMENT_LABELS[currentUser.department] || currentUser.department}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -55,16 +55,16 @@ export default function HodDashboard() {
           color="#2196f3"
         />
         <StatCard
-          title="Admin Owes You"
+          title="To Collect"
           value={formatCurrency(accounting?.adminOwesHod || 0)}
-          subtitle="For services"
+          subtitle="From admin (service)"
           icon={<TrendingUp size={20} className="text-[#4caf50]" />}
           color="#4caf50"
         />
         <StatCard
-          title="You Owe Admin"
+          title="To Pay"
           value={formatCurrency(accounting?.hodOwesAdmin || 0)}
-          subtitle="For consumer goods"
+          subtitle="To admin (consumer goods)"
           icon={<TrendingDown size={20} className="text-[#ff9800]" />}
           color="#ff9800"
         />
@@ -125,12 +125,12 @@ export default function HodDashboard() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl bg-green-50/80 border border-green-100/50">
-              <p className="text-[10px] text-green-500 font-semibold uppercase tracking-wider">Admin Owes You</p>
+              <p className="text-[10px] text-green-500 font-semibold uppercase tracking-wider">To Collect from Admin</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(accounting.adminOwesHod)}</p>
               <p className="text-[11px] text-green-400 mt-1">For service costs</p>
             </div>
             <div className="p-4 rounded-xl bg-orange-50/80 border border-orange-100/50">
-              <p className="text-[10px] text-orange-500 font-semibold uppercase tracking-wider">You Owe Admin</p>
+              <p className="text-[10px] text-orange-500 font-semibold uppercase tracking-wider">To Pay Admin</p>
               <p className="text-2xl font-bold text-orange-600 mt-1">{formatCurrency(accounting.hodOwesAdmin)}</p>
               <p className="text-[11px] text-orange-400 mt-1">For consumer goods</p>
             </div>

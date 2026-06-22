@@ -38,7 +38,7 @@ export default function UserStatReport() {
   const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div className="flex items-center gap-4">
         <button onClick={() => navigate(-1)} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />

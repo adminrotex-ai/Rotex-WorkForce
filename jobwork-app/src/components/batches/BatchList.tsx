@@ -16,6 +16,7 @@ export default function BatchList() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDelete, setShowDelete] = useState<Batch | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
+  const [deleteAdminPassword, setDeleteAdminPassword] = useState('');
   const [error, setError] = useState('');
   const [form, setForm] = useState({ totalPieces: '', sizes: '' });
   const [filter, setFilter] = useState<'all' | 'created' | 'in_progress' | 'completed'>('all');
@@ -61,10 +62,13 @@ export default function BatchList() {
 
   const handleDelete = async () => {
     if (!showDelete || !deleteReason.trim()) { setError('Deletion reason is required'); return; }
+    if (!deleteAdminPassword) { setError('Admin password is required'); return; }
     try {
-      await deleteBatch(showDelete.id, deleteReason, currentUser!.id, currentUser!.firstName);
+      await deleteBatch(showDelete.id, deleteReason, currentUser!.id, currentUser!.firstName, deleteAdminPassword);
       setShowDelete(null);
       setDeleteReason('');
+      setDeleteAdminPassword('');
+      setError('');
       loadBatches();
     } catch (e: any) {
       setError(e.message);
@@ -74,7 +78,7 @@ export default function BatchList() {
   const filtered = filter === 'all' ? batches : batches.filter(b => b.status === filter);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" >Batches</h1>
@@ -204,7 +208,11 @@ export default function BatchList() {
       </Modal>
 
       {/* Delete Batch Modal */}
-      <Modal isOpen={!!showDelete} onClose={() => { setShowDelete(null); setDeleteReason(''); }} title="Delete Batch">
+      <Modal
+        isOpen={!!showDelete}
+        onClose={() => { setShowDelete(null); setDeleteReason(''); setDeleteAdminPassword(''); setError(''); }}
+        title="Delete Batch"
+      >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             Delete batch <strong>{showDelete?.batchNumber}</strong>?
@@ -219,10 +227,25 @@ export default function BatchList() {
               placeholder="Enter reason for deletion"
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password (required)</label>
+            <input
+              type="password"
+              value={deleteAdminPassword}
+              onChange={e => setDeleteAdminPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-red-500 text-sm"
+              placeholder="Enter admin password to confirm"
+            />
+          </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <div className="flex gap-3">
-            <button onClick={() => { setShowDelete(null); setDeleteReason(''); }} className="flex-1 py-2 border border-gray-300 rounded-2xl text-sm">Cancel</button>
-            <button onClick={handleDelete} className="flex-1 py-2 bg-red-500 text-white rounded-2xl text-sm hover:bg-red-600">Delete</button>
+            <button
+              onClick={() => { setShowDelete(null); setDeleteReason(''); setDeleteAdminPassword(''); setError(''); }}
+              className="flex-1 py-2.5 border border-gray-300 rounded-2xl text-sm"
+            >
+              Cancel
+            </button>
+            <button onClick={handleDelete} className="flex-1 py-2.5 bg-red-500 text-white rounded-2xl text-sm hover:bg-red-600">Delete</button>
           </div>
         </div>
       </Modal>

@@ -1,4 +1,4 @@
-export type Department = 'store' | 'welding' | 'pressing' | 'buffing' | 'packaging' | 'dispatch';
+export type Department = string;
 
 export type UserRole = 'admin' | 'hod' | 'user';
 
@@ -42,7 +42,9 @@ export const STAGE_TO_DEPARTMENT: Record<BatchStage, Department> = {
   dispatch: 'dispatch',
 };
 
-export const DEPARTMENT_LABELS: Record<Department, string> = {
+export const DEFAULT_DEPARTMENTS = ['store', 'welding', 'pressing', 'buffing', 'packaging', 'dispatch'];
+
+export const DEFAULT_DEPARTMENT_LABELS: Record<string, string> = {
   store: 'Store',
   welding: 'Welding Department',
   pressing: 'Pressing Department',
@@ -50,6 +52,9 @@ export const DEPARTMENT_LABELS: Record<Department, string> = {
   packaging: 'Packaging Department',
   dispatch: 'Dispatch Department',
 };
+
+// Mutable label store; updated at runtime when custom departments are loaded.
+export const DEPARTMENT_LABELS: Record<string, string> = { ...DEFAULT_DEPARTMENT_LABELS };
 
 export const STAGE_LABELS: Record<BatchStage, string> = {
   store_raw: 'Store (Raw Material)',
@@ -64,6 +69,15 @@ export const STAGE_LABELS: Record<BatchStage, string> = {
   dispatch: 'Dispatch',
 };
 
+export interface CustomDepartment {
+  id: string;
+  key: string;
+  label: string;
+  createdBy: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -72,10 +86,13 @@ export interface User {
   role: UserRole;
   department: Department;
   phone?: string;
+  profilePicture?: string;
+  openingBalance?: number;
   createdBy: string;
   createdAt: string;
   deletedAt?: string;
   deleteReason?: string;
+  deletedBy?: string;
   isActive: boolean;
 }
 
@@ -139,6 +156,7 @@ export interface PieceEntry {
 export interface ConsumerGoodItem {
   id: string;
   name: string;
+  unit?: string;
   createdBy: string;
   createdAt: string;
   deletedAt?: string;
@@ -149,6 +167,7 @@ export interface ConsumerGoodItem {
 export interface MaterialType {
   id: string;
   name: string;
+  unit?: string;
   createdBy: string;
   createdAt: string;
   isActive: boolean;
@@ -161,7 +180,9 @@ export interface MaterialEntry {
   billPhoto?: string;
   price: number;
   quantity: number;
+  remainingQuantity: number;
   unit: string;
+  isOpening?: boolean;
   enteredBy: string;
   createdAt: string;
 }
@@ -219,7 +240,7 @@ export interface PaymentRecord {
 export interface AuditLog {
   id: string;
   action: string;
-  category: 'batch' | 'user' | 'cost' | 'transfer' | 'material' | 'consumer_goods' | 'payment' | 'deletion' | 'general';
+  category: 'batch' | 'user' | 'cost' | 'transfer' | 'material' | 'consumer_goods' | 'payment' | 'deletion' | 'department' | 'product' | 'general';
   entityType: string;
   entityId: string;
   userId: string;
@@ -235,6 +256,7 @@ export interface ConsumerGoodInventory {
   quantity: number;
   remainingQuantity: number;
   pricePerUnit: number;
+  isOpening?: boolean;
   enteredBy: string;
   supplierName?: string;
   billPhoto?: string;
@@ -263,6 +285,27 @@ export interface ConsumerGoodReceiptItem {
   totalCost: number;
   inventoryEntryId: string;
   supplierName?: string;
+}
+
+export interface FinalProduct {
+  id: string;
+  name: string;
+  unit: string;
+  createdBy: string;
+  createdAt: string;
+  deletedAt?: string;
+  isActive: boolean;
+}
+
+export interface FinalProductStockEntry {
+  id: string;
+  productId: string;
+  quantity: number;
+  remainingQuantity: number;
+  batchId?: string;
+  isOpening?: boolean;
+  enteredBy: string;
+  createdAt: string;
 }
 
 export interface SyncQueueItem {

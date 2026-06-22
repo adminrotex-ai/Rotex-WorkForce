@@ -1,16 +1,32 @@
 import { db } from './db';
 import { generateId, generateBatchNumber, getDateRange } from '../utils/helpers';
 import { hashPassword } from '../utils/crypto';
+import {
+  DEPARTMENT_LABELS, DEFAULT_DEPARTMENT_LABELS,
+} from '../types';
 import type {
   User, Batch, BatchStageRecord, BatchTransfer, PieceEntry,
   ConsumerGoodItem, MaterialType, MaterialEntry, ConsumerGoodUsage,
   ServiceCost, AccountingEntry, PaymentRecord, AuditLog,
   ConsumerGoodInventory, ConsumerGoodReceipt, ConsumerGoodReceiptItem,
-  Department, BatchStage, UserRole,
+  Department, BatchStage, UserRole, CustomDepartment,
+  FinalProduct, FinalProductStockEntry,
 } from '../types';
 
 function now(): string {
   return new Date().toISOString();
+}
+
+function ensurePositive(value: number, label: string): void {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${label} must be a positive number greater than zero`);
+  }
+}
+
+function ensureNonNegative(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${label} cannot be negative`);
+  }
 }
 
 async function addAudit(
@@ -37,6 +53,83 @@ async function addAudit(
   });
 }
 
+// ---- ADMIN PASSWORD VERIFICATION ----
+
+export async function verifyAdminPassword(password: string): Promise<boolean> {
+  if (!password) return false;
+  const hash = hashPassword(password);
+  const admins = await db.users.where('role').equals('admin').toArray();
+  return admins.some(a => a.isActive && a.passwordHash === hash);
+}
+
+async function requireAdminPassword(password: string): Promise<void> {
+  const ok = await verifyAdminPassword(password);
+  if (!ok) throw new Error('Invalid admin password');
+}
+
+// ---- DEPARTMENT OPERATIONS ----
+
+export async function loadCustomDepartmentsIntoLabels(): Promise<CustomDepartment[]> {
+  const customs = await db.customDepartments.where('isActive').equals(1).toArray();
+  // Reset to defaults then layer customs
+  for (const k of Object.keys(DEPARTMENT_LABELS)) delete DEPARTMENT_LABELS[k];
+  Object.assign(DEPARTMENT_LABELS, DEFAULT_DEPARTMENT_LABELS);
+  for (const c of customs) DEPARTMENT_LABELS[c.key] = c.label;
+  return customs;
+}
+
+export async function getActiveDepartments(): Promise<Array<{ key: string; label: string; custom: boolean }>> {
+  const customs = await loadCustomDepartmentsIntoLabels();
+  const defaults = Object.entries(DEFAULT_DEPARTMENT_LABELS).map(([key, label]) => ({ key, label, custom: false }));
+  const customList = customs.map(c => ({ key: c.key, label: c.label, custom: true }));
+  return [...defaults, ...customList];
+}
+
+export async function createCustomDepartment(
+  label: string,
+  createdBy: string,
+  creatorName: string,
+): Promise<CustomDepartment> {
+  const trimmed = label.trim();
+  if (!trimmed) throw new Error('Department name is required');
+  const key = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  if (!key) throw new Error('Invalid department name');
+  if (DEFAULT_DEPARTMENT_LABELS[key]) throw new Error('A built-in department with this name already exists');
+  const existing = await db.customDepartments.where('key').equals(key).first();
+  if (existing && existing.isActive) throw new Error('A department with this name already exists');
+
+  const dept: CustomDepartment = {
+    id: generateId(),
+    key,
+    label: trimmed,
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.customDepartments.add(dept);
+  DEPARTMENT_LABELS[key] = trimmed;
+  await addAudit('DEPARTMENT_CREATED', 'department', 'department', dept.id, createdBy, creatorName,
+    `Created department "${trimmed}"`);
+  return dept;
+}
+
+export async function deleteCustomDepartment(
+  id: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword: string,
+) {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  await requireAdminPassword(adminPassword);
+  const dept = await db.customDepartments.get(id);
+  if (!dept) throw new Error('Department not found');
+  await db.customDepartments.update(id, { isActive: false });
+  delete DEPARTMENT_LABELS[dept.key];
+  await addAudit('DEPARTMENT_DELETED', 'deletion', 'department', id, deletedBy, deleterName,
+    `Deleted department "${dept.label}". Reason: ${reason}`);
+}
+
 // ---- USER OPERATIONS ----
 
 export async function createUser(
@@ -48,34 +141,70 @@ export async function createUser(
   createdBy: string,
   creatorName: string,
   phone?: string,
+  profilePicture?: string,
+  openingBalance?: number,
 ): Promise<User> {
+  if (!username.trim() || !password.trim() || !firstName.trim()) {
+    throw new Error('Username, password and name are required');
+  }
   const existing = await db.users.where('username').equals(username).first();
   if (existing) throw new Error('Username already exists');
 
   const user: User = {
     id: generateId(),
-    username,
+    username: username.trim(),
     passwordHash: hashPassword(password),
-    firstName,
+    firstName: firstName.trim(),
     role,
     department,
     phone: role === 'hod' ? phone : undefined,
+    profilePicture: role === 'hod' ? profilePicture : undefined,
+    openingBalance: role === 'hod' ? openingBalance : undefined,
     createdBy,
     createdAt: now(),
     isActive: true,
   };
   await db.users.add(user);
+
+  // Apply opening balance to accounting if HOD
+  if (role === 'hod' && openingBalance !== undefined && openingBalance !== 0) {
+    const admin = await db.users.where('role').equals('admin').first();
+    if (admin) {
+      // Positive: HOD owes admin (e.g., previous unpaid balance HOD has to pay)
+      // Negative: admin owes HOD
+      if (openingBalance > 0) {
+        await addAccountingEntry(user.id, admin.id, 'hod_owes_admin', openingBalance,
+          `Opening balance for ${firstName}`, undefined, undefined);
+      } else {
+        await addAccountingEntry(user.id, admin.id, 'admin_owes_hod', Math.abs(openingBalance),
+          `Opening balance for ${firstName}`, undefined, undefined);
+      }
+    }
+  }
+
   await addAudit('USER_CREATED', 'user', 'user', user.id, createdBy, creatorName,
-    `Created ${role} user "${firstName}" in ${department} department`);
+    `Created ${role} user "${firstName}" in ${DEPARTMENT_LABELS[department] || department} department${openingBalance !== undefined && openingBalance !== 0 ? ` with opening balance ₹${openingBalance}` : ''}`);
   return user;
 }
 
-export async function deleteUser(userId: string, reason: string, deletedBy: string, deleterName: string) {
+export async function deleteUser(
+  userId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword?: string,
+) {
   if (!reason.trim()) throw new Error('Deletion reason is required');
-  await db.users.update(userId, { isActive: false, deletedAt: now(), deleteReason: reason });
   const user = await db.users.get(userId);
+  if (!user) throw new Error('User not found');
+  // Require admin password for HOD/admin deletion
+  if (user.role === 'hod' || user.role === 'admin') {
+    if (!adminPassword) throw new Error('Admin password is required to delete an HOD');
+    await requireAdminPassword(adminPassword);
+  }
+  await db.users.update(userId, { isActive: false, deletedAt: now(), deleteReason: reason, deletedBy });
   await addAudit('USER_DELETED', 'deletion', 'user', userId, deletedBy, deleterName,
-    `Deleted user "${user?.firstName}" (${user?.role}) from ${user?.department}. Reason: ${reason}`);
+    `Deleted user "${user.firstName}" (${user.role}) from ${DEPARTMENT_LABELS[user.department] || user.department}. Reason: ${reason}`);
 }
 
 export async function getActiveUsers(): Promise<User[]> {
@@ -113,6 +242,9 @@ export async function createBatch(
   createdBy: string,
   creatorName: string,
 ): Promise<Batch> {
+  ensurePositive(totalPieces, 'Total pieces');
+  if (sizes.length === 0) throw new Error('At least one size is required');
+
   const batch: Batch = {
     id: generateId(),
     batchNumber: generateBatchNumber(),
@@ -146,12 +278,21 @@ export async function createBatch(
   return batch;
 }
 
-export async function deleteBatch(batchId: string, reason: string, deletedBy: string, deleterName: string) {
+export async function deleteBatch(
+  batchId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword: string,
+) {
   if (!reason.trim()) throw new Error('Deletion reason is required');
+  if (!adminPassword) throw new Error('Admin password is required to delete a batch');
+  await requireAdminPassword(adminPassword);
   const batch = await db.batches.get(batchId);
+  if (!batch) throw new Error('Batch not found');
   await db.batches.update(batchId, { isActive: false, deletedAt: now(), deleteReason: reason, deletedBy });
   await addAudit('BATCH_DELETED', 'deletion', 'batch', batchId, deletedBy, deleterName,
-    `Deleted batch ${batch?.batchNumber}. Reason: ${reason}`);
+    `Deleted batch ${batch.batchNumber}. Reason: ${reason}`);
 }
 
 export async function getActiveBatches(): Promise<Batch[]> {
@@ -186,6 +327,7 @@ export async function transferPieces(
   targetHodId?: string,
   size?: string,
 ): Promise<BatchTransfer> {
+  ensurePositive(piecesCount, 'Transfer count');
   const batch = await db.batches.get(batchId);
   if (!batch) throw new Error('Batch not found');
 
@@ -196,7 +338,6 @@ export async function transferPieces(
   if (piecesCount > availablePieces) {
     throw new Error(`Only ${availablePieces} pieces available for transfer`);
   }
-  if (piecesCount <= 0) throw new Error('Transfer count must be positive');
 
   await db.batchStageRecords.update(fromRecord.id, {
     piecesSentForward: fromRecord.piecesSentForward + piecesCount,
@@ -261,6 +402,10 @@ export async function recordPieceEntry(
   size?: string,
   notes?: string,
 ): Promise<PieceEntry> {
+  ensureNonNegative(acceptedPieces, 'Accepted pieces');
+  ensureNonNegative(rejectedPieces, 'Rejected pieces');
+  if (acceptedPieces + rejectedPieces <= 0) throw new Error('Enter at least one piece');
+
   const stageRecord = await db.batchStageRecords.get(stageRecordId);
   if (!stageRecord) throw new Error('Stage record not found');
 
@@ -303,6 +448,7 @@ export async function sendRejectedToWelding(
   transferredBy: string,
   transferrerName: string,
 ) {
+  ensurePositive(rejectedPieces, 'Rejected pieces');
   return transferPieces(batchId, fromStage, 'welding', rejectedPieces, transferredBy, transferrerName);
 }
 
@@ -316,10 +462,13 @@ export async function createConsumerGoodItem(
   name: string,
   createdBy: string,
   creatorName: string,
+  unit?: string,
 ): Promise<ConsumerGoodItem> {
+  if (!name.trim()) throw new Error('Item name is required');
   const item: ConsumerGoodItem = {
     id: generateId(),
-    name,
+    name: name.trim(),
+    unit,
     createdBy,
     createdAt: now(),
     isActive: true,
@@ -336,8 +485,9 @@ export async function updateConsumerGoodItem(
   updatedBy: string,
   updaterName: string,
 ) {
+  if (!name.trim()) throw new Error('Item name is required');
   const old = await db.consumerGoodItems.get(itemId);
-  await db.consumerGoodItems.update(itemId, { name });
+  await db.consumerGoodItems.update(itemId, { name: name.trim() });
   await addAudit('CONSUMER_GOOD_UPDATED', 'consumer_goods', 'consumer_good', itemId, updatedBy, updaterName,
     `Updated consumer good from "${old?.name}" to "${name}"`);
 }
@@ -365,10 +515,13 @@ export async function createMaterialType(
   name: string,
   createdBy: string,
   creatorName: string,
+  unit?: string,
 ): Promise<MaterialType> {
+  if (!name.trim()) throw new Error('Material type name is required');
   const mt: MaterialType = {
     id: generateId(),
-    name,
+    name: name.trim(),
+    unit,
     createdBy,
     createdAt: now(),
     isActive: true,
@@ -392,23 +545,31 @@ export async function addMaterialEntry(
   enteredBy: string,
   entererName: string,
   billPhoto?: string,
+  isOpening?: boolean,
 ): Promise<MaterialEntry> {
+  ensurePositive(price, 'Price');
+  ensurePositive(quantity, 'Quantity');
+  if (!materialTypeId) throw new Error('Material type is required');
+  if (!supplierName.trim() && !isOpening) throw new Error('Supplier name is required');
+
   const entry: MaterialEntry = {
     id: generateId(),
     materialTypeId,
-    supplierName,
+    supplierName: supplierName.trim() || (isOpening ? 'Opening Stock' : ''),
     billPhoto,
     price,
     quantity,
+    remainingQuantity: quantity,
     unit,
+    isOpening,
     enteredBy,
     createdAt: now(),
   };
   await db.materialEntries.add(entry);
   const mt = await db.materialTypes.get(materialTypeId);
-  await addAudit('MATERIAL_ENTRY_ADDED', 'material', 'material_entry', entry.id, enteredBy, entererName,
-    `Added material entry: ${mt?.name} from ${supplierName}, qty: ${quantity} ${unit}, price: ₹${price}`,
-    JSON.stringify({ materialTypeId, supplierName, price, quantity }));
+  await addAudit(isOpening ? 'MATERIAL_OPENING_STOCK' : 'MATERIAL_ENTRY_ADDED', 'material', 'material_entry', entry.id, enteredBy, entererName,
+    `${isOpening ? 'Opening stock' : 'Added entry'}: ${mt?.name} ${isOpening ? '' : `from ${supplierName}`}, qty: ${quantity} ${unit}, price: ₹${price}`,
+    JSON.stringify({ materialTypeId, supplierName, price, quantity, isOpening }));
   return entry;
 }
 
@@ -417,6 +578,15 @@ export async function getMaterialEntries(materialTypeId?: string): Promise<Mater
     return db.materialEntries.where('materialTypeId').equals(materialTypeId).toArray();
   }
   return db.materialEntries.toArray();
+}
+
+export async function getMaterialStockTotal(materialTypeId: string): Promise<{ totalQty: number; latestPrice: number; unit: string }> {
+  const all = await db.materialEntries.where('materialTypeId').equals(materialTypeId).toArray();
+  const totalQty = all.reduce((s, e) => s + (e.remainingQuantity ?? e.quantity), 0);
+  const sorted = [...all].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const latestPrice = sorted.length > 0 ? sorted[sorted.length - 1].price : 0;
+  const unit = sorted.length > 0 ? sorted[sorted.length - 1].unit : '';
+  return { totalQty, latestPrice, unit };
 }
 
 // ---- CONSUMER GOODS USAGE ----
@@ -431,6 +601,9 @@ export async function recordConsumerGoodUsage(
   userName: string,
   stageRecordId?: string,
 ): Promise<ConsumerGoodUsage> {
+  ensurePositive(quantity, 'Quantity');
+  ensurePositive(pricePerUnit, 'Price per unit');
+
   const usage: ConsumerGoodUsage = {
     id: generateId(),
     batchId,
@@ -448,7 +621,7 @@ export async function recordConsumerGoodUsage(
   const good = await db.consumerGoodItems.get(consumerGoodId);
   const batch = await db.batches.get(batchId);
   await addAudit('CONSUMER_GOOD_USED', 'consumer_goods', 'consumer_good_usage', usage.id, userId, userName,
-    `Used ${quantity} units of "${good?.name}" (₹${pricePerUnit}/unit = ₹${usage.totalCost}) for batch ${batch?.batchNumber} in ${department}`,
+    `Used ${quantity} units of "${good?.name}" (₹${pricePerUnit}/unit = ₹${usage.totalCost}) for batch ${batch?.batchNumber} in ${DEPARTMENT_LABELS[department] || department}`,
     JSON.stringify({ batchId, consumerGoodId, quantity, pricePerUnit, totalCost: usage.totalCost }));
 
   const user = await db.users.get(userId);
@@ -468,8 +641,7 @@ export async function getConsumerGoodUsages(filters: {
   department?: Department;
   userId?: string;
 }): Promise<ConsumerGoodUsage[]> {
-  let query = db.consumerGoodUsages.toCollection();
-  const results = await query.toArray();
+  const results = await db.consumerGoodUsages.toArray();
   return results.filter(u => {
     if (filters.batchId && u.batchId !== filters.batchId) return false;
     if (filters.department && u.department !== filters.department) return false;
@@ -490,6 +662,9 @@ export async function recordServiceCost(
   size?: string,
   stageRecordId?: string,
 ): Promise<ServiceCost> {
+  ensurePositive(costPerPiece, 'Cost per piece');
+  ensurePositive(totalPieces, 'Total pieces');
+
   const cost: ServiceCost = {
     id: generateId(),
     batchId,
@@ -506,13 +681,13 @@ export async function recordServiceCost(
 
   const batch = await db.batches.get(batchId);
   await addAudit('SERVICE_COST_RECORDED', 'cost', 'service_cost', cost.id, enteredBy, entererName,
-    `Service cost for ${department}: ₹${costPerPiece}/piece x ${totalPieces} = ₹${cost.totalCost} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
+    `Service cost for ${DEPARTMENT_LABELS[department] || department}: ₹${costPerPiece}/piece x ${totalPieces} = ₹${cost.totalCost} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
     JSON.stringify({ batchId, department, costPerPiece, totalPieces, totalCost: cost.totalCost, size }));
 
   const admin = await db.users.where('role').equals('admin').first();
   if (admin) {
     await addAccountingEntry(enteredBy, admin.id, 'admin_owes_hod', cost.totalCost,
-      `Service cost: ${department} - ₹${costPerPiece}/piece x ${totalPieces} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
+      `Service cost: ${DEPARTMENT_LABELS[department] || department} - ₹${costPerPiece}/piece x ${totalPieces} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
       batchId, cost.id);
   }
 
@@ -525,6 +700,7 @@ export async function updateServiceCost(
   updatedBy: string,
   updaterName: string,
 ) {
+  ensurePositive(costPerPiece, 'Cost per piece');
   const old = await db.serviceCosts.get(costId);
   if (!old) throw new Error('Service cost not found');
   const newTotal = costPerPiece * old.totalPieces;
@@ -627,7 +803,7 @@ export async function makePayment(
   amount: number,
   description: string,
 ): Promise<PaymentRecord> {
-  if (amount <= 0) throw new Error('Payment amount must be positive');
+  ensurePositive(amount, 'Payment amount');
   const payment: PaymentRecord = {
     id: generateId(),
     payerId,
@@ -679,13 +855,18 @@ export async function addConsumerGoodToInventory(
   entererName: string,
   supplierName?: string,
   billPhoto?: string,
+  isOpening?: boolean,
 ): Promise<ConsumerGoodInventory> {
+  ensurePositive(quantity, 'Quantity');
+  ensurePositive(pricePerUnit, 'Price per unit');
+
   const inv: ConsumerGoodInventory = {
     id: generateId(),
     consumerGoodId,
     quantity,
     remainingQuantity: quantity,
     pricePerUnit,
+    isOpening,
     enteredBy,
     supplierName,
     billPhoto,
@@ -693,8 +874,8 @@ export async function addConsumerGoodToInventory(
   };
   await db.consumerGoodInventory.add(inv);
   const good = await db.consumerGoodItems.get(consumerGoodId);
-  await addAudit('INVENTORY_ADDED', 'consumer_goods', 'inventory', inv.id, enteredBy, entererName,
-    `Added ${quantity} units of "${good?.name}" to inventory at ₹${pricePerUnit}/unit from ${supplierName || 'unknown'}`);
+  await addAudit(isOpening ? 'INVENTORY_OPENING_STOCK' : 'INVENTORY_ADDED', 'consumer_goods', 'inventory', inv.id, enteredBy, entererName,
+    `${isOpening ? 'Opening stock' : 'Added'} ${quantity} units of "${good?.name}" at ₹${pricePerUnit}/unit${supplierName ? ` from ${supplierName}` : ''}`);
   return inv;
 }
 
@@ -739,6 +920,7 @@ export async function issueConsumerGoodsToHod(
   let totalAmount = 0;
 
   for (const item of items) {
+    ensurePositive(item.quantity, 'Quantity');
     const good = await db.consumerGoodItems.get(item.consumerGoodId);
     if (!good) throw new Error(`Consumer good not found`);
 
@@ -801,7 +983,7 @@ export async function issueConsumerGoodsToHod(
 
   const batch = batchId ? await db.batches.get(batchId) : null;
   await addAudit('CONSUMER_GOODS_ISSUED', 'consumer_goods', 'receipt', receipt.id, issuedBy, issuedByName,
-    `Issued consumer goods to ${hodName} (${department}) - Receipt ${receipt.receiptNumber}, Total: ₹${totalAmount}${batch ? ` for batch ${batch.batchNumber}` : ''}`,
+    `Issued consumer goods to ${hodName} (${DEPARTMENT_LABELS[department] || department}) - Receipt ${receipt.receiptNumber}, Total: ₹${totalAmount}${batch ? ` for batch ${batch.batchNumber}` : ''}`,
     JSON.stringify(receipt));
 
   return receipt;
@@ -813,6 +995,69 @@ export async function getReceiptsForHod(hodId: string): Promise<ConsumerGoodRece
 
 export async function getAllReceipts(): Promise<ConsumerGoodReceipt[]> {
   return db.consumerGoodReceipts.orderBy('createdAt').reverse().toArray();
+}
+
+// ---- FINAL PRODUCT OPERATIONS ----
+
+export async function createFinalProduct(
+  name: string,
+  unit: string,
+  createdBy: string,
+  creatorName: string,
+): Promise<FinalProduct> {
+  if (!name.trim()) throw new Error('Product name is required');
+  const product: FinalProduct = {
+    id: generateId(),
+    name: name.trim(),
+    unit: unit.trim() || 'pcs',
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.finalProducts.add(product);
+  await addAudit('PRODUCT_CREATED', 'product', 'final_product', product.id, createdBy, creatorName,
+    `Created final product: ${name}`);
+  return product;
+}
+
+export async function getActiveFinalProducts(): Promise<FinalProduct[]> {
+  return db.finalProducts.where('isActive').equals(1).toArray();
+}
+
+export async function addFinalProductStock(
+  productId: string,
+  quantity: number,
+  enteredBy: string,
+  entererName: string,
+  batchId?: string,
+  isOpening?: boolean,
+): Promise<FinalProductStockEntry> {
+  ensurePositive(quantity, 'Quantity');
+  const entry: FinalProductStockEntry = {
+    id: generateId(),
+    productId,
+    quantity,
+    remainingQuantity: quantity,
+    batchId,
+    isOpening,
+    enteredBy,
+    createdAt: now(),
+  };
+  await db.finalProductStock.add(entry);
+  const product = await db.finalProducts.get(productId);
+  await addAudit(isOpening ? 'PRODUCT_OPENING_STOCK' : 'PRODUCT_STOCK_ADDED', 'product', 'final_product_stock', entry.id, enteredBy, entererName,
+    `${isOpening ? 'Opening stock' : 'Added stock'} for ${product?.name}: ${quantity} ${product?.unit}`);
+  return entry;
+}
+
+export async function getFinalProductStockEntries(productId?: string): Promise<FinalProductStockEntry[]> {
+  if (productId) return db.finalProductStock.where('productId').equals(productId).toArray();
+  return db.finalProductStock.toArray();
+}
+
+export async function getFinalProductStockTotal(productId: string): Promise<number> {
+  const entries = await db.finalProductStock.where('productId').equals(productId).toArray();
+  return entries.reduce((s, e) => s + (e.remainingQuantity ?? e.quantity), 0);
 }
 
 // ---- AUDIT OPERATIONS ----

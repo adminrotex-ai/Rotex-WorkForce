@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { RootState } from '../../store';
 import { logout } from '../../store/slices/authSlice';
 import { DEPARTMENT_LABELS } from '../../types';
+import { currentISTString } from '../../utils/helpers';
+import { loadCustomDepartmentsIntoLabels } from '../../database/operations';
 import {
   LayoutDashboard, Users, Package, BarChart3, DollarSign,
   ClipboardList, Warehouse, LogOut, Menu, ChevronRight,
-  Settings, FileText, Bell, Search
+  Settings, FileText, Bell, Search, Building2, Boxes
 } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -22,14 +24,23 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isAdmin = currentUser.role === 'admin';
   const isHod = currentUser.role === 'hod';
 
+  const [, forceTick] = useState(0);
+  useEffect(() => { loadCustomDepartmentsIntoLabels().then(() => forceTick(t => t + 1)); }, []);
+  useEffect(() => {
+    const id = setInterval(() => forceTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
     { path: '/batches', label: 'Batches', icon: Package, show: true },
     { path: '/users', label: 'User Management', icon: Users, show: isAdmin || isHod },
+    { path: '/departments', label: 'Departments', icon: Building2, show: isAdmin },
     { path: '/statistics', label: 'Statistics', icon: BarChart3, show: true },
     { path: '/accounting', label: 'Accounting', icon: DollarSign, show: isAdmin || isHod },
     { path: '/materials', label: 'Materials & Inventory', icon: Warehouse, show: isAdmin || (isHod && currentUser.department === 'store') },
     { path: '/consumer-goods', label: 'Consumer Goods', icon: Settings, show: isAdmin || (isHod && (currentUser.department === 'store' || currentUser.department === 'welding' || currentUser.department === 'buffing')) },
+    { path: '/products', label: 'Final Products', icon: Boxes, show: isAdmin || (isHod && currentUser.department === 'store') },
     { path: '/audit', label: 'Audit Logs', icon: ClipboardList, show: isAdmin },
     { path: '/reports', label: 'Reports', icon: FileText, show: isAdmin || isHod },
   ];
@@ -59,20 +70,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* User Info */}
-          <div className="mx-4 mb-4 p-3 rounded-xl bg-white/10 backdrop-blur-sm">
+          <div className="mx-4 mb-5 p-3 rounded-xl bg-white/10 backdrop-blur-sm">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm">
-                {currentUser.firstName[0]}
-              </div>
+              {currentUser.profilePicture ? (
+                <img src={currentUser.profilePicture} alt={currentUser.firstName} className="w-10 h-10 rounded-full object-cover" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm">
+                  {currentUser.firstName[0]}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-white font-medium text-sm truncate">{currentUser.firstName}</p>
-                <p className="text-white/60 text-[11px] capitalize truncate">{currentUser.role} &bull; {DEPARTMENT_LABELS[currentUser.department]}</p>
+                <p className="text-white/60 text-[11px] capitalize truncate">{currentUser.role} &bull; {DEPARTMENT_LABELS[currentUser.department] || currentUser.department}</p>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 overflow-y-auto space-y-1.5">
+          <nav className="flex-1 px-3 overflow-y-auto space-y-2.5 pb-4">
             {navItems.filter(i => i.show).map(item => {
               const Icon = item.icon;
               const active = location.pathname.startsWith(item.path);
@@ -131,8 +146,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400 hidden lg:block">
-              {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            <span className="text-xs text-gray-500 hidden lg:block font-medium">
+              {currentISTString()}
             </span>
             <button className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors">
               <Bell size={18} className="text-gray-500" />
@@ -144,7 +159,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="p-8 animate-fade-in">
+        <main className="p-10 animate-fade-in">
           {children}
         </main>
       </div>

@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   }));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -94,14 +94,14 @@ export default function AdminDashboard() {
           color="#2196f3"
         />
         <StatCard
-          title="Owed to You"
+          title="To Collect"
           value={formatCurrency(totalOwedToAdmin)}
           subtitle="From all HODs"
           icon={<TrendingUp size={20} className="text-[#4caf50]" />}
           color="#4caf50"
         />
         <StatCard
-          title="You Owe"
+          title="To Pay"
           value={formatCurrency(totalOwedByAdmin)}
           subtitle="To all HODs"
           icon={<TrendingDown size={20} className="text-[#ff9800]" />}
@@ -213,8 +213,8 @@ export default function AdminDashboard() {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
                   formatter={(value) => formatCurrency(Number(value))}
                 />
-                <Bar dataKey="owes" name="HOD Owes You" fill="#4caf50" radius={[4, 4, 0, 0]} barSize={16} />
-                <Bar dataKey="owed" name="You Owe HOD" fill="#ff9800" radius={[4, 4, 0, 0]} barSize={16} />
+                <Bar dataKey="owes" name="To Collect" fill="#4caf50" radius={[4, 4, 0, 0]} barSize={16} />
+                <Bar dataKey="owed" name="To Pay" fill="#ff9800" radius={[4, 4, 0, 0]} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -239,8 +239,8 @@ export default function AdminDashboard() {
                 <thead>
                   <tr className="text-left">
                     <th className="pb-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">HOD</th>
-                    <th className="pb-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">Owes You</th>
-                    <th className="pb-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">You Owe</th>
+                    <th className="pb-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">To Collect</th>
+                    <th className="pb-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">To Pay</th>
                     <th className="pb-3 text-[10px] font-semibold text-gray-400 uppercase tracking-wider text-right">Net</th>
                   </tr>
                 </thead>
@@ -256,7 +256,7 @@ export default function AdminDashboard() {
                             </div>
                             <div>
                               <p className="text-xs font-medium text-gray-700">{a.hodName}</p>
-                              <p className="text-[10px] text-gray-400">{DEPARTMENT_LABELS[a.department]}</p>
+                              <p className="text-[10px] text-gray-400">{DEPARTMENT_LABELS[a.department] || a.department}</p>
                             </div>
                           </div>
                         </td>
