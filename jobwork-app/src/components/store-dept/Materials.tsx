@@ -134,7 +134,7 @@ export default function Materials() {
           <button
             onClick={() => setShowAddType(true)}
             className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm hover:opacity-90"
-            style={{ backgroundColor: '#1a237e' }}
+            style={{ backgroundColor: '#2d2d2d' }}
           >
             <FolderOpen size={16} /> Add Material Type
           </button>
@@ -160,14 +160,14 @@ export default function Materials() {
           {materialTypes.map(mt => {
             const s = stockTotals[mt.id];
             return (
-              <div key={mt.id} className="bg-white rounded-2xl p-5 border border-gray-100 flex items-center justify-between">
+              <div key={mt.id} className="warm-card p-5 flex items-center justify-between">
                 <div>
                   <p className="text-xs text-gray-400 uppercase font-medium tracking-wider">{mt.name}</p>
-                  <p className="text-2xl font-bold text-[#1a237e] mt-1">{s?.totalQty || 0} <span className="text-sm text-gray-400 font-normal">{s?.unit || ''}</span></p>
+                  <p className="text-2xl font-bold text-[#c9a227] mt-1">{s?.totalQty || 0} <span className="text-sm text-gray-400 font-normal">{s?.unit || ''}</span></p>
                   {s && s.latestPrice > 0 && <p className="text-xs text-gray-400 mt-1">Latest: {formatCurrency(s.latestPrice)}/unit</p>}
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-[#1a237e]/10 flex items-center justify-center">
-                  <Package size={22} className="text-[#1a237e]" />
+                <div className="w-12 h-12 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
+                  <Package size={22} className="text-[#c9a227]" />
                 </div>
               </div>
             );
@@ -180,7 +180,7 @@ export default function Materials() {
         <button
           onClick={() => setSelectedType(null)}
           className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${!selectedType ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-          style={!selectedType ? { backgroundColor: '#1a237e' } : {}}
+          style={!selectedType ? { backgroundColor: '#2d2d2d' } : {}}
         >
           All Types
         </button>
@@ -189,7 +189,7 @@ export default function Materials() {
             key={mt.id}
             onClick={() => setSelectedType(mt.id)}
             className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${selectedType === mt.id ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-            style={selectedType === mt.id ? { backgroundColor: '#1a237e' } : {}}
+            style={selectedType === mt.id ? { backgroundColor: '#2d2d2d' } : {}}
           >
             {mt.name}
           </button>
@@ -198,7 +198,7 @@ export default function Materials() {
 
       {/* Entries */}
       {filteredEntries.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+        <div className="warm-card p-12 text-center">
           <Package size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-400">No material entries found</p>
         </div>
@@ -207,7 +207,7 @@ export default function Materials() {
           {filteredEntries.map(entry => {
             const type = materialTypes.find(t => t.id === entry.materialTypeId);
             return (
-              <div key={entry.id} className="bg-white rounded-2xl p-4 border border-gray-100">
+              <div key={entry.id} className="warm-card p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2">
@@ -223,7 +223,7 @@ export default function Materials() {
                     <p className="text-xs text-gray-400">{formatDate(entry.createdAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-[#1a237e]">{formatCurrency(entry.price * entry.quantity)}</p>
+                    <p className="font-semibold text-[#c9a227]">{formatCurrency(entry.price * entry.quantity)}</p>
                     {entry.billPhoto && (
                       <button
                         onClick={() => window.open(entry.billPhoto, '_blank')}
@@ -254,7 +254,7 @@ export default function Materials() {
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddType} className="w-full py-2.5 text-white rounded-2xl text-sm" style={{ backgroundColor: '#1a237e' }}>
+          <button onClick={handleAddType} className="w-full py-2.5 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2d2d2d' }}>
             Add Type
           </button>
         </div>

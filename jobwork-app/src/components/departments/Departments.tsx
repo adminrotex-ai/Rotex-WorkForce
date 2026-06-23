@@ -62,7 +62,7 @@ export default function Departments() {
         <button
           onClick={() => setShowAdd(true)}
           className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm font-medium hover:opacity-90"
-          style={{ backgroundColor: '#1a237e' }}
+          style={{ backgroundColor: '#2d2d2d' }}
         >
           <Plus size={16} /> Add Department
         </button>
@@ -70,10 +70,10 @@ export default function Departments() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map(d => (
-          <div key={d.key} className="bg-white rounded-2xl p-5 border border-gray-100 flex items-center justify-between">
+          <div key={d.key} className="warm-card p-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-r from-[#1a237e] to-[#0d47a1] flex items-center justify-center">
-                <Building2 size={20} className="text-white" />
+              <div className="w-11 h-11 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
+                <Building2 size={20} className="text-[#c9a227]" />
               </div>
               <div>
                 <p className="font-medium text-sm">{d.label}</p>
@@ -110,11 +110,11 @@ export default function Departments() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Quality Control"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#1a237e]"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#c9a227]"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAdd} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#1a237e' }}>
+          <button onClick={handleAdd} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#2d2d2d' }}>
             Create Department
           </button>
         </div>

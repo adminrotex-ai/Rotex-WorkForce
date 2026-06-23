@@ -64,11 +64,11 @@ export default function UserStatReport() {
 
       {/* Cost Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+        <div className="warm-card p-5">
           <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Used</p>
           <p className="text-2xl font-bold mt-1" style={{ color: '#ff9800' }}>{formatCurrency(stats.totalConsumerCost)}</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+        <div className="warm-card p-5">
           <p className="text-xs text-gray-500 uppercase font-medium">Service Cost</p>
           <p className="text-2xl font-bold mt-1" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
         </div>
@@ -76,7 +76,7 @@ export default function UserStatReport() {
 
       {/* Piece Entries */}
       {stats.pieceEntries.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >Piece Entry History</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -107,7 +107,7 @@ export default function UserStatReport() {
 
       {/* Consumer Goods Usage */}
       {stats.consumerUsages.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >Consumer Goods Usage</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -138,7 +138,7 @@ export default function UserStatReport() {
 
       {/* Service Costs */}
       {stats.serviceCosts.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >Service Costs</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -171,7 +171,7 @@ export default function UserStatReport() {
 
       {/* Sub-Users (for HODs) */}
       {user.role === 'hod' && subUsers.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >Team Members</h2>
           <div className="space-y-3">
             {subUsers.map(u => (

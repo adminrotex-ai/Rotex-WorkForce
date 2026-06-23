@@ -69,7 +69,7 @@ export default function Statistics() {
             className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               period === p ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={period === p ? { backgroundColor: '#1a237e' } : {}}
+            style={period === p ? { backgroundColor: '#2d2d2d' } : {}}
           >
             {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -98,15 +98,15 @@ export default function Statistics() {
 
       {/* Cost Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+        <div className="warm-card p-5">
           <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Cost</p>
           <p className="text-2xl font-bold mt-1" style={{ color: '#2196f3' }}>{formatCurrency(stats.totalConsumerCost)}</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+        <div className="warm-card p-5">
           <p className="text-xs text-gray-500 uppercase font-medium">Service Cost</p>
           <p className="text-2xl font-bold mt-1" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+        <div className="warm-card p-5">
           <p className="text-xs text-gray-500 uppercase font-medium">Total Cost</p>
           <p className="text-2xl font-bold mt-1" >{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
         </div>
@@ -114,7 +114,7 @@ export default function Statistics() {
 
       {/* User Statistics - Department Hierarchy */}
       {(isAdmin || isHod) && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >
             {isAdmin ? 'Department Statistics' : 'Team Statistics'}
           </h2>
@@ -131,8 +131,8 @@ export default function Statistics() {
                       className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#1a237e] to-[#0d47a1]">
-                          <Users size={14} className="text-white" />
+                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center bg-[#c9a227]/10">
+                          <Users size={14} className="text-[#c9a227]" />
                         </div>
                         <span className="font-medium text-sm">{DEPARTMENT_LABELS[dept]}</span>
                         <span className="text-xs text-gray-400">({deptHods.length} HODs)</span>

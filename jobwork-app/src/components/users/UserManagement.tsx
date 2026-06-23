@@ -126,14 +126,14 @@ export default function UserManagement() {
         const hods = hodsByDept(dept);
         const isExpanded = expandedDept === dept;
         return (
-          <div key={dept} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <div key={dept} className="warm-card overflow-hidden">
             <button
               onClick={() => setExpandedDept(isExpanded ? null : dept)}
               className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#1a237e] to-[#0d47a1]">
-                  <Users size={18} className="text-white" />
+                <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#c9a227]/10">
+                  <Users size={18} className="text-[#c9a227]" />
                 </div>
                 <div className="text-left">
                   <p className="font-medium">{d.label}</p>
@@ -158,7 +158,7 @@ export default function UserManagement() {
                               {hod.profilePicture ? (
                                 <img src={hod.profilePicture} alt={hod.firstName} className="w-10 h-10 rounded-full object-cover" />
                               ) : (
-                                <div className="w-10 h-10 rounded-full bg-[#1a237e]/10 flex items-center justify-center text-[#1a237e] font-semibold">
+                                <div className="w-10 h-10 rounded-full bg-[#c9a227]/15 flex items-center justify-center text-[#c9a227] font-semibold">
                                   {hod.firstName[0]}
                                 </div>
                               )}
@@ -251,7 +251,7 @@ export default function UserManagement() {
   const renderHodView = () => {
     const myUsers = allUsers.filter(u => u.createdBy === currentUser?.id);
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+      <div className="warm-card p-6">
         <h2 className="text-lg font-semibold mb-4">My Team Members</h2>
         {myUsers.length === 0 ? (
           <p className="text-gray-400 text-sm">No users created yet</p>
@@ -296,7 +296,7 @@ export default function UserManagement() {
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl transition-all hover:opacity-90"
-          style={{ backgroundColor: '#1a237e' }}
+          style={{ backgroundColor: '#2d2d2d' }}
         >
           <UserPlus size={18} />
           <span className="text-sm font-medium">Create User</span>
@@ -314,7 +314,7 @@ export default function UserManagement() {
               type="text"
               value={form.firstName}
               onChange={e => setForm({ ...form, firstName: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
               placeholder="Enter first name"
             />
           </div>
@@ -324,7 +324,7 @@ export default function UserManagement() {
               type="text"
               value={form.username}
               onChange={e => setForm({ ...form, username: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
               placeholder="Enter username"
             />
           </div>
@@ -334,7 +334,7 @@ export default function UserManagement() {
               type="password"
               value={form.password}
               onChange={e => setForm({ ...form, password: e.target.value })}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
               placeholder="Enter password"
             />
           </div>
@@ -343,7 +343,7 @@ export default function UserManagement() {
             <select
               value={form.role}
               onChange={e => setForm({ ...form, role: e.target.value as 'hod' | 'user' })}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
             >
               {isAdmin && <option value="hod">Head of Department (HOD)</option>}
               <option value="user">User</option>
@@ -355,7 +355,7 @@ export default function UserManagement() {
               <select
                 value={form.department}
                 onChange={e => setForm({ ...form, department: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
               >
                 {departments.map(d => (
                   <option key={d.key} value={d.key}>{d.label}</option>
@@ -371,7 +371,7 @@ export default function UserManagement() {
                   type="tel"
                   value={form.phone}
                   onChange={e => setForm({ ...form, phone: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
                   placeholder="Enter phone number"
                 />
               </div>
@@ -436,7 +436,7 @@ export default function UserManagement() {
                   step="0.01"
                   value={form.openingBalance}
                   onChange={e => setForm({ ...form, openingBalance: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
                   placeholder="e.g. 5000 (HOD owes you) or -2000 (you owe HOD)"
                 />
                 <p className="text-[11px] text-gray-400 mt-1">
@@ -451,7 +451,7 @@ export default function UserManagement() {
           <button
             onClick={handleCreate}
             className="w-full py-2.5 text-white font-medium rounded-2xl transition-all hover:opacity-90 text-sm"
-            style={{ backgroundColor: '#1a237e' }}
+            style={{ backgroundColor: '#2d2d2d' }}
           >
             Create User
           </button>

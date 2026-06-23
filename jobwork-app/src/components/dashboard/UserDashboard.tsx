@@ -5,8 +5,7 @@ import type { RootState } from '../../store';
 import type { PieceEntry } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
 import { getPieceEntriesByUser } from '../../database/operations';
-import StatCard from '../common/StatCard';
-import { XCircle, Package, BarChart3 } from 'lucide-react';
+import { XCircle, Package, BarChart3, CheckCircle } from 'lucide-react';
 
 export default function UserDashboard() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -27,58 +26,84 @@ export default function UserDashboard() {
   const acceptRate = total > 0 ? (totalAccepted / total) * 100 : 0;
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
+      {/* Welcome */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
-        <p className="text-gray-400 text-sm mt-0.5">{currentUser.firstName} &bull; {DEPARTMENT_LABELS[currentUser.department]}</p>
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Welcome in, {currentUser.firstName}</h1>
+        <p className="text-gray-400 text-sm mt-1">{DEPARTMENT_LABELS[currentUser.department]} Department</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard
-          title="Total Pieces Worked"
-          value={total}
-          icon={<Package size={20} className="text-[#1a237e]" />}
-          color="#1a237e"
-        />
-        <StatCard
-          title="Accepted Pieces"
-          value={totalAccepted}
-          progress={acceptRate}
-          color="#4caf50"
-        />
-        <StatCard
-          title="Rejected Pieces"
-          value={totalRejected}
-          subtitle={total > 0 ? `${((totalRejected / total) * 100).toFixed(1)}% rate` : ''}
-          icon={<XCircle size={20} className="text-[#f44336]" />}
-          color="#f44336"
-        />
-      </div>
-
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100/80">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <button
-            onClick={() => navigate('/batches')}
-            className="p-5 rounded-xl border border-gray-100 hover:bg-gray-50/80 hover:border-[#1a237e]/20 transition-all text-left group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#1a237e]/8 flex items-center justify-center mb-3 group-hover:bg-[#1a237e]/15 transition-colors">
-              <Package size={20} className="text-[#1a237e]" />
-            </div>
-            <p className="font-semibold text-sm text-gray-700">View Batches</p>
-            <p className="text-xs text-gray-400 mt-1">Input piece data for assigned batches</p>
-          </button>
-          <button
-            onClick={() => navigate('/statistics')}
-            className="p-5 rounded-xl border border-gray-100 hover:bg-gray-50/80 hover:border-[#2196f3]/20 transition-all text-left group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#2196f3]/8 flex items-center justify-center mb-3 group-hover:bg-[#2196f3]/15 transition-colors">
-              <BarChart3 size={20} className="text-[#2196f3]" />
-            </div>
-            <p className="font-semibold text-sm text-gray-700">My Statistics</p>
-            <p className="text-xs text-gray-400 mt-1">View your performance statistics</p>
-          </button>
+      {/* Hero Stats */}
+      <div className="flex items-center gap-8 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
+            <Package size={18} className="text-[#c9a227]" />
+          </div>
+          <div>
+            <p className="stat-number text-gray-900">{total}</p>
+            <p className="text-xs text-gray-400 font-medium">Total Pieces</p>
+          </div>
         </div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#34c759]/10 flex items-center justify-center">
+            <CheckCircle size={18} className="text-[#34c759]" />
+          </div>
+          <div>
+            <p className="stat-number text-[#34c759]">{totalAccepted}</p>
+            <p className="text-xs text-gray-400 font-medium">Accepted</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-[#ff3b30]/10 flex items-center justify-center">
+            <XCircle size={18} className="text-[#ff3b30]" />
+          </div>
+          <div>
+            <p className="stat-number text-[#ff3b30]">{totalRejected}</p>
+            <p className="text-xs text-gray-400 font-medium">Rejected</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Acceptance Rate */}
+      <div className="warm-card p-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-800">Acceptance Rate</h3>
+          <span className="text-2xl font-extrabold text-gray-900">{acceptRate.toFixed(0)}%</span>
+        </div>
+        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-700" style={{
+            width: `${acceptRate}%`,
+            background: acceptRate >= 80 ? '#34c759' : acceptRate >= 50 ? '#ff9f0a' : '#ff3b30'
+          }} />
+        </div>
+        <div className="flex justify-between mt-2">
+          <span className="text-[11px] text-gray-400">{totalRejected} rejected</span>
+          <span className="text-[11px] text-gray-400">{totalAccepted} accepted</span>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          onClick={() => navigate('/batches')}
+          className="warm-card p-6 text-left hover-lift group"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center mb-4 group-hover:bg-[#c9a227]/20 transition-colors">
+            <Package size={22} className="text-[#c9a227]" />
+          </div>
+          <p className="font-bold text-base text-gray-800">View Batches</p>
+          <p className="text-xs text-gray-400 mt-1">Input piece data for assigned batches</p>
+        </button>
+        <button
+          onClick={() => navigate('/statistics')}
+          className="warm-card p-6 text-left hover-lift group"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-[#5ac8fa]/10 flex items-center justify-center mb-4 group-hover:bg-[#5ac8fa]/20 transition-colors">
+            <BarChart3 size={22} className="text-[#5ac8fa]" />
+          </div>
+          <p className="font-bold text-base text-gray-800">My Statistics</p>
+          <p className="text-xs text-gray-400 mt-1">View your performance statistics</p>
+        </button>
       </div>
     </div>
   );

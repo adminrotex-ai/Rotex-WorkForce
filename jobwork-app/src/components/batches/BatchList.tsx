@@ -88,7 +88,7 @@ export default function BatchList() {
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl hover:opacity-90"
-            style={{ backgroundColor: '#1a237e',  }}
+            style={{ backgroundColor: '#2d2d2d' }}
           >
             <Plus size={18} /><span className="text-sm font-medium">Create Batch</span>
           </button>
@@ -104,7 +104,7 @@ export default function BatchList() {
             className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               filter === f ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={filter === f ? { backgroundColor: '#1a237e' } : {}}
+            style={filter === f ? { backgroundColor: '#2d2d2d' } : {}}
           >
             {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </button>
@@ -113,7 +113,7 @@ export default function BatchList() {
 
       {/* Batch List */}
       {filtered.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+        <div className="warm-card p-12 text-center">
           <Package size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-400">No batches found</p>
         </div>
@@ -122,14 +122,14 @@ export default function BatchList() {
           {filtered.map(batch => (
             <div
               key={batch.id}
-              className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-sm transition-shadow cursor-pointer"
+              className="warm-card p-4 hover:shadow-md transition-shadow cursor-pointer"
              
               onClick={() => navigate(`/batches/${batch.id}`)}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-gradient-to-r from-[#1a237e] to-[#0d47a1]">
-                    <Package size={22} className="text-white" />
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#c9a227]/10">
+                    <Package size={22} className="text-[#c9a227]" />
                   </div>
                   <div>
                     <p className="font-semibold">{batch.batchNumber}</p>
@@ -142,7 +142,7 @@ export default function BatchList() {
                   <div className="text-right">
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       batch.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      batch.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                      batch.status === 'in_progress' ? 'bg-[#c9a227]/10 text-[#c9a227]' :
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {batch.status.replace('_', ' ')}
@@ -181,7 +181,7 @@ export default function BatchList() {
               type="number"
               value={form.totalPieces}
               onChange={e => setForm({ ...form, totalPieces: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
               placeholder="Enter total number of pieces"
               min="1"
             />
@@ -192,15 +192,14 @@ export default function BatchList() {
               type="text"
               value={form.sizes}
               onChange={e => setForm({ ...form, sizes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#1a237e] text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
               placeholder="e.g. Small, Medium, Large"
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             onClick={handleCreate}
-            className="w-full py-2 text-white font-medium rounded-2xl hover:opacity-90 text-sm"
-            style={{ backgroundColor: '#1a237e',  }}
+            className="w-full py-2.5 text-white font-medium rounded-2xl hover:opacity-90 text-sm bg-[#2d2d2d]"
           >
             Create Batch
           </button>
