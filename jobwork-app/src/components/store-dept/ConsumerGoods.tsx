@@ -7,7 +7,7 @@ import {
   getActiveConsumerGoods, createConsumerGoodItem, updateConsumerGoodItem,
   deleteConsumerGoodItem, addConsumerGoodToInventory, getConsumerGoodInventory,
   getAvailableStockTotal, issueConsumerGoodsToHod, getAllReceipts,
-  getReceiptsForHod, getActiveUsers,
+  getReceiptsForHod, getActiveUsers, deleteReceipt,
 } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import Modal from '../common/Modal';
@@ -32,6 +32,7 @@ export default function ConsumerGoods() {
   const [error, setError] = useState('');
   const [stockInfo, setStockInfo] = useState<Record<string, { totalQty: number; latestPrice: number }>>({});
   const [tab, setTab] = useState<'items' | 'receipts'>('items');
+  const [showDeleteReceipt, setShowDeleteReceipt] = useState<ConsumerGoodReceipt | null>(null);
 
   const [invForm, setInvForm] = useState({
     goodId: '',
@@ -219,6 +220,18 @@ export default function ConsumerGoods() {
     }
   };
 
+  const handleDeleteReceipt = async () => {
+    if (!showDeleteReceipt || !currentUser) return;
+    try {
+      await deleteReceipt(showDeleteReceipt.id, currentUser.id, currentUser.firstName);
+      setShowDeleteReceipt(null);
+      setSelectedReceipt(null);
+      loadData();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   const issueTotal = issueForm.items.reduce((sum, i) => {
     const qty = parseFloat(i.quantity) || 0;
     return sum + qty * i.price;
@@ -387,7 +400,17 @@ export default function ConsumerGoods() {
                   </p>
                   <p className="text-[11px] text-gray-400">{new Date(receipt.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} · By: {receipt.issuedByName}</p>
                 </div>
-                <p className="font-semibold text-sm text-gray-900">{formatCurrency(receipt.totalAmount)}</p>
+                <div className="flex items-center gap-3">
+                  <p className="font-semibold text-sm text-gray-900">{formatCurrency(receipt.totalAmount)}</p>
+                  {canManage && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setShowDeleteReceipt(receipt); }}
+                      className="p-1.5 rounded-xl hover:bg-red-50 text-red-400 cursor-pointer"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -423,7 +446,6 @@ export default function ConsumerGoods() {
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="pb-2 font-medium">Item</th>
-                  <th className="pb-2 font-medium">Supplier</th>
                   <th className="pb-2 font-medium text-right">Qty</th>
                   <th className="pb-2 font-medium text-right">Price/Unit</th>
                   <th className="pb-2 font-medium text-right">Total</th>
@@ -433,7 +455,6 @@ export default function ConsumerGoods() {
                 {selectedReceipt.items.map((item, idx) => (
                   <tr key={idx} className="border-b border-gray-50">
                     <td className="py-2 font-medium text-gray-900">{item.consumerGoodName}</td>
-                    <td className="py-2 text-gray-500">{item.supplierName || '-'}</td>
                     <td className="py-2 text-right">{item.quantity}</td>
                     <td className="py-2 text-right">{formatCurrency(item.pricePerUnit)}</td>
                     <td className="py-2 text-right font-medium">{formatCurrency(item.totalCost)}</td>
@@ -442,7 +463,7 @@ export default function ConsumerGoods() {
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-gray-200">
-                  <td colSpan={4} className="py-3 text-right font-semibold text-gray-900">Total Amount:</td>
+                  <td colSpan={3} className="py-3 text-right font-semibold text-gray-900">Total Amount:</td>
                   <td className="py-3 text-right font-semibold text-lg text-gray-900">{formatCurrency(selectedReceipt.totalAmount)}</td>
                 </tr>
               </tfoot>
@@ -451,6 +472,15 @@ export default function ConsumerGoods() {
             <div className="p-3 bg-orange-50 border border-orange-100 rounded-xl text-[11px] text-orange-700">
               This amount ({formatCurrency(selectedReceipt.totalAmount)}) has been added to {selectedReceipt.hodName}'s account as owed to admin.
             </div>
+
+            {canManage && (
+              <button
+                onClick={() => setShowDeleteReceipt(selectedReceipt)}
+                className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 cursor-pointer"
+              >
+                <Trash2 size={14} /> Delete Receipt
+              </button>
+            )}
           </div>
         )}
       </Modal>
@@ -652,6 +682,22 @@ export default function ConsumerGoods() {
           >
             Issue Goods & Generate Receipt
           </button>
+        </div>
+      </Modal>
+
+      {/* Delete Receipt Confirmation */}
+      <Modal isOpen={!!showDeleteReceipt} onClose={() => setShowDeleteReceipt(null)} title="Delete Receipt" maxWidth="28rem">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Delete receipt <strong>{showDeleteReceipt?.receiptNumber}</strong> ({formatCurrency(showDeleteReceipt?.totalAmount || 0)}) issued to {showDeleteReceipt?.hodName}?
+          </p>
+          <p className="text-[11px] text-gray-400">
+            This will restore the stock to inventory and remove the accounting entry.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setShowDeleteReceipt(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer">Cancel</button>
+            <button onClick={handleDeleteReceipt} className="px-4 py-2 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 cursor-pointer">Delete</button>
+          </div>
         </div>
       </Modal>
     </div>
