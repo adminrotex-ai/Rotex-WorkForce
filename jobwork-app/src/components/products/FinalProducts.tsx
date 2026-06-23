@@ -72,7 +72,7 @@ export default function FinalProducts() {
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm font-medium hover:opacity-90"
-            style={{ backgroundColor: '#1a237e' }}
+            style={{ backgroundColor: '#2d2d2d' }}
           >
             <Plus size={16} /> Add Product
           </button>
@@ -80,7 +80,7 @@ export default function FinalProducts() {
       </div>
 
       {products.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+        <div className="warm-card p-12 text-center">
           <Boxes size={48} className="mx-auto text-gray-300 mb-4" />
           <p className="text-gray-400">No final products yet</p>
         </div>
@@ -91,14 +91,14 @@ export default function FinalProducts() {
             const isExp = expanded === p.id;
             const productEntries = entries.filter(e => e.productId === p.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             return (
-              <div key={p.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div key={p.id} className="warm-card overflow-hidden">
                 <div className="flex items-center justify-between p-4">
                   <button
                     onClick={() => setExpanded(isExp ? null : p.id)}
                     className="flex items-center gap-3 flex-1 text-left"
                   >
-                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-r from-[#1a237e] to-[#0d47a1] flex items-center justify-center">
-                      <Package size={20} className="text-white" />
+                    <div className="w-11 h-11 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
+                      <Package size={20} className="text-[#c9a227]" />
                     </div>
                     <div>
                       <p className="font-medium text-sm">{p.name}</p>
@@ -175,7 +175,7 @@ export default function FinalProducts() {
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddProduct} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#1a237e' }}>
+          <button onClick={handleAddProduct} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#2d2d2d' }}>
             Add Product
           </button>
         </div>
@@ -203,7 +203,7 @@ export default function FinalProducts() {
             Mark as opening stock
           </label>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddStock} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#1a237e' }}>
+          <button onClick={handleAddStock} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#2d2d2d' }}>
             Add Stock
           </button>
         </div>

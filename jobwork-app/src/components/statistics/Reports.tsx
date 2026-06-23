@@ -46,7 +46,7 @@ export default function Reports() {
             className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
               period === p ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'
             }`}
-            style={period === p ? { backgroundColor: '#1a237e' } : {}}
+            style={period === p ? { backgroundColor: '#2d2d2d' } : {}}
           >
             {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
           </button>
@@ -55,7 +55,7 @@ export default function Reports() {
 
       {/* Period Summary */}
       {stats && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >
             {period === 'all' ? 'All Time' : period.charAt(0).toUpperCase() + period.slice(1)} Report
           </h2>
@@ -92,7 +92,7 @@ export default function Reports() {
           </div>
 
           {/* Raw Material vs Finished Product */}
-          <div className="mt-6 p-4 rounded-2xl" style={{ backgroundColor: '#1a237e10', border: '1px solid #1a237e20' }}>
+          <div className="mt-6 p-4 rounded-2xl" style={{ backgroundColor: '#c9a22710', border: '1px solid #c9a22720' }}>
             <h3 className="text-sm font-semibold mb-3" >Raw Material to Finished Product Ratio</h3>
             <div className="grid grid-cols-3 gap-4">
               <div>
@@ -115,7 +115,7 @@ export default function Reports() {
       )}
 
       {/* Batch-wise Report */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-100">
+      <div className="warm-card p-6">
         <h2 className="text-lg font-semibold mb-4" >Batch-wise Report</h2>
         <select
           value={selectedBatch}

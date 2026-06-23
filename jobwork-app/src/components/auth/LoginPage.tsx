@@ -42,21 +42,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1a237e 0%, #283593 50%, #0d47a1 100%)' }}>
-      {/* Background decoration */}
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5f0e5 0%, #e8dcc8 50%, #f0e6d0 100%)' }}>
+      {/* Warm background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-white/5" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-white/5" />
-        <div className="absolute top-1/2 left-1/4 w-64 h-64 rounded-full bg-white/3" />
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(201,162,39,0.12) 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(201,162,39,0.08) 0%, transparent 70%)' }} />
       </div>
 
-      <div className="animate-fade-in bg-white rounded-2xl p-10 w-full max-w-md shadow-2xl relative z-10">
+      <div className="animate-fade-in bg-white rounded-3xl p-10 w-full max-w-md shadow-xl shadow-black/5 relative z-10 border border-[#e8e2d4]">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#1a237e] to-[#0d47a1] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-200">
+          <div className="w-16 h-16 rounded-2xl bg-[#c9a227] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#c9a227]/20">
             <Package size={28} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-800">Welcome Back</h1>
+          <h1 className="text-2xl font-extrabold text-gray-900">Welcome Back</h1>
           <p className="text-gray-400 mt-1 text-sm">Sign in to Rotex WorkForce</p>
         </div>
 
@@ -67,7 +66,7 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder-gray-300"
+              className="w-full px-4 py-3.5 bg-[#f5f0e5] border border-[#e8e2d4] rounded-2xl text-sm transition-all placeholder-gray-300"
               placeholder="Enter your username"
               required
             />
@@ -80,7 +79,7 @@ export default function LoginPage() {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm transition-all placeholder-gray-300 pr-11"
+                className="w-full px-4 py-3.5 bg-[#f5f0e5] border border-[#e8e2d4] rounded-2xl text-sm transition-all placeholder-gray-300 pr-11"
                 placeholder="Enter your password"
                 required
               />
@@ -95,7 +94,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+            <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-2xl text-sm flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
               {error}
             </div>
@@ -104,7 +103,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 text-white font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-indigo-200 disabled:opacity-50 text-sm bg-gradient-to-r from-[#1a237e] to-[#0d47a1]"
+            className="w-full py-3.5 text-white font-bold rounded-2xl transition-all hover:shadow-lg hover:shadow-[#c9a227]/20 disabled:opacity-50 text-sm bg-[#2d2d2d] hover:bg-[#1a1a1a]"
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -118,7 +117,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-300 mt-6">Rotex WorkForce — Manufacturing Workflow v1.0</p>
+        <p className="text-center text-xs text-gray-300 mt-6">Rotex WorkForce — Manufacturing Workflow</p>
       </div>
     </div>
   );

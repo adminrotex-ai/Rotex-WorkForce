@@ -236,7 +236,7 @@ export default function ConsumerGoods() {
             <button
               onClick={() => setShowAdd(true)}
               className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
-              style={{ backgroundColor: '#1a237e',  }}
+              style={{ backgroundColor: '#2d2d2d',  }}
             >
               <Plus size={16} /> Add Item
             </button>
@@ -267,14 +267,14 @@ export default function ConsumerGoods() {
         <button
           onClick={() => setTab('items')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'items' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'items' ? { backgroundColor: '#1a237e' } : {}}
+          style={tab === 'items' ? { backgroundColor: '#2d2d2d' } : {}}
         >
           Items & Stock
         </button>
         <button
           onClick={() => setTab('receipts')}
           className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'receipts' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'receipts' ? { backgroundColor: '#1a237e' } : {}}
+          style={tab === 'receipts' ? { backgroundColor: '#2d2d2d' } : {}}
         >
           Receipts ({receipts.length})
         </button>
@@ -283,7 +283,7 @@ export default function ConsumerGoods() {
       {tab === 'items' && (
         <div className="space-y-3">
           {items.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+            <div className="warm-card p-12 text-center">
               <Package size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="text-gray-400">No consumer goods added yet</p>
             </div>
@@ -295,7 +295,7 @@ export default function ConsumerGoods() {
             const isExpanded = expandedItem === item.id;
 
             return (
-              <div key={item.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div key={item.id} className="warm-card overflow-hidden">
                 <div
                   className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
                   onClick={() => setExpandedItem(isExpanded ? null : item.id)}
@@ -374,14 +374,14 @@ export default function ConsumerGoods() {
       {tab === 'receipts' && (
         <div className="space-y-3">
           {receipts.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+            <div className="warm-card p-12 text-center">
               <FileText size={48} className="mx-auto text-gray-300 mb-4" />
               <p className="text-gray-400">No receipts yet</p>
             </div>
           ) : receipts.map(receipt => (
             <div
               key={receipt.id}
-              className="bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-sm cursor-pointer transition-shadow"
+              className="warm-card p-4 hover:shadow-sm cursor-pointer transition-shadow"
              
               onClick={() => setSelectedReceipt(receipt)}
             >
@@ -472,7 +472,7 @@ export default function ConsumerGoods() {
             placeholder="Item name"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAdd} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#1a237e',  }}>
+          <button onClick={handleAdd} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2d2d2d',  }}>
             Add Item
           </button>
         </div>

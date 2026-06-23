@@ -273,7 +273,7 @@ export default function BatchDetail() {
       </div>
 
       {/* Stage Progress */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-100 overflow-x-auto">
+      <div className="warm-card p-6 overflow-x-auto">
         <h2 className="text-sm font-semibold mb-4" >Workflow Progress</h2>
         <div className="flex items-center gap-1 min-w-max">
           {STAGE_ORDER.map((stage, idx) => {
@@ -313,7 +313,7 @@ export default function BatchDetail() {
             <button
               onClick={() => setShowPieceEntry(true)}
               className="flex items-center gap-2 px-4 py-2 rounded-2xl text-white text-sm font-medium hover:opacity-90"
-              style={{ backgroundColor: '#1a237e',  }}
+              style={{ backgroundColor: '#2d2d2d' }}
             >
               <CheckCircle size={16} /> Record Pieces
             </button>
@@ -362,7 +362,7 @@ export default function BatchDetail() {
       {/* Stage Details */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {stages.map(stage => (
-          <div key={stage.id} className="bg-white rounded-2xl p-5 border border-gray-100">
+          <div key={stage.id} className="warm-card p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold" >{STAGE_LABELS[stage.stage]}</h3>
               <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -403,7 +403,7 @@ export default function BatchDetail() {
 
       {/* Cost Summary */}
       {stats && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >Cost Summary</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
             <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
@@ -414,7 +414,7 @@ export default function BatchDetail() {
               <p className="text-xs text-green-600 uppercase font-medium">Service Costs</p>
               <p className="text-xl font-bold text-green-700">{formatCurrency(stats.totalServiceCost)}</p>
             </div>
-            <div className="p-4 rounded-2xl" style={{ backgroundColor: '#1a237e10', border: '1px solid #1a237e20' }}>
+            <div className="p-4 rounded-2xl" style={{ backgroundColor: '#c9a22710', border: '1px solid #c9a22720' }}>
               <p className="text-xs uppercase font-medium" >Total Cost</p>
               <p className="text-xl font-bold" >{formatCurrency(stats.totalCost)}</p>
             </div>
@@ -452,7 +452,7 @@ export default function BatchDetail() {
 
       {/* Transfer History */}
       {transfers.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-gray-100">
+        <div className="warm-card p-6">
           <h2 className="text-lg font-semibold mb-4" >Transfer History</h2>
           <div className="space-y-3">
             {transfers.map(t => (
@@ -577,7 +577,7 @@ export default function BatchDetail() {
             />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handlePieceEntry} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#1a237e',  }}>
+          <button onClick={handlePieceEntry} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2d2d2d' }}>
             Record Entry
           </button>
         </div>

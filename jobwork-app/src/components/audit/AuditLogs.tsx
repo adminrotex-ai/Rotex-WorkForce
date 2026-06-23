@@ -68,7 +68,7 @@ export default function AuditLogs() {
             className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-colors ${
               filter === c.value ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
             }`}
-            style={filter === c.value ? { backgroundColor: '#1a237e' } : {}}
+            style={filter === c.value ? { backgroundColor: '#2d2d2d' } : {}}
           >
             {c.label}
           </button>
@@ -81,19 +81,19 @@ export default function AuditLogs() {
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search audit logs..."
-        className="w-full px-4 py-2 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#1a237e]"
+        className="w-full px-4 py-2 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#c9a227]"
       />
 
       {/* Logs */}
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center border border-gray-100">
+          <div className="warm-card p-12 text-center">
             <ClipboardList size={48} className="mx-auto text-gray-300 mb-4" />
             <p className="text-gray-400">No audit logs found</p>
           </div>
         ) : (
           filtered.map(log => (
-            <div key={log.id} className="bg-white rounded-2xl p-4 border border-gray-100 animate-fade-in">
+            <div key={log.id} className="warm-card p-4 animate-fade-in">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">

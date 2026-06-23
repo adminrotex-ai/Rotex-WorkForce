@@ -74,15 +74,15 @@ function AdminAccounting() {
       <h1 className="text-2xl font-bold" >Accounting</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-2xl p-5 border border-green-100">
+        <div className="warm-card p-5 border border-green-100">
           <p className="text-xs text-green-600 uppercase font-medium">Total to Collect</p>
           <p className="text-2xl font-bold text-green-700">{formatCurrency(totalOwed)}</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-orange-100">
+        <div className="warm-card p-5 border border-orange-100">
           <p className="text-xs text-orange-600 uppercase font-medium">Total to Pay</p>
           <p className="text-2xl font-bold text-orange-700">{formatCurrency(totalOwing)}</p>
         </div>
-        <div className="bg-white rounded-2xl p-5 border border-gray-100">
+        <div className="warm-card p-5">
           <p className="text-xs text-gray-500 uppercase font-medium">Net Balance</p>
           <p className={`text-2xl font-bold ${totalOwed - totalOwing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
             {formatCurrency(totalOwed - totalOwing)}
@@ -91,7 +91,7 @@ function AdminAccounting() {
       </div>
 
       {/* HOD-wise breakdown */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-100">
+      <div className="warm-card p-6">
         <h2 className="text-lg font-semibold mb-4" >HOD Accounts</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -136,7 +136,7 @@ function AdminAccounting() {
 
       {/* Pending Payments to Confirm */}
       {pendingPayments.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-yellow-100">
+        <div className="warm-card p-6 border border-yellow-100">
           <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Payment Confirmations</h2>
           <div className="space-y-3">
             {pendingPayments.map(p => (
@@ -260,7 +260,7 @@ function HodAccounting() {
       </div>
 
       {/* Transaction History */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-100">
+      <div className="warm-card p-6">
         <h2 className="text-lg font-semibold mb-4" >Transactions</h2>
         {accounting.entries.length === 0 ? (
           <p className="text-gray-400 text-sm">No transactions yet</p>
@@ -288,7 +288,7 @@ function HodAccounting() {
 
       {/* Pending Payments */}
       {pendingPayments.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 border border-yellow-100">
+        <div className="warm-card p-6 border border-yellow-100">
           <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Confirmations</h2>
           <div className="space-y-3">
             {pendingPayments.map(p => (
@@ -375,7 +375,7 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-gray-100">
+      <div className="warm-card p-6">
         <h2 className="text-lg font-semibold mb-4" >Transaction History</h2>
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {accounting.entries.map(e => (
