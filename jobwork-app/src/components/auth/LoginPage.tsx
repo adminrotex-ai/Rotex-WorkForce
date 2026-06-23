@@ -3,7 +3,6 @@ import { useDispatch } from 'react-redux';
 import { login } from '../../store/slices/authSlice';
 import { hashPassword } from '../../utils/crypto';
 import { db } from '../../database/db';
-import { Package, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const dispatch = useDispatch();
@@ -11,11 +10,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (!username.trim() || !password.trim()) {
+      setError('Please enter both username and password');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -42,82 +44,57 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f5f0e5 0%, #e8dcc8 50%, #f0e6d0 100%)' }}>
-      {/* Warm background decoration */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(201,162,39,0.12) 0%, transparent 70%)' }} />
-        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(201,162,39,0.08) 0%, transparent 70%)' }} />
-      </div>
-
-      <div className="animate-fade-in bg-white rounded-3xl p-10 w-full max-w-md shadow-xl shadow-black/5 relative z-10 border border-[#e8e2d4]">
-        {/* Logo */}
+    <div className="min-h-screen bg-[#e8e0cc] flex items-center justify-center p-4">
+      <div className="bg-[#f5f0e0] rounded-[2rem] w-full max-w-md p-10 shadow-xl">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-[#c9a227] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#c9a227]/20">
-            <Package size={28} className="text-white" />
+          <div className="inline-block border border-gray-300/70 rounded-full px-6 py-2.5 mb-6">
+            <span className="text-sm font-medium text-gray-800">Rotex WorkForce</span>
           </div>
-          <h1 className="text-2xl font-extrabold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-400 mt-1 text-sm">Sign in to Rotex WorkForce</p>
+          <h1 className="text-3xl font-light text-gray-900 mb-2">Welcome Back</h1>
+          <p className="text-gray-400 text-sm">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">Username</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="w-full px-4 py-3.5 bg-[#f5f0e5] border border-[#e8e2d4] rounded-2xl text-sm transition-all placeholder-gray-300"
-              placeholder="Enter your username"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wider">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full px-4 py-3.5 bg-[#f5f0e5] border border-[#e8e2d4] rounded-2xl text-sm transition-all placeholder-gray-300 pr-11"
-                placeholder="Enter your password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
-
           {error && (
-            <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-2xl text-sm flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
               {error}
             </div>
           )}
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Username</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full bg-white/60 border border-gray-200/50 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+              placeholder="Enter your username"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full bg-white/60 border border-gray-200/50 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gold-400 focus:border-transparent"
+              placeholder="Enter your password"
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 text-white font-bold rounded-2xl transition-all hover:shadow-lg hover:shadow-[#c9a227]/20 disabled:opacity-50 text-sm bg-[#2d2d2d] hover:bg-[#1a1a1a]"
+            className="w-full bg-[#2a2a2a] text-white py-3 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] transition-colors cursor-pointer disabled:opacity-50"
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Signing in...
-              </span>
-            ) : 'Sign In'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-300 mt-6">Rotex WorkForce — Manufacturing Workflow</p>
+        <p className="text-center text-xs text-gray-400 mt-8">
+          Contact your admin for account access
+        </p>
       </div>
     </div>
   );

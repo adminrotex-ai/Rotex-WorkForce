@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../store';
 import type { Batch, BatchStageRecord } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
-import { getAccountingForHod, getHodBatchesInProgress, getUsersByCreator } from '../../database/operations';
+import { getAccountingForHod, getHodBatchesInProgress, getUsersByCreator, getPieceEntriesByUser } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
-import { Package, Users, TrendingUp, TrendingDown, ChevronRight, ArrowRight } from 'lucide-react';
+import { Package, Users, TrendingUp, TrendingDown } from 'lucide-react';
 
 export default function HodDashboard() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -14,6 +14,7 @@ export default function HodDashboard() {
   const [myBatches, setMyBatches] = useState<{ batch: Batch; stageRecord: BatchStageRecord }[]>([]);
   const [accounting, setAccounting] = useState<{ hodOwesAdmin: number; adminOwesHod: number } | null>(null);
   const [userCount, setUserCount] = useState(0);
+  const [stats, setStats] = useState({ totalPieces: 0, accepted: 0, rejected: 0, batchesHandled: 0 });
 
   useEffect(() => {
     if (currentUser) loadData();
@@ -21,138 +22,104 @@ export default function HodDashboard() {
 
   const loadData = async () => {
     if (!currentUser) return;
-    const [batches, acc, users] = await Promise.all([
+    const [batches, acc, users, entries] = await Promise.all([
       getHodBatchesInProgress(currentUser.id),
       getAccountingForHod(currentUser.id),
       getUsersByCreator(currentUser.id),
+      getPieceEntriesByUser(currentUser.id),
     ]);
     setMyBatches(batches);
     setAccounting(acc);
     setUserCount(users.length);
+    const totalAccepted = entries.reduce((s, e) => s + e.acceptedPieces, 0);
+    const totalRejected = entries.reduce((s, e) => s + e.rejectedPieces, 0);
+    const total = totalAccepted + totalRejected;
+    setStats({
+      totalPieces: total,
+      accepted: totalAccepted,
+      rejected: totalRejected,
+      batchesHandled: new Set(entries.map(e => e.batchId)).size,
+    });
   };
 
   if (!currentUser) return null;
 
+  const acceptRate = stats.totalPieces > 0 ? ((stats.accepted / stats.totalPieces) * 100).toFixed(0) : '0';
+  const rejectRate = stats.totalPieces > 0 ? ((stats.rejected / stats.totalPieces) * 100).toFixed(0) : '0';
+
   return (
-    <div className="space-y-6">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Welcome in, {currentUser.firstName}</h1>
-        <p className="text-gray-400 text-sm mt-1">{DEPARTMENT_LABELS[currentUser.department] || currentUser.department} Department</p>
+    <div>
+      <div className="mb-8">
+        <h1 className="text-3xl font-light text-gray-900">Welcome, {currentUser.firstName}</h1>
+        <p className="text-sm text-gray-400 mt-1">HOD · {DEPARTMENT_LABELS[currentUser.department] || currentUser.department} Department</p>
       </div>
 
-      {/* Hero Stats */}
-      <div className="flex items-center gap-8 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
-            <Package size={18} className="text-[#c9a227]" />
-          </div>
+      <div className="grid grid-cols-4 gap-5 mb-8">
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gold-300 flex items-center justify-center"><Package size={22} className="text-dark-800" /></div>
           <div>
-            <p className="stat-number text-gray-900">{myBatches.length}</p>
-            <p className="text-xs text-gray-400 font-medium">Active Batches</p>
+            <p className="text-2xl font-light text-gray-900">{myBatches.length}</p>
+            <p className="text-sm text-gray-600">Active Batches</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#5ac8fa]/10 flex items-center justify-center">
-            <Users size={18} className="text-[#5ac8fa]" />
-          </div>
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-200 flex items-center justify-center"><Users size={22} className="text-dark-800" /></div>
           <div>
-            <p className="stat-number text-gray-900">{userCount}</p>
-            <p className="text-xs text-gray-400 font-medium">My Users</p>
+            <p className="text-2xl font-light text-gray-900">{userCount}</p>
+            <p className="text-sm text-gray-600">My Users</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#34c759]/10 flex items-center justify-center">
-            <TrendingUp size={18} className="text-[#34c759]" />
-          </div>
-          <div>
-            <p className="stat-number text-gray-900">{formatCurrency(accounting?.adminOwesHod || 0)}</p>
-            <p className="text-xs text-gray-400 font-medium">To Collect</p>
-          </div>
+        <div className="bg-emerald-50 rounded-2xl p-5">
+          <p className="text-sm text-emerald-600 flex items-center gap-1 mb-1"><TrendingUp size={14} /> To Collect</p>
+          <p className="text-2xl font-light text-emerald-700">{formatCurrency(accounting?.adminOwesHod || 0)}</p>
+          <p className="text-[11px] text-emerald-500">Admin owes you</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-[#ff9f0a]/10 flex items-center justify-center">
-            <TrendingDown size={18} className="text-[#ff9f0a]" />
-          </div>
-          <div>
-            <p className="stat-number text-gray-900">{formatCurrency(accounting?.hodOwesAdmin || 0)}</p>
-            <p className="text-xs text-gray-400 font-medium">To Pay</p>
-          </div>
+        <div className="bg-red-50 rounded-2xl p-5">
+          <p className="text-sm text-red-500 flex items-center gap-1 mb-1"><TrendingDown size={14} /> To Pay</p>
+          <p className="text-2xl font-light text-red-600">{formatCurrency(accounting?.hodOwesAdmin || 0)}</p>
+          <p className="text-[11px] text-red-400">You owe admin</p>
         </div>
       </div>
 
-      {/* Batches In Progress */}
-      <div className="warm-card p-6">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">Batches In Progress</h3>
-        {myBatches.length === 0 ? (
-          <p className="text-gray-300 text-sm">No batches assigned to you currently</p>
-        ) : (
-          <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-5 mb-8">
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Active Batches</h2>
+          <div className="space-y-3">
             {myBatches.map(({ batch, stageRecord }) => (
-              <div
-                key={batch.id}
-                className="flex items-center justify-between p-4 rounded-2xl hover:bg-[#f5f0e5] cursor-pointer transition-colors"
-                onClick={() => navigate(`/batches/${batch.id}`)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
-                    <Package size={16} className="text-[#c9a227]" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm text-gray-800">{batch.batchNumber}</p>
-                    <p className="text-[11px] text-gray-400">
-                      Received: {stageRecord.totalPiecesReceived} &bull; Processed: {stageRecord.piecesProcessed} &bull; Sent: {stageRecord.piecesSentForward}
-                    </p>
-                  </div>
+              <div key={batch.id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-white/40 rounded-lg px-2 -mx-2" onClick={() => navigate(`/batches/${batch.id}`)}>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{batch.batchNumber}</p>
+                  <p className="text-[11px] text-gray-400">{stageRecord.totalPiecesReceived} received · {stageRecord.acceptedPieces} accepted</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-[#c9a227]">
-                      {stageRecord.totalPiecesReceived - stageRecord.piecesProcessed} pending
-                    </p>
-                    <p className="text-[11px] text-gray-400">
-                      {stageRecord.acceptedPieces} accepted / {stageRecord.rejectedPieces} rejected
-                    </p>
-                  </div>
-                  <ChevronRight size={14} className="text-gray-300" />
-                </div>
+                <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-gold-300 text-dark-800">{stageRecord.status.replace('_', ' ')}</span>
               </div>
             ))}
-          </div>
-        )}
-      </div>
-
-      {/* Accounting Summary */}
-      {accounting && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="warm-card p-6" style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-green-500 font-semibold uppercase tracking-wider">To Collect from Admin</p>
-              <button
-                onClick={() => navigate('/accounting')}
-                className="text-xs font-medium text-green-500 hover:text-green-600 flex items-center gap-1"
-              >
-                Details <ArrowRight size={12} />
-              </button>
-            </div>
-            <p className="text-3xl font-extrabold text-[#34c759]">{formatCurrency(accounting.adminOwesHod)}</p>
-            <p className="text-xs text-green-400 mt-1">For service costs</p>
-          </div>
-          <div className="warm-card p-6" style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-orange-500 font-semibold uppercase tracking-wider">To Pay Admin</p>
-              <button
-                onClick={() => navigate('/accounting')}
-                className="text-xs font-medium text-orange-500 hover:text-orange-600 flex items-center gap-1"
-              >
-                Details <ArrowRight size={12} />
-              </button>
-            </div>
-            <p className="text-3xl font-extrabold text-[#ff9f0a]">{formatCurrency(accounting.hodOwesAdmin)}</p>
-            <p className="text-xs text-orange-400 mt-1">For consumer goods</p>
+            {myBatches.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No active batches</p>}
           </div>
         </div>
-      )}
+
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">My Performance</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-2xl font-light text-gray-900">{stats.totalPieces}</p>
+              <p className="text-[11px] text-gray-400">Pieces Handled</p>
+            </div>
+            <div>
+              <p className="text-2xl font-light text-emerald-600">{acceptRate}%</p>
+              <p className="text-[11px] text-gray-400">Accept Rate</p>
+            </div>
+            <div>
+              <p className="text-2xl font-light text-red-500">{rejectRate}%</p>
+              <p className="text-[11px] text-gray-400">Reject Rate</p>
+            </div>
+            <div>
+              <p className="text-2xl font-light text-gray-900">{stats.batchesHandled}</p>
+              <p className="text-[11px] text-gray-400">Batches Done</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
