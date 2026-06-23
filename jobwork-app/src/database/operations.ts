@@ -997,6 +997,34 @@ export async function getAllReceipts(): Promise<ConsumerGoodReceipt[]> {
   return db.consumerGoodReceipts.orderBy('createdAt').reverse().toArray();
 }
 
+export async function deleteReceipt(
+  receiptId: string,
+  deletedBy: string,
+  deletedByName: string,
+) {
+  const receipt = await db.consumerGoodReceipts.get(receiptId);
+  if (!receipt) throw new Error('Receipt not found');
+
+  for (const item of receipt.items) {
+    const inv = await db.consumerGoodInventory.get(item.inventoryEntryId);
+    if (inv) {
+      await db.consumerGoodInventory.update(inv.id, {
+        remainingQuantity: inv.remainingQuantity + item.quantity,
+      });
+    }
+  }
+
+  const allEntries = await db.accountingEntries.where('relatedCostId').equals(receiptId).toArray();
+  for (const entry of allEntries) {
+    await db.accountingEntries.delete(entry.id);
+  }
+
+  await db.consumerGoodReceipts.delete(receiptId);
+
+  await addAudit('RECEIPT_DELETED', 'deletion', 'receipt', receiptId, deletedBy, deletedByName,
+    `Deleted receipt ${receipt.receiptNumber} (₹${receipt.totalAmount}) issued to ${receipt.hodName}`);
+}
+
 // ---- FINAL PRODUCT OPERATIONS ----
 
 export async function createFinalProduct(
