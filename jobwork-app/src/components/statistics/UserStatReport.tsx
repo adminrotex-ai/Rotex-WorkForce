@@ -7,6 +7,7 @@ import { DEPARTMENT_LABELS } from '../../types';
 import { getUserStatistics, getUsersByCreator, getUserById } from '../../database/operations';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import StatCard from '../common/StatCard';
+import { PageHeader, WidgetCard, Accordion } from '../common/Widgets';
 import { ArrowLeft, CheckCircle, XCircle, Package, BarChart3 } from 'lucide-react';
 
 export default function UserStatReport() {
@@ -43,20 +44,15 @@ export default function UserStatReport() {
         <button onClick={() => navigate(-1)} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold" >
-            {user.firstName}'s Report
-          </h1>
-          <p className="text-gray-500 text-sm">
-            {user.role.toUpperCase()} - {DEPARTMENT_LABELS[user.department]}
-            {isAdmin && ` | Username: ${user.username}`}
-          </p>
-        </div>
+        <PageHeader
+          title={`${user.firstName}'s Report`}
+          subtitle={`${user.role.toUpperCase()} - ${DEPARTMENT_LABELS[user.department]}${isAdmin ? ` | Username: ${user.username}` : ''}`}
+        />
       </div>
 
       {/* Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Pieces" value={stats.totalPieces} icon={<Package size={20}  />} />
+        <StatCard title="Total Pieces" value={stats.totalPieces} icon={<Package size={20} />} />
         <StatCard title="Accepted" value={stats.totalAccepted} subtitle={`${stats.acceptanceRate.toFixed(1)}% rate`} icon={<CheckCircle size={20} style={{ color: '#4caf50' }} />} color="#4caf50" />
         <StatCard title="Rejected" value={stats.totalRejected} subtitle={`${stats.rejectionRate.toFixed(1)}% rate`} icon={<XCircle size={20} style={{ color: '#f44336' }} />} color="#f44336" />
         <StatCard title="Batches Worked" value={stats.batchCount} icon={<Package size={20} style={{ color: '#2196f3' }} />} color="#2196f3" />
@@ -64,21 +60,23 @@ export default function UserStatReport() {
 
       {/* Cost Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="warm-card p-5">
-          <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Used</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#ff9800' }}>{formatCurrency(stats.totalConsumerCost)}</p>
-        </div>
-        <div className="warm-card p-5">
-          <p className="text-xs text-gray-500 uppercase font-medium">Service Cost</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
-        </div>
+        <WidgetCard title="Consumer Goods Used">
+          <p className="text-2xl font-bold" style={{ color: '#ff9800' }}>{formatCurrency(stats.totalConsumerCost)}</p>
+        </WidgetCard>
+        <WidgetCard title="Service Cost">
+          <p className="text-2xl font-bold" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
+        </WidgetCard>
       </div>
 
       {/* Piece Entries */}
       {stats.pieceEntries.length > 0 && (
-        <div className="warm-card p-6">
-          <h2 className="text-lg font-semibold mb-4" >Piece Entry History</h2>
-          <div className="overflow-x-auto">
+        <Accordion
+          title="Piece Entry History"
+          subtitle={`${stats.pieceEntries.length} entries`}
+          icon={<Package size={16} className="text-[#c9a227]" />}
+          defaultOpen
+        >
+          <div className="p-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
@@ -102,14 +100,17 @@ export default function UserStatReport() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Accordion>
       )}
 
       {/* Consumer Goods Usage */}
       {stats.consumerUsages.length > 0 && (
-        <div className="warm-card p-6">
-          <h2 className="text-lg font-semibold mb-4" >Consumer Goods Usage</h2>
-          <div className="overflow-x-auto">
+        <Accordion
+          title="Consumer Goods Usage"
+          subtitle={`${stats.consumerUsages.length} entries`}
+          icon={<Package size={16} className="text-orange-500" />}
+        >
+          <div className="p-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
@@ -133,14 +134,17 @@ export default function UserStatReport() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Accordion>
       )}
 
       {/* Service Costs */}
       {stats.serviceCosts.length > 0 && (
-        <div className="warm-card p-6">
-          <h2 className="text-lg font-semibold mb-4" >Service Costs</h2>
-          <div className="overflow-x-auto">
+        <Accordion
+          title="Service Costs"
+          subtitle={`${stats.serviceCosts.length} entries`}
+          icon={<BarChart3 size={16} className="text-green-500" />}
+        >
+          <div className="p-4 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b">
@@ -166,13 +170,12 @@ export default function UserStatReport() {
               </tbody>
             </table>
           </div>
-        </div>
+        </Accordion>
       )}
 
       {/* Sub-Users (for HODs) */}
       {user.role === 'hod' && subUsers.length > 0 && (
-        <div className="warm-card p-6">
-          <h2 className="text-lg font-semibold mb-4" >Team Members</h2>
+        <WidgetCard title="Team Members">
           <div className="space-y-3">
             {subUsers.map(u => (
               <div key={u.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-2xl border border-gray-100">
@@ -189,7 +192,7 @@ export default function UserStatReport() {
               </div>
             ))}
           </div>
-        </div>
+        </WidgetCard>
       )}
     </div>
   );

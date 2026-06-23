@@ -7,6 +7,7 @@ import {
   getActiveDepartments, createCustomDepartment, deleteCustomDepartment,
 } from '../../database/operations';
 import Modal from '../common/Modal';
+import { PageHeader, WidgetCard } from '../common/Widgets';
 import { Building2, Plus, Trash2, Lock } from 'lucide-react';
 
 export default function Departments() {
@@ -54,46 +55,45 @@ export default function Departments() {
 
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Departments</h1>
-          <p className="text-gray-500 text-sm">Manage built-in and custom departments</p>
-        </div>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm font-medium hover:opacity-90"
-          style={{ backgroundColor: '#2d2d2d' }}
-        >
-          <Plus size={16} /> Add Department
-        </button>
-      </div>
+      <PageHeader
+        title="Departments"
+        subtitle="Manage built-in and custom departments"
+        action={
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm font-medium hover:opacity-90"
+            style={{ backgroundColor: '#2d2d2d' }}
+          >
+            <Plus size={16} /> Add Department
+          </button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map(d => (
-          <div key={d.key} className="warm-card p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
-                <Building2 size={20} className="text-[#c9a227]" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">{d.label}</p>
+          <WidgetCard key={d.key} title={d.label}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
+                  <Building2 size={20} className="text-[#c9a227]" />
+                </div>
                 <p className="text-xs text-gray-400">
                   {d.custom ? 'Custom' : 'Built-in'} &middot; key: {d.key}
                 </p>
               </div>
+              {d.custom ? (
+                <button
+                  onClick={() => setShowDelete({ key: d.key, label: d.label })}
+                  className="p-2 rounded-2xl hover:bg-red-50 text-red-500"
+                  title="Delete department"
+                >
+                  <Trash2 size={16} />
+                </button>
+              ) : (
+                <Lock size={14} className="text-gray-300" />
+              )}
             </div>
-            {d.custom ? (
-              <button
-                onClick={() => setShowDelete({ key: d.key, label: d.label })}
-                className="p-2 rounded-2xl hover:bg-red-50 text-red-500"
-                title="Delete department"
-              >
-                <Trash2 size={16} />
-              </button>
-            ) : (
-              <Lock size={14} className="text-gray-300" />
-            )}
-          </div>
+          </WidgetCard>
         ))}
       </div>
 

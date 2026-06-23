@@ -8,14 +8,14 @@ import {
 } from '../../database/operations';
 import { formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { Boxes, Plus, Package, ChevronRight } from 'lucide-react';
+import { PageHeader, Accordion } from '../common/Widgets';
+import { Boxes, Plus, Package } from 'lucide-react';
 
 export default function FinalProducts() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
   const [products, setProducts] = useState<FinalProduct[]>([]);
   const [stockTotals, setStockTotals] = useState<Record<string, number>>({});
   const [entries, setEntries] = useState<FinalProductStockEntry[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showStock, setShowStock] = useState<FinalProduct | null>(null);
   const [productForm, setProductForm] = useState({ name: '', unit: 'pcs' });
@@ -63,12 +63,10 @@ export default function FinalProducts() {
 
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Final Products</h1>
-          <p className="text-gray-500 text-sm">Track finished product stock</p>
-        </div>
-        {canManage && (
+      <PageHeader
+        title="Final Products"
+        subtitle="Track finished product stock"
+        action={canManage ? (
           <button
             onClick={() => setShowAdd(true)}
             className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm font-medium hover:opacity-90"
@@ -76,8 +74,8 @@ export default function FinalProducts() {
           >
             <Plus size={16} /> Add Product
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       {products.length === 0 ? (
         <div className="warm-card p-12 text-center">
@@ -88,65 +86,49 @@ export default function FinalProducts() {
         <div className="space-y-4">
           {products.map(p => {
             const total = stockTotals[p.id] ?? 0;
-            const isExp = expanded === p.id;
             const productEntries = entries.filter(e => e.productId === p.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             return (
-              <div key={p.id} className="warm-card overflow-hidden">
-                <div className="flex items-center justify-between p-4">
-                  <button
-                    onClick={() => setExpanded(isExp ? null : p.id)}
-                    className="flex items-center gap-3 flex-1 text-left"
-                  >
-                    <div className="w-11 h-11 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
-                      <Package size={20} className="text-[#c9a227]" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-gray-400">Stock available: <span className="font-semibold text-green-600">{total} {p.unit}</span></p>
-                    </div>
-                  </button>
-                  <div className="flex items-center gap-2">
-                    {canManage && (
-                      <button
-                        onClick={() => { setShowStock(p); setStockForm({ quantity: '', isOpening: false }); }}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-2xl"
-                      >
-                        + Add Stock
-                      </button>
-                    )}
-                    <ChevronRight size={16} className={`text-gray-400 transition-transform ${isExp ? 'rotate-90' : ''}`} />
-                  </div>
-                </div>
-
-                {isExp && (
-                  <div className="border-t border-gray-100 p-4 animate-fade-in">
-                    {productEntries.length === 0 ? (
-                      <p className="text-xs text-gray-400">No stock entries</p>
-                    ) : (
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="text-left text-gray-500 border-b">
-                            <th className="pb-2 font-medium">Date (IST)</th>
-                            <th className="pb-2 font-medium text-right">Added</th>
-                            <th className="pb-2 font-medium text-right">Remaining</th>
-                            <th className="pb-2 font-medium">Type</th>
+              <Accordion
+                key={p.id}
+                title={p.name}
+                subtitle={`Stock: ${total} ${p.unit}`}
+                icon={<Package size={20} className="text-[#c9a227]" />}
+              >
+                <div className="p-4">
+                  {canManage && (
+                    <button
+                      onClick={() => { setShowStock(p); setStockForm({ quantity: '', isOpening: false }); }}
+                      className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-2xl mb-3"
+                    >
+                      + Add Stock
+                    </button>
+                  )}
+                  {productEntries.length === 0 ? (
+                    <p className="text-xs text-gray-400">No stock entries</p>
+                  ) : (
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-left text-gray-500 border-b">
+                          <th className="pb-2 font-medium">Date (IST)</th>
+                          <th className="pb-2 font-medium text-right">Added</th>
+                          <th className="pb-2 font-medium text-right">Remaining</th>
+                          <th className="pb-2 font-medium">Type</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {productEntries.map(e => (
+                          <tr key={e.id} className="border-b border-gray-50">
+                            <td className="py-2">{formatDate(e.createdAt)}</td>
+                            <td className="py-2 text-right">{e.quantity} {p.unit}</td>
+                            <td className="py-2 text-right font-medium text-green-600">{e.remainingQuantity} {p.unit}</td>
+                            <td className="py-2">{e.isOpening ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded-full">Opening</span> : 'Stock'}</td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          {productEntries.map(e => (
-                            <tr key={e.id} className="border-b border-gray-50">
-                              <td className="py-2">{formatDate(e.createdAt)}</td>
-                              <td className="py-2 text-right">{e.quantity} {p.unit}</td>
-                              <td className="py-2 text-right font-medium text-green-600">{e.remainingQuantity} {p.unit}</td>
-                              <td className="py-2">{e.isOpening ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded-full">Opening</span> : 'Stock'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                )}
-              </div>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </Accordion>
             );
           })}
         </div>

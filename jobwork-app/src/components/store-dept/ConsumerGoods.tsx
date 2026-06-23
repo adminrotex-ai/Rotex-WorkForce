@@ -11,7 +11,8 @@ import {
 } from '../../database/operations';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { Plus, Edit, Trash2, Package, ChevronRight, Send, FileText } from 'lucide-react';
+import { PageHeader, PillTabs, Accordion } from '../common/Widgets';
+import { Plus, Edit, Trash2, Package, Send, FileText } from 'lucide-react';
 
 export default function ConsumerGoods() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -25,13 +26,12 @@ export default function ConsumerGoods() {
   const [showInventory, setShowInventory] = useState(false);
   const [showIssue, setShowIssue] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<ConsumerGoodReceipt | null>(null);
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [editName, setEditName] = useState('');
   const [deleteReason, setDeleteReason] = useState('');
   const [error, setError] = useState('');
   const [stockInfo, setStockInfo] = useState<Record<string, { totalQty: number; latestPrice: number }>>({});
-  const [tab, setTab] = useState<'items' | 'receipts'>('items');
+  const [tab, setTab] = useState('items');
 
   const [invForm, setInvForm] = useState({
     goodId: '',
@@ -224,61 +224,49 @@ export default function ConsumerGoods() {
     return sum + qty * i.price;
   }, 0);
 
+  const tabsList = [
+    { key: 'items', label: 'Items & Stock', count: items.length },
+    { key: 'receipts', label: 'Receipts', count: receipts.length },
+  ];
+
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" >Consumer Goods</h1>
-          <p className="text-gray-500 text-sm">Manage consumer goods, stock, and issuance</p>
-        </div>
-        <div className="flex gap-2">
-          {canManage && (
-            <button
-              onClick={() => setShowAdd(true)}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
-              style={{ backgroundColor: '#2d2d2d',  }}
-            >
-              <Plus size={16} /> Add Item
-            </button>
-          )}
-          {canAddStock && (
-            <button
-              onClick={() => setShowInventory(true)}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
-              style={{ backgroundColor: '#2196f3',  }}
-            >
-              <Package size={16} /> Add Stock
-            </button>
-          )}
-          {canAddStock && (
-            <button
-              onClick={() => { setShowIssue(true); setError(''); }}
-              className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90 bg-green-600"
-             
-            >
-              <Send size={16} /> Issue to HOD
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Consumer Goods"
+        subtitle="Manage consumer goods, stock, and issuance"
+        action={
+          <div className="flex gap-2">
+            {canManage && (
+              <button
+                onClick={() => setShowAdd(true)}
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
+                style={{ backgroundColor: '#2d2d2d' }}
+              >
+                <Plus size={16} /> Add Item
+              </button>
+            )}
+            {canAddStock && (
+              <button
+                onClick={() => setShowInventory(true)}
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90"
+                style={{ backgroundColor: '#2196f3' }}
+              >
+                <Package size={16} /> Add Stock
+              </button>
+            )}
+            {canAddStock && (
+              <button
+                onClick={() => { setShowIssue(true); setError(''); }}
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl text-sm hover:opacity-90 bg-green-600"
+              >
+                <Send size={16} /> Issue to HOD
+              </button>
+            )}
+          </div>
+        }
+      />
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200 pb-2">
-        <button
-          onClick={() => setTab('items')}
-          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'items' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'items' ? { backgroundColor: '#2d2d2d' } : {}}
-        >
-          Items & Stock
-        </button>
-        <button
-          onClick={() => setTab('receipts')}
-          className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${tab === 'receipts' ? 'text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-          style={tab === 'receipts' ? { backgroundColor: '#2d2d2d' } : {}}
-        >
-          Receipts ({receipts.length})
-        </button>
-      </div>
+      <PillTabs tabs={tabsList} active={tab} onChange={setTab} />
 
       {tab === 'items' && (
         <div className="space-y-3">
@@ -292,49 +280,32 @@ export default function ConsumerGoods() {
             const stock = stockInfo[item.id];
             const totalQty = itemInv.reduce((s, i) => s + i.quantity, 0);
             const remainingQty = stock?.totalQty || 0;
-            const isExpanded = expandedItem === item.id;
 
             return (
-              <div key={item.id} className="warm-card overflow-hidden">
-                <div
-                  className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => setExpandedItem(isExpanded ? null : item.id)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-orange-100">
-                      <Package size={18} className="text-orange-600" />
+              <Accordion
+                key={item.id}
+                title={item.name}
+                subtitle={`Total: ${totalQty} | Available: ${remainingQty}${stock?.latestPrice ? ` | ${formatCurrency(stock.latestPrice)}/unit` : ''}`}
+                icon={<Package size={18} className="text-orange-600" />}
+              >
+                <div className="p-4">
+                  {canManage && (
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        onClick={() => { setShowEdit(item); setEditName(item.name); }}
+                        className="text-xs px-3 py-1.5 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100 flex items-center gap-1"
+                      >
+                        <Edit size={12} /> Edit
+                      </button>
+                      <button
+                        onClick={() => setShowDelete(item)}
+                        className="text-xs px-3 py-1.5 bg-red-50 text-red-600 rounded-2xl hover:bg-red-100 flex items-center gap-1"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
                     </div>
-                    <div>
-                      <p className="font-medium text-sm">{item.name}</p>
-                      <p className="text-xs text-gray-400">
-                        Total purchased: {totalQty} | <span className={remainingQty > 0 ? 'text-green-600' : 'text-red-500'}>Available: {remainingQty}</span>
-                        {stock?.latestPrice ? ` | Latest price: ${formatCurrency(stock.latestPrice)}/unit` : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {canManage && (
-                      <>
-                        <button
-                          onClick={e => { e.stopPropagation(); setShowEdit(item); setEditName(item.name); }}
-                          className="p-1.5 rounded-2xl hover:bg-blue-50 text-blue-500"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button
-                          onClick={e => { e.stopPropagation(); setShowDelete(item); }}
-                          className="p-1.5 rounded-2xl hover:bg-red-50 text-red-500"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </>
-                    )}
-                    <ChevronRight size={16} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                  </div>
-                </div>
-
-                {isExpanded && itemInv.length > 0 && (
-                  <div className="border-t border-gray-100 p-4 animate-fade-in">
+                  )}
+                  {itemInv.length > 0 && (
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="text-left text-gray-500 border-b">
@@ -363,9 +334,9 @@ export default function ConsumerGoods() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </Accordion>
             );
           })}
         </div>
@@ -382,7 +353,6 @@ export default function ConsumerGoods() {
             <div
               key={receipt.id}
               className="warm-card p-4 hover:shadow-sm cursor-pointer transition-shadow"
-             
               onClick={() => setSelectedReceipt(receipt)}
             >
               <div className="flex items-center justify-between">
@@ -393,7 +363,7 @@ export default function ConsumerGoods() {
                   </p>
                   <p className="text-xs text-gray-400">{formatDate(receipt.createdAt)} | By: {receipt.issuedByName}</p>
                 </div>
-                <p className="font-bold text-sm" >{formatCurrency(receipt.totalAmount)}</p>
+                <p className="font-bold text-sm text-[#c9a227]">{formatCurrency(receipt.totalAmount)}</p>
               </div>
             </div>
           ))}
@@ -449,7 +419,7 @@ export default function ConsumerGoods() {
               <tfoot>
                 <tr className="border-t-2 border-gray-200">
                   <td colSpan={4} className="py-3 text-right font-semibold">Total Amount:</td>
-                  <td className="py-3 text-right font-bold text-lg" >{formatCurrency(selectedReceipt.totalAmount)}</td>
+                  <td className="py-3 text-right font-bold text-lg text-[#c9a227]">{formatCurrency(selectedReceipt.totalAmount)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -472,7 +442,7 @@ export default function ConsumerGoods() {
             placeholder="Item name"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAdd} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2d2d2d',  }}>
+          <button onClick={handleAdd} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2d2d2d' }}>
             Add Item
           </button>
         </div>
@@ -488,7 +458,7 @@ export default function ConsumerGoods() {
             className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleEdit} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3',  }}>
+          <button onClick={handleEdit} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3' }}>
             Update
           </button>
         </div>
@@ -510,7 +480,7 @@ export default function ConsumerGoods() {
         </div>
       </Modal>
 
-      {/* Add Stock Modal (Store HOD / Admin only) */}
+      {/* Add Stock Modal */}
       <Modal isOpen={showInventory} onClose={() => { setShowInventory(false); setError(''); }} title="Add Consumer Goods to Stock">
         <div className="space-y-4">
           <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl text-xs text-blue-700">
@@ -546,7 +516,7 @@ export default function ConsumerGoods() {
             </div>
           </div>
           {invForm.quantity && invForm.pricePerUnit && (
-            <p className="text-sm font-medium" >
+            <p className="text-sm font-medium text-[#c9a227]">
               Total value: {formatCurrency(parseFloat(invForm.quantity) * parseFloat(invForm.pricePerUnit))}
             </p>
           )}
@@ -562,7 +532,7 @@ export default function ConsumerGoods() {
             )}
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddInventory} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3',  }}>
+          <button onClick={handleAddInventory} className="w-full py-2 text-white rounded-2xl text-sm" style={{ backgroundColor: '#2196f3' }}>
             Add to Stock
           </button>
         </div>
@@ -589,7 +559,6 @@ export default function ConsumerGoods() {
             </select>
           </div>
 
-          {/* Add items */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Add Items</label>
             <select
@@ -608,7 +577,6 @@ export default function ConsumerGoods() {
             </select>
           </div>
 
-          {/* Selected items */}
           {issueForm.items.length > 0 && (
             <div className="space-y-3">
               {issueForm.items.map(item => (
@@ -642,7 +610,7 @@ export default function ConsumerGoods() {
 
               <div className="flex justify-between items-center p-3 bg-gray-100 rounded-2xl">
                 <span className="text-sm font-semibold">Total Amount:</span>
-                <span className="text-lg font-bold" >{formatCurrency(issueTotal)}</span>
+                <span className="text-lg font-bold text-[#c9a227]">{formatCurrency(issueTotal)}</span>
               </div>
             </div>
           )}
@@ -652,7 +620,6 @@ export default function ConsumerGoods() {
             onClick={handleIssue}
             disabled={issueForm.items.length === 0 || !issueForm.hodId}
             className="w-full py-2 text-white rounded-2xl text-sm bg-green-600 hover:bg-green-700 disabled:opacity-50"
-           
           >
             Issue Goods & Generate Receipt
           </button>

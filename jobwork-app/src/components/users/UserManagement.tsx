@@ -7,7 +7,8 @@ import {
   getActiveUsers, getUsersByCreator, createUser, deleteUser, getActiveDepartments,
 } from '../../database/operations';
 import Modal from '../common/Modal';
-import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X } from 'lucide-react';
+import { PageHeader, Accordion, WidgetCard } from '../common/Widgets';
+import { Trash2, BarChart3, Eye, Users, UserPlus, Camera, ImageIcon, X } from 'lucide-react';
 import { formatCurrency } from '../../utils/helpers';
 
 export default function UserManagement() {
@@ -20,7 +21,6 @@ export default function UserManagement() {
   const [deleteReason, setDeleteReason] = useState('');
   const [deleteAdminPassword, setDeleteAdminPassword] = useState('');
   const [error, setError] = useState('');
-  const [expandedDept, setExpandedDept] = useState<Department | null>(null);
   const [expandedHod, setExpandedHod] = useState<string | null>(null);
 
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -124,125 +124,111 @@ export default function UserManagement() {
       {departments.map(d => {
         const dept = d.key;
         const hods = hodsByDept(dept);
-        const isExpanded = expandedDept === dept;
         return (
-          <div key={dept} className="warm-card overflow-hidden">
-            <button
-              onClick={() => setExpandedDept(isExpanded ? null : dept)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#c9a227]/10">
-                  <Users size={18} className="text-[#c9a227]" />
-                </div>
-                <div className="text-left">
-                  <p className="font-medium">{d.label}</p>
-                  <p className="text-xs text-gray-400">{hods.length} HODs{d.custom ? ' · custom' : ''}</p>
-                </div>
-              </div>
-              <ChevronRight size={18} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-            </button>
-
-            {isExpanded && (
-              <div className="border-t border-gray-100 p-5 animate-fade-in">
-                {hods.length === 0 ? (
-                  <p className="text-gray-400 text-sm">No HODs in this department</p>
-                ) : (
-                  <div className="space-y-4">
-                    {hods.map(hod => {
-                      const hodUsers = usersByHod(hod.id);
-                      return (
-                        <div key={hod.id} className="border border-gray-100 rounded-2xl overflow-hidden">
-                          <div className="flex items-center justify-between p-3 bg-gray-50">
-                            <div className="flex items-center gap-3">
-                              {hod.profilePicture ? (
-                                <img src={hod.profilePicture} alt={hod.firstName} className="w-10 h-10 rounded-full object-cover" />
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-[#c9a227]/15 flex items-center justify-center text-[#c9a227] font-semibold">
-                                  {hod.firstName[0]}
-                                </div>
-                              )}
-                              <div>
-                                <p className="font-medium text-sm">{hod.firstName} <span className="text-xs text-blue-500">(HOD)</span></p>
-                                {isAdmin && (
-                                  <p className="text-xs text-gray-400">
-                                    Username: {hod.username}
-                                    {hod.phone && ` | Phone: ${hod.phone}`}
-                                    {hod.openingBalance !== undefined && hod.openingBalance !== 0 && ` | Opening: ${formatCurrency(hod.openingBalance)}`}
-                                  </p>
-                                )}
+          <Accordion
+            key={dept}
+            title={d.label}
+            subtitle={`${hods.length} HODs${d.custom ? ' · custom' : ''}`}
+            icon={<Users size={18} className="text-[#c9a227]" />}
+          >
+            <div className="p-5">
+              {hods.length === 0 ? (
+                <p className="text-gray-400 text-sm">No HODs in this department</p>
+              ) : (
+                <div className="space-y-4">
+                  {hods.map(hod => {
+                    const hodUsers = usersByHod(hod.id);
+                    return (
+                      <div key={hod.id} className="border border-gray-100 rounded-2xl overflow-hidden">
+                        <div className="flex items-center justify-between p-3 bg-gray-50">
+                          <div className="flex items-center gap-3">
+                            {hod.profilePicture ? (
+                              <img src={hod.profilePicture} alt={hod.firstName} className="w-10 h-10 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-[#c9a227]/15 flex items-center justify-center text-[#c9a227] font-semibold">
+                                {hod.firstName[0]}
                               </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => navigate(`/statistics/user/${hod.id}`)}
-                                className="p-2 rounded-2xl hover:bg-blue-50 text-blue-500 transition-colors"
-                                title="Inspect HOD"
-                              >
-                                <BarChart3 size={16} />
-                              </button>
-                              <button
-                                onClick={() => setExpandedHod(expandedHod === hod.id ? null : hod.id)}
-                                className="p-2 rounded-2xl hover:bg-gray-200 text-gray-500 transition-colors"
-                                title="View Users"
-                              >
-                                <Eye size={16} />
-                              </button>
+                            )}
+                            <div>
+                              <p className="font-medium text-sm">{hod.firstName} <span className="text-xs text-blue-500">(HOD)</span></p>
                               {isAdmin && (
-                                <button
-                                  onClick={() => setShowDelete(hod)}
-                                  className="p-2 rounded-2xl hover:bg-red-50 text-red-500 transition-colors"
-                                  title="Delete"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                <p className="text-xs text-gray-400">
+                                  Username: {hod.username}
+                                  {hod.phone && ` | Phone: ${hod.phone}`}
+                                  {hod.openingBalance !== undefined && hod.openingBalance !== 0 && ` | Opening: ${formatCurrency(hod.openingBalance)}`}
+                                </p>
                               )}
                             </div>
                           </div>
-
-                          {expandedHod === hod.id && (
-                            <div className="p-4 border-t border-gray-100 animate-fade-in">
-                              {hodUsers.length === 0 ? (
-                                <p className="text-gray-400 text-xs">No users under this HOD</p>
-                              ) : (
-                                <div className="space-y-3">
-                                  {hodUsers.map(user => (
-                                    <div key={user.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50">
-                                      <div>
-                                        <p className="text-sm font-medium">{user.firstName}</p>
-                                        {isAdmin && (
-                                          <p className="text-xs text-gray-400">Username: {user.username}</p>
-                                        )}
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={() => navigate(`/statistics/user/${user.id}`)}
-                                          className="p-1.5 rounded-2xl hover:bg-blue-50 text-blue-500 transition-colors text-xs"
-                                          title="Inspect User"
-                                        >
-                                          <BarChart3 size={14} />
-                                        </button>
-                                        <button
-                                          onClick={() => setShowDelete(user)}
-                                          className="p-1.5 rounded-2xl hover:bg-red-50 text-red-500 transition-colors"
-                                        >
-                                          <Trash2 size={14} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => navigate(`/statistics/user/${hod.id}`)}
+                              className="p-2 rounded-2xl hover:bg-blue-50 text-blue-500 transition-colors"
+                              title="Inspect HOD"
+                            >
+                              <BarChart3 size={16} />
+                            </button>
+                            <button
+                              onClick={() => setExpandedHod(expandedHod === hod.id ? null : hod.id)}
+                              className="p-2 rounded-2xl hover:bg-gray-200 text-gray-500 transition-colors"
+                              title="View Users"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => setShowDelete(hod)}
+                                className="p-2 rounded-2xl hover:bg-red-50 text-red-500 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+
+                        {expandedHod === hod.id && (
+                          <div className="p-4 border-t border-gray-100 animate-fade-in">
+                            {hodUsers.length === 0 ? (
+                              <p className="text-gray-400 text-xs">No users under this HOD</p>
+                            ) : (
+                              <div className="space-y-3">
+                                {hodUsers.map(user => (
+                                  <div key={user.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50">
+                                    <div>
+                                      <p className="text-sm font-medium">{user.firstName}</p>
+                                      {isAdmin && (
+                                        <p className="text-xs text-gray-400">Username: {user.username}</p>
+                                      )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => navigate(`/statistics/user/${user.id}`)}
+                                        className="p-1.5 rounded-2xl hover:bg-blue-50 text-blue-500 transition-colors text-xs"
+                                        title="Inspect User"
+                                      >
+                                        <BarChart3 size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() => setShowDelete(user)}
+                                        className="p-1.5 rounded-2xl hover:bg-red-50 text-red-500 transition-colors"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </Accordion>
         );
       })}
     </div>
@@ -251,8 +237,7 @@ export default function UserManagement() {
   const renderHodView = () => {
     const myUsers = allUsers.filter(u => u.createdBy === currentUser?.id);
     return (
-      <div className="warm-card p-6">
-        <h2 className="text-lg font-semibold mb-4">My Team Members</h2>
+      <WidgetCard title="My Team Members">
         {myUsers.length === 0 ? (
           <p className="text-gray-400 text-sm">No users created yet</p>
         ) : (
@@ -282,26 +267,26 @@ export default function UserManagement() {
             ))}
           </div>
         )}
-      </div>
+      </WidgetCard>
     );
   };
 
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">User Management</h1>
-          <p className="text-gray-500 text-sm">Create and manage user accounts</p>
-        </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl transition-all hover:opacity-90"
-          style={{ backgroundColor: '#2d2d2d' }}
-        >
-          <UserPlus size={18} />
-          <span className="text-sm font-medium">Create User</span>
-        </button>
-      </div>
+      <PageHeader
+        title="User Management"
+        subtitle="Create and manage user accounts"
+        action={
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl transition-all hover:opacity-90"
+            style={{ backgroundColor: '#2d2d2d' }}
+          >
+            <UserPlus size={18} />
+            <span className="text-sm font-medium">Create User</span>
+          </button>
+        }
+      />
 
       {isAdmin ? renderDepartmentView() : renderHodView()}
 

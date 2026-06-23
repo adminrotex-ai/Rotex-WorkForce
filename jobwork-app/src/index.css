@@ -147,19 +147,28 @@ button:focus-visible {
   font-weight: 500;
   transition: all 0.2s ease;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
 }
 
 .pill-tab.active {
   background: var(--accent);
   color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .pill-tab:not(.active) {
   color: var(--text-secondary);
+  background: white;
+  border: 1px solid var(--border);
 }
 
 .pill-tab:not(.active):hover {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0,0,0,0.04);
+  border-color: #ccc;
 }
 
 .stat-number {
@@ -167,4 +176,10 @@ button:focus-visible {
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
+}
+
+@media (max-width: 768px) {
+  .stat-number {
+    font-size: 1.75rem;
+  }
 }

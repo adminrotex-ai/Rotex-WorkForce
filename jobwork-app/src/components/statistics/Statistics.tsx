@@ -7,18 +7,17 @@ import { DEPARTMENT_LABELS } from '../../types';
 import { getPeriodStatistics, getActiveUsers, getUsersByCreator } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import StatCard from '../common/StatCard';
-import { BarChart3, Package, CheckCircle, XCircle, Users, ChevronRight } from 'lucide-react';
+import { PageHeader, PillTabs, WidgetCard, Accordion } from '../common/Widgets';
+import { BarChart3, Package, CheckCircle, XCircle, Users } from 'lucide-react';
 
 const DEPARTMENTS: Department[] = ['store', 'welding', 'pressing', 'buffing', 'packaging', 'dispatch'];
 
 export default function Statistics() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
   const navigate = useNavigate();
-  const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
+  const [period, setPeriod] = useState('month');
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const [expandedDept, setExpandedDept] = useState<Department | null>(null);
-  const [expandedHod, setExpandedHod] = useState<string | null>(null);
 
   const isAdmin = currentUser?.role === 'admin';
   const isHod = currentUser?.role === 'hod';
@@ -29,7 +28,7 @@ export default function Statistics() {
   }, [period]);
 
   const loadStats = async () => {
-    setStats(await getPeriodStatistics(period));
+    setStats(await getPeriodStatistics(period as any));
   };
 
   const loadUsers = async () => {
@@ -51,34 +50,22 @@ export default function Statistics() {
   const acceptRate = stats.totalPieces > 0 ? ((stats.totalAccepted / stats.totalPieces) * 100).toFixed(1) : '0';
   const rejectRate = stats.totalPieces > 0 ? ((stats.totalRejected / stats.totalPieces) * 100).toFixed(1) : '0';
 
+  const periodTabs = [
+    { key: 'week', label: 'Week' },
+    { key: 'month', label: 'Month' },
+    { key: 'year', label: 'Year' },
+    { key: 'all', label: 'All Time' },
+  ];
+
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" >Statistics</h1>
-          <p className="text-gray-500 text-sm">Performance and production reports</p>
-        </div>
-      </div>
+      <PageHeader title="Statistics" subtitle="Performance and production reports" />
 
-      {/* Period Selector */}
-      <div className="flex gap-2">
-        {(['week', 'month', 'year', 'all'] as const).map(p => (
-          <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-              period === p ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
-            style={period === p ? { backgroundColor: '#2d2d2d' } : {}}
-          >
-            {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
-          </button>
-        ))}
-      </div>
+      <PillTabs tabs={periodTabs} active={period} onChange={setPeriod} />
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Batches" value={stats.batchCount} icon={<Package size={20}  />} />
+        <StatCard title="Total Batches" value={stats.batchCount} icon={<Package size={20} />} />
         <StatCard title="Total Pieces" value={stats.totalPieces} icon={<BarChart3 size={20} style={{ color: '#2196f3' }} />} color="#2196f3" />
         <StatCard
           title="Acceptance Rate"
@@ -98,95 +85,68 @@ export default function Statistics() {
 
       {/* Cost Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="warm-card p-5">
-          <p className="text-xs text-gray-500 uppercase font-medium">Consumer Goods Cost</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#2196f3' }}>{formatCurrency(stats.totalConsumerCost)}</p>
-        </div>
-        <div className="warm-card p-5">
-          <p className="text-xs text-gray-500 uppercase font-medium">Service Cost</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
-        </div>
-        <div className="warm-card p-5">
-          <p className="text-xs text-gray-500 uppercase font-medium">Total Cost</p>
-          <p className="text-2xl font-bold mt-1" >{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
-        </div>
+        <WidgetCard title="Consumer Goods Cost">
+          <p className="text-2xl font-bold" style={{ color: '#2196f3' }}>{formatCurrency(stats.totalConsumerCost)}</p>
+        </WidgetCard>
+        <WidgetCard title="Service Cost">
+          <p className="text-2xl font-bold" style={{ color: '#4caf50' }}>{formatCurrency(stats.totalServiceCost)}</p>
+        </WidgetCard>
+        <WidgetCard title="Total Cost">
+          <p className="text-2xl font-bold text-[#c9a227]">{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
+        </WidgetCard>
       </div>
 
       {/* User Statistics - Department Hierarchy */}
       {(isAdmin || isHod) && (
-        <div className="warm-card p-6">
-          <h2 className="text-lg font-semibold mb-4" >
-            {isAdmin ? 'Department Statistics' : 'Team Statistics'}
-          </h2>
-
+        <WidgetCard title={isAdmin ? 'Department Statistics' : 'Team Statistics'}>
           {isAdmin ? (
             <div className="space-y-3">
               {DEPARTMENTS.map(dept => {
                 const deptHods = hodsByDept(dept);
-                const isExpanded = expandedDept === dept;
                 return (
-                  <div key={dept} className="border border-gray-100 rounded-2xl overflow-hidden">
-                    <button
-                      onClick={() => setExpandedDept(isExpanded ? null : dept)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-2xl flex items-center justify-center bg-[#c9a227]/10">
-                          <Users size={14} className="text-[#c9a227]" />
-                        </div>
-                        <span className="font-medium text-sm">{DEPARTMENT_LABELS[dept]}</span>
-                        <span className="text-xs text-gray-400">({deptHods.length} HODs)</span>
-                      </div>
-                      <ChevronRight size={16} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                    </button>
-                    {isExpanded && (
-                      <div className="border-t border-gray-100 p-3 animate-fade-in space-y-2">
-                        {deptHods.length === 0 ? (
-                          <p className="text-gray-400 text-xs p-2">No HODs</p>
-                        ) : deptHods.map(hod => {
-                          const hodUsers = usersByHod(hod.id);
-                          return (
-                            <div key={hod.id} className="border border-gray-100 rounded-2xl">
-                              <div className="flex items-center justify-between p-3">
-                                <span className="font-medium text-sm">{hod.firstName} (HOD)</span>
-                                <div className="flex gap-2">
+                  <Accordion
+                    key={dept}
+                    title={DEPARTMENT_LABELS[dept]}
+                    subtitle={`${deptHods.length} HODs`}
+                    icon={<Users size={14} className="text-[#c9a227]" />}
+                  >
+                    <div className="p-3 space-y-2">
+                      {deptHods.length === 0 ? (
+                        <p className="text-gray-400 text-xs p-2">No HODs</p>
+                      ) : deptHods.map(hod => {
+                        const hodUsers = usersByHod(hod.id);
+                        return (
+                          <Accordion
+                            key={hod.id}
+                            title={`${hod.firstName} (HOD)`}
+                            subtitle={`${hodUsers.length} users`}
+                          >
+                            <div className="p-3 space-y-1">
+                              <button
+                                onClick={() => navigate(`/statistics/user/${hod.id}`)}
+                                className="text-xs px-3 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100 mb-2"
+                              >
+                                <BarChart3 size={12} className="inline mr-1" />HOD Report
+                              </button>
+                              {hodUsers.length === 0 ? (
+                                <p className="text-gray-400 text-xs">No users</p>
+                              ) : hodUsers.map(u => (
+                                <div key={u.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-2xl">
+                                  <span className="text-sm">{u.firstName}</span>
                                   <button
-                                    onClick={() => navigate(`/statistics/user/${hod.id}`)}
-                                    className="text-xs px-3 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                    onClick={() => navigate(`/statistics/user/${u.id}`)}
+                                    className="text-xs px-2 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100"
                                   >
                                     <BarChart3 size={12} className="inline mr-1" />Report
                                   </button>
-                                  <button
-                                    onClick={() => setExpandedHod(expandedHod === hod.id ? null : hod.id)}
-                                    className="text-xs px-3 py-1 rounded-2xl bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                  >
-                                    Users ({hodUsers.length})
-                                  </button>
                                 </div>
-                              </div>
-                              {expandedHod === hod.id && (
-                                <div className="border-t border-gray-100 p-3 animate-fade-in space-y-1">
-                                  {hodUsers.length === 0 ? (
-                                    <p className="text-gray-400 text-xs">No users</p>
-                                  ) : hodUsers.map(u => (
-                                    <div key={u.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-2xl">
-                                      <span className="text-sm">{u.firstName}</span>
-                                      <button
-                                        onClick={() => navigate(`/statistics/user/${u.id}`)}
-                                        className="text-xs px-2 py-1 rounded-2xl bg-blue-50 text-blue-600 hover:bg-blue-100"
-                                      >
-                                        <BarChart3 size={12} className="inline mr-1" />Report
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                              ))}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
+                          </Accordion>
+                        );
+                      })}
+                    </div>
+                  </Accordion>
                 );
               })}
             </div>
@@ -205,7 +165,7 @@ export default function Statistics() {
               ))}
             </div>
           )}
-        </div>
+        </WidgetCard>
       )}
     </div>
   );

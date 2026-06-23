@@ -5,6 +5,7 @@ import type { RootState } from '../../store';
 import type { PieceEntry } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
 import { getPieceEntriesByUser } from '../../database/operations';
+import { PageHeader, WidgetCard, SegmentedProgress } from '../common/Widgets';
 import { XCircle, Package, BarChart3, CheckCircle } from 'lucide-react';
 
 export default function UserDashboard() {
@@ -27,11 +28,10 @@ export default function UserDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div>
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Welcome in, {currentUser.firstName}</h1>
-        <p className="text-gray-400 text-sm mt-1">{DEPARTMENT_LABELS[currentUser.department]} Department</p>
-      </div>
+      <PageHeader
+        title={`Welcome in, ${currentUser.firstName}`}
+        subtitle={`${DEPARTMENT_LABELS[currentUser.department]} Department`}
+      />
 
       {/* Hero Stats */}
       <div className="flex items-center gap-8 flex-wrap">
@@ -65,45 +65,37 @@ export default function UserDashboard() {
       </div>
 
       {/* Acceptance Rate */}
-      <div className="warm-card p-6">
+      <WidgetCard title="Acceptance Rate">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-800">Acceptance Rate</h3>
           <span className="text-2xl font-extrabold text-gray-900">{acceptRate.toFixed(0)}%</span>
         </div>
-        <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full rounded-full transition-all duration-700" style={{
-            width: `${acceptRate}%`,
-            background: acceptRate >= 80 ? '#34c759' : acceptRate >= 50 ? '#ff9f0a' : '#ff3b30'
-          }} />
-        </div>
-        <div className="flex justify-between mt-2">
-          <span className="text-[11px] text-gray-400">{totalRejected} rejected</span>
-          <span className="text-[11px] text-gray-400">{totalAccepted} accepted</span>
-        </div>
-      </div>
+        <SegmentedProgress
+          segments={[
+            { label: 'Accepted', value: totalAccepted, color: '#34c759' },
+            { label: 'Rejected', value: totalRejected, color: '#ff3b30' },
+          ]}
+          total={total}
+        />
+      </WidgetCard>
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate('/batches')}
-          className="warm-card p-6 text-left hover-lift group"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center mb-4 group-hover:bg-[#c9a227]/20 transition-colors">
-            <Package size={22} className="text-[#c9a227]" />
+        <WidgetCard title="View Batches" onNavigate={() => navigate('/batches')}>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
+              <Package size={22} className="text-[#c9a227]" />
+            </div>
+            <p className="text-xs text-gray-400">Input piece data for assigned batches</p>
           </div>
-          <p className="font-bold text-base text-gray-800">View Batches</p>
-          <p className="text-xs text-gray-400 mt-1">Input piece data for assigned batches</p>
-        </button>
-        <button
-          onClick={() => navigate('/statistics')}
-          className="warm-card p-6 text-left hover-lift group"
-        >
-          <div className="w-12 h-12 rounded-2xl bg-[#5ac8fa]/10 flex items-center justify-center mb-4 group-hover:bg-[#5ac8fa]/20 transition-colors">
-            <BarChart3 size={22} className="text-[#5ac8fa]" />
+        </WidgetCard>
+        <WidgetCard title="My Statistics" onNavigate={() => navigate('/statistics')}>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#5ac8fa]/10 flex items-center justify-center">
+              <BarChart3 size={22} className="text-[#5ac8fa]" />
+            </div>
+            <p className="text-xs text-gray-400">View your performance statistics</p>
           </div>
-          <p className="font-bold text-base text-gray-800">My Statistics</p>
-          <p className="text-xs text-gray-400 mt-1">View your performance statistics</p>
-        </button>
+        </WidgetCard>
       </div>
     </div>
   );

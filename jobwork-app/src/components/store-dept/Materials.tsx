@@ -8,6 +8,7 @@ import {
 } from '../../database/operations';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
+import { PageHeader, PillTabs, WidgetCard } from '../common/Widgets';
 import { Plus, FolderOpen, Package, Boxes } from 'lucide-react';
 
 export default function Materials() {
@@ -123,36 +124,41 @@ export default function Materials() {
   const filteredEntries = (selectedType ? entries.filter(e => e.materialTypeId === selectedType) : entries)
     .slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+  const filterTabs = [
+    { key: 'all', label: 'All Types' },
+    ...materialTypes.map(mt => ({ key: mt.id, label: mt.name })),
+  ];
+
   return (
     <div className="space-y-10">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Materials &amp; Inventory</h1>
-          <p className="text-gray-500 text-sm">Manage raw materials, opening stock and supplier entries</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowAddType(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm hover:opacity-90"
-            style={{ backgroundColor: '#2d2d2d' }}
-          >
-            <FolderOpen size={16} /> Add Material Type
-          </button>
-          <button
-            onClick={() => setShowOpening(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm hover:opacity-90 bg-purple-600"
-          >
-            <Boxes size={16} /> Opening Stock
-          </button>
-          <button
-            onClick={() => setShowAddEntry(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm hover:opacity-90"
-            style={{ backgroundColor: '#2196f3' }}
-          >
-            <Plus size={16} /> Add Entry
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Materials & Inventory"
+        subtitle="Manage raw materials, opening stock and supplier entries"
+        action={
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowAddType(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm hover:opacity-90"
+              style={{ backgroundColor: '#2d2d2d' }}
+            >
+              <FolderOpen size={16} /> Add Material Type
+            </button>
+            <button
+              onClick={() => setShowOpening(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm hover:opacity-90 bg-purple-600"
+            >
+              <Boxes size={16} /> Opening Stock
+            </button>
+            <button
+              onClick={() => setShowAddEntry(true)}
+              className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm hover:opacity-90"
+              style={{ backgroundColor: '#2196f3' }}
+            >
+              <Plus size={16} /> Add Entry
+            </button>
+          </div>
+        }
+      />
 
       {/* Stock Totals */}
       {materialTypes.length > 0 && (
@@ -160,41 +166,28 @@ export default function Materials() {
           {materialTypes.map(mt => {
             const s = stockTotals[mt.id];
             return (
-              <div key={mt.id} className="warm-card p-5 flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-400 uppercase font-medium tracking-wider">{mt.name}</p>
-                  <p className="text-2xl font-bold text-[#c9a227] mt-1">{s?.totalQty || 0} <span className="text-sm text-gray-400 font-normal">{s?.unit || ''}</span></p>
-                  {s && s.latestPrice > 0 && <p className="text-xs text-gray-400 mt-1">Latest: {formatCurrency(s.latestPrice)}/unit</p>}
+              <WidgetCard key={mt.id} title={mt.name}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-bold text-[#c9a227]">{s?.totalQty || 0} <span className="text-sm text-gray-400 font-normal">{s?.unit || ''}</span></p>
+                    {s && s.latestPrice > 0 && <p className="text-xs text-gray-400 mt-1">Latest: {formatCurrency(s.latestPrice)}/unit</p>}
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
+                    <Package size={22} className="text-[#c9a227]" />
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
-                  <Package size={22} className="text-[#c9a227]" />
-                </div>
-              </div>
+              </WidgetCard>
             );
           })}
         </div>
       )}
 
       {/* Material Type Filters */}
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setSelectedType(null)}
-          className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${!selectedType ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-          style={!selectedType ? { backgroundColor: '#2d2d2d' } : {}}
-        >
-          All Types
-        </button>
-        {materialTypes.map(mt => (
-          <button
-            key={mt.id}
-            onClick={() => setSelectedType(mt.id)}
-            className={`px-3 py-1.5 rounded-2xl text-xs font-medium ${selectedType === mt.id ? 'text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
-            style={selectedType === mt.id ? { backgroundColor: '#2d2d2d' } : {}}
-          >
-            {mt.name}
-          </button>
-        ))}
-      </div>
+      <PillTabs
+        tabs={filterTabs}
+        active={selectedType || 'all'}
+        onChange={key => setSelectedType(key === 'all' ? null : key)}
+      />
 
       {/* Entries */}
       {filteredEntries.length === 0 ? (

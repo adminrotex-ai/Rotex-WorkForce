@@ -7,6 +7,7 @@ import { STAGE_LABELS } from '../../types';
 import { getActiveBatches, createBatch, deleteBatch, getHodBatchesInProgress } from '../../database/operations';
 import { formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
+import { PageHeader, PillTabs } from '../common/Widgets';
 import { Plus, Trash2, Eye, Package } from 'lucide-react';
 
 export default function BatchList() {
@@ -19,7 +20,7 @@ export default function BatchList() {
   const [deleteAdminPassword, setDeleteAdminPassword] = useState('');
   const [error, setError] = useState('');
   const [form, setForm] = useState({ totalPieces: '', sizes: '' });
-  const [filter, setFilter] = useState<'all' | 'created' | 'in_progress' | 'completed'>('all');
+  const [filter, setFilter] = useState('all');
 
   const isAdmin = currentUser?.role === 'admin';
   const isStoreHod = currentUser?.role === 'hod' && currentUser.department === 'store';
@@ -77,14 +78,19 @@ export default function BatchList() {
 
   const filtered = filter === 'all' ? batches : batches.filter(b => b.status === filter);
 
+  const filterTabs = [
+    { key: 'all', label: 'All', count: batches.length },
+    { key: 'created', label: 'Created', count: batches.filter(b => b.status === 'created').length },
+    { key: 'in_progress', label: 'In Progress', count: batches.filter(b => b.status === 'in_progress').length },
+    { key: 'completed', label: 'Completed', count: batches.filter(b => b.status === 'completed').length },
+  ];
+
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold" >Batches</h1>
-          <p className="text-gray-500 text-sm">{batches.length} total batches</p>
-        </div>
-        {canCreateBatch && (
+      <PageHeader
+        title="Batches"
+        subtitle={`${batches.length} total batches`}
+        action={canCreateBatch ? (
           <button
             onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl hover:opacity-90"
@@ -92,24 +98,10 @@ export default function BatchList() {
           >
             <Plus size={18} /><span className="text-sm font-medium">Create Batch</span>
           </button>
-        )}
-      </div>
+        ) : undefined}
+      />
 
-      {/* Filters */}
-      <div className="flex gap-2">
-        {(['all', 'created', 'in_progress', 'completed'] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-              filter === f ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
-            style={filter === f ? { backgroundColor: '#2d2d2d' } : {}}
-          >
-            {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-          </button>
-        ))}
-      </div>
+      <PillTabs tabs={filterTabs} active={filter} onChange={setFilter} />
 
       {/* Batch List */}
       {filtered.length === 0 ? (
@@ -123,7 +115,6 @@ export default function BatchList() {
             <div
               key={batch.id}
               className="warm-card p-4 hover:shadow-md transition-shadow cursor-pointer"
-             
               onClick={() => navigate(`/batches/${batch.id}`)}
             >
               <div className="flex items-center justify-between">

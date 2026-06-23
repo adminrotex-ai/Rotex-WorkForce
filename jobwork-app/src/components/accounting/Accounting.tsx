@@ -11,7 +11,8 @@ import {
 } from '../../database/operations';
 import { formatCurrency, formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { ArrowLeft, Send } from 'lucide-react';
+import { PageHeader, WidgetCard, Accordion } from '../common/Widgets';
+import { ArrowLeft, Send, DollarSign } from 'lucide-react';
 
 export default function Accounting() {
   const { hodId } = useParams<{ hodId: string }>();
@@ -71,28 +72,24 @@ function AdminAccounting() {
 
   return (
     <div className="space-y-10">
-      <h1 className="text-2xl font-bold" >Accounting</h1>
+      <PageHeader title="Accounting" subtitle="Financial overview and HOD accounts" />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="warm-card p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">Total to Collect</p>
+        <WidgetCard title="Total to Collect">
           <p className="text-2xl font-bold text-green-700">{formatCurrency(totalOwed)}</p>
-        </div>
-        <div className="warm-card p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">Total to Pay</p>
+        </WidgetCard>
+        <WidgetCard title="Total to Pay">
           <p className="text-2xl font-bold text-orange-700">{formatCurrency(totalOwing)}</p>
-        </div>
-        <div className="warm-card p-5">
-          <p className="text-xs text-gray-500 uppercase font-medium">Net Balance</p>
+        </WidgetCard>
+        <WidgetCard title="Net Balance">
           <p className={`text-2xl font-bold ${totalOwed - totalOwing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
             {formatCurrency(totalOwed - totalOwing)}
           </p>
-        </div>
+        </WidgetCard>
       </div>
 
       {/* HOD-wise breakdown */}
-      <div className="warm-card p-6">
-        <h2 className="text-lg font-semibold mb-4" >HOD Accounts</h2>
+      <WidgetCard title="HOD Accounts" onNavigate={undefined}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -132,13 +129,17 @@ function AdminAccounting() {
             </tbody>
           </table>
         </div>
-      </div>
+      </WidgetCard>
 
       {/* Pending Payments to Confirm */}
       {pendingPayments.length > 0 && (
-        <div className="warm-card p-6 border border-yellow-100">
-          <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Payment Confirmations</h2>
-          <div className="space-y-3">
+        <Accordion
+          title="Pending Payment Confirmations"
+          subtitle={`${pendingPayments.length} pending`}
+          icon={<DollarSign size={16} className="text-yellow-600" />}
+          defaultOpen
+        >
+          <div className="p-4 space-y-3">
             {pendingPayments.map(p => (
               <div key={p.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-2xl">
                 <div>
@@ -156,7 +157,7 @@ function AdminAccounting() {
               </div>
             ))}
           </div>
-        </div>
+        </Accordion>
       )}
 
       {/* Payment Modal */}
@@ -238,59 +239,71 @@ function HodAccounting() {
 
   return (
     <div className="space-y-10">
-      <h1 className="text-2xl font-bold" >My Accounting</h1>
+      <PageHeader title="My Accounting" subtitle="Your financial overview" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">Admin To Collect</p>
-          <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.adminOwesHod)}</p>
-          <p className="text-xs text-green-500 mt-1">For service costs</p>
-        </div>
-        <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">To Pay Admin</p>
-          <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
-          <p className="text-xs text-orange-500 mt-1">For consumer goods &amp; opening balance</p>
-          <button
-            onClick={() => setShowPayment(true)}
-            className="mt-3 text-xs px-3 py-1.5 bg-orange-500 text-white rounded-2xl hover:bg-orange-600"
-          >
-            <Send size={12} className="inline mr-1" />Pay Admin
-          </button>
-        </div>
+        <WidgetCard title="To Collect from Admin">
+          <div className="p-3 rounded-2xl" style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' }}>
+            <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.adminOwesHod)}</p>
+            <p className="text-xs text-green-500 mt-1">For service costs</p>
+          </div>
+        </WidgetCard>
+        <WidgetCard title="To Pay Admin">
+          <div className="p-3 rounded-2xl" style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)' }}>
+            <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
+            <p className="text-xs text-orange-500 mt-1">For consumer goods &amp; opening balance</p>
+            <button
+              onClick={() => setShowPayment(true)}
+              className="mt-3 text-xs px-3 py-1.5 bg-orange-500 text-white rounded-2xl hover:bg-orange-600"
+            >
+              <Send size={12} className="inline mr-1" />Pay Admin
+            </button>
+          </div>
+        </WidgetCard>
       </div>
 
       {/* Transaction History */}
-      <div className="warm-card p-6">
-        <h2 className="text-lg font-semibold mb-4" >Transactions</h2>
-        {accounting.entries.length === 0 ? (
-          <p className="text-gray-400 text-sm">No transactions yet</p>
-        ) : (
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {accounting.entries.map(e => (
-              <div key={e.id} className={`p-3 rounded-2xl text-sm ${
-                e.type === 'admin_owes_hod' ? 'bg-green-50 border border-green-100' : 'bg-orange-50 border border-orange-100'
-              }`}>
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{formatCurrency(e.amount)}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    e.type === 'admin_owes_hod' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    {e.type === 'admin_owes_hod' ? 'To collect from admin' : 'To pay admin'}
-                  </span>
+      <Accordion
+        title="Transactions"
+        subtitle={`${accounting.entries.length} entries`}
+        icon={<DollarSign size={16} className="text-[#c9a227]" />}
+        defaultOpen
+      >
+        <div className="p-4">
+          {accounting.entries.length === 0 ? (
+            <p className="text-gray-400 text-sm">No transactions yet</p>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {accounting.entries.map(e => (
+                <div key={e.id} className={`p-3 rounded-2xl text-sm ${
+                  e.type === 'admin_owes_hod' ? 'bg-green-50 border border-green-100' : 'bg-orange-50 border border-orange-100'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{formatCurrency(e.amount)}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      e.type === 'admin_owes_hod' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                    }`}>
+                      {e.type === 'admin_owes_hod' ? 'To collect from admin' : 'To pay admin'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{e.description}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{formatDate(e.createdAt)}</p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{e.description}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(e.createdAt)}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </Accordion>
 
       {/* Pending Payments */}
       {pendingPayments.length > 0 && (
-        <div className="warm-card p-6 border border-yellow-100">
-          <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Confirmations</h2>
-          <div className="space-y-3">
+        <Accordion
+          title="Pending Confirmations"
+          subtitle={`${pendingPayments.length} pending`}
+          icon={<DollarSign size={16} className="text-yellow-600" />}
+          defaultOpen
+        >
+          <div className="p-4 space-y-3">
             {pendingPayments.map(p => (
               <div key={p.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-2xl">
                 <div>
@@ -308,7 +321,7 @@ function HodAccounting() {
               </div>
             ))}
           </div>
-        </div>
+        </Accordion>
       )}
 
       {/* Payment Modal */}
@@ -358,26 +371,28 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
         <button onClick={() => navigate('/accounting')} className="p-2 rounded-2xl hover:bg-gray-100">
           <ArrowLeft size={20} />
         </button>
-        <div>
-          <h1 className="text-2xl font-bold" >{hod.firstName}'s Account</h1>
-          <p className="text-gray-500 text-sm">{DEPARTMENT_LABELS[hod.department]}</p>
-        </div>
+        <PageHeader
+          title={`${hod.firstName}'s Account`}
+          subtitle={DEPARTMENT_LABELS[hod.department]}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">To Collect</p>
+        <WidgetCard title="To Collect">
           <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
-        </div>
-        <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">To Pay</p>
+        </WidgetCard>
+        <WidgetCard title="To Pay">
           <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.adminOwesHod)}</p>
-        </div>
+        </WidgetCard>
       </div>
 
-      <div className="warm-card p-6">
-        <h2 className="text-lg font-semibold mb-4" >Transaction History</h2>
-        <div className="space-y-2 max-h-96 overflow-y-auto">
+      <Accordion
+        title="Transaction History"
+        subtitle={`${accounting.entries.length} entries`}
+        icon={<DollarSign size={16} className="text-[#c9a227]" />}
+        defaultOpen
+      >
+        <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
           {accounting.entries.map(e => (
             <div key={e.id} className={`p-3 rounded-2xl text-sm ${
               e.type === 'hod_owes_admin' ? 'bg-green-50 border border-green-100' : 'bg-orange-50 border border-orange-100'
@@ -395,7 +410,7 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
             </div>
           ))}
         </div>
-      </div>
+      </Accordion>
     </div>
   );
 }

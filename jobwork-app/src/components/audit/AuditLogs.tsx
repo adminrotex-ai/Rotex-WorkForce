@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import type { AuditLog } from '../../types';
 import { getAuditLogs } from '../../database/operations';
 import { formatDate } from '../../utils/helpers';
-import { ClipboardList, Filter } from 'lucide-react';
+import { PageHeader, PillTabs } from '../common/Widgets';
+import { ClipboardList } from 'lucide-react';
 
 const CATEGORIES: Array<{ value: AuditLog['category'] | 'all'; label: string }> = [
   { value: 'all', label: 'All' },
@@ -31,7 +32,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [filter, setFilter] = useState<AuditLog['category'] | 'all'>('all');
+  const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export default function AuditLogs() {
   }, [filter]);
 
   const loadLogs = async () => {
-    const filters = filter !== 'all' ? { category: filter } : undefined;
+    const filters = filter !== 'all' ? { category: filter as AuditLog['category'] } : undefined;
     setLogs(await getAuditLogs(filters));
   };
 
@@ -51,29 +52,13 @@ export default function AuditLogs() {
       )
     : logs;
 
+  const pillTabs = CATEGORIES.map(c => ({ key: c.value, label: c.label }));
+
   return (
     <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold" >Audit Logs</h1>
-        <p className="text-gray-500 text-sm">Complete audit trail of all actions</p>
-      </div>
+      <PageHeader title="Audit Logs" subtitle="Complete audit trail of all actions" />
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <Filter size={16} className="text-gray-400" />
-        {CATEGORIES.map(c => (
-          <button
-            key={c.value}
-            onClick={() => setFilter(c.value)}
-            className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-colors ${
-              filter === c.value ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-            }`}
-            style={filter === c.value ? { backgroundColor: '#2d2d2d' } : {}}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
+      <PillTabs tabs={pillTabs} active={filter} onChange={setFilter} />
 
       {/* Search */}
       <input
