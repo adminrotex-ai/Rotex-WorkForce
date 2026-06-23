@@ -9,7 +9,7 @@ import {
   getAllAccountingSummary, getAccountingForHod, makePayment,
   confirmPayment, getPendingPayments, getUserById,
 } from '../../database/operations';
-import { formatCurrency, formatDate } from '../../utils/helpers';
+import { formatCurrency } from '../../utils/helpers';
 import Modal from '../common/Modal';
 import { ArrowLeft, Send } from 'lucide-react';
 
@@ -70,33 +70,36 @@ function AdminAccounting() {
   const totalOwing = summary.reduce((s, a) => s + a.adminOwesHod, 0);
 
   return (
-    <div className="space-y-10">
-      <h1 className="text-2xl font-bold" >Accounting</h1>
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-light text-gray-900">Accounting</h1>
+        <p className="text-sm text-gray-400 mt-1">{summary.length} HOD accounts</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="warm-card p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">Total to Collect</p>
-          <p className="text-2xl font-bold text-green-700">{formatCurrency(totalOwed)}</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+        <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+          <p className="text-[11px] text-emerald-600 uppercase font-medium">Total to Collect</p>
+          <p className="text-2xl font-light text-emerald-700">{formatCurrency(totalOwed)}</p>
         </div>
-        <div className="warm-card p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">Total to Pay</p>
-          <p className="text-2xl font-bold text-orange-700">{formatCurrency(totalOwing)}</p>
+        <div className="bg-red-50 rounded-2xl p-5 border border-red-100">
+          <p className="text-[11px] text-red-500 uppercase font-medium">Total to Pay</p>
+          <p className="text-2xl font-light text-red-600">{formatCurrency(totalOwing)}</p>
         </div>
-        <div className="warm-card p-5">
-          <p className="text-xs text-gray-500 uppercase font-medium">Net Balance</p>
-          <p className={`text-2xl font-bold ${totalOwed - totalOwing >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5">
+          <p className="text-[11px] text-gray-400 uppercase font-medium">Net Balance</p>
+          <p className={`text-2xl font-light ${totalOwed - totalOwing >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
             {formatCurrency(totalOwed - totalOwing)}
           </p>
         </div>
       </div>
 
       {/* HOD-wise breakdown */}
-      <div className="warm-card p-6">
-        <h2 className="text-lg font-semibold mb-4" >HOD Accounts</h2>
+      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">HOD Accounts</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-500 border-b">
+              <tr className="text-left text-gray-500 border-b border-gray-200">
                 <th className="pb-3 font-medium">HOD</th>
                 <th className="pb-3 font-medium">Department</th>
                 <th className="pb-3 font-medium text-right">To Collect</th>
@@ -107,21 +110,21 @@ function AdminAccounting() {
             <tbody>
               {summary.map(a => (
                 <tr key={a.hodId} className="border-b border-gray-50">
-                  <td className="py-3 font-medium">{a.hodName}</td>
+                  <td className="py-3 font-medium text-gray-900">{a.hodName}</td>
                   <td className="py-3 text-gray-500">{DEPARTMENT_LABELS[a.department]}</td>
-                  <td className="py-3 text-right text-green-600">{formatCurrency(a.hodOwesAdmin)}</td>
-                  <td className="py-3 text-right text-orange-500">{formatCurrency(a.adminOwesHod)}</td>
+                  <td className="py-3 text-right text-emerald-600">{formatCurrency(a.hodOwesAdmin)}</td>
+                  <td className="py-3 text-right text-red-500">{formatCurrency(a.adminOwesHod)}</td>
                   <td className="py-3 text-right">
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => navigate(`/accounting/${a.hodId}`)}
-                        className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded-2xl hover:bg-blue-100"
+                        className="text-[11px] px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 cursor-pointer"
                       >
                         Details
                       </button>
                       <button
                         onClick={() => setShowPayment({ hodId: a.hodId, hodName: a.hodName })}
-                        className="text-xs px-2 py-1 bg-green-50 text-green-600 rounded-2xl hover:bg-green-100"
+                        className="text-[11px] px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 cursor-pointer"
                       >
                         Pay
                       </button>
@@ -136,19 +139,19 @@ function AdminAccounting() {
 
       {/* Pending Payments to Confirm */}
       {pendingPayments.length > 0 && (
-        <div className="warm-card p-6 border border-yellow-100">
-          <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Payment Confirmations</h2>
+        <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200">
+          <h2 className="text-base font-semibold text-amber-700 mb-4">Pending Payment Confirmations</h2>
           <div className="space-y-3">
             {pendingPayments.map(p => (
-              <div key={p.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-2xl">
+              <div key={p.id} className="flex items-center justify-between p-3 bg-white/60 rounded-xl">
                 <div>
-                  <p className="text-sm font-medium">{formatCurrency(p.amount)}</p>
-                  <p className="text-xs text-gray-500">{p.description} | {formatDate(p.createdAt)}</p>
+                  <p className="text-sm font-medium text-gray-900">{formatCurrency(p.amount)}</p>
+                  <p className="text-[11px] text-gray-400">{p.description} · {new Date(p.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
                 </div>
                 {p.payeeId === currentUser?.id && (
                   <button
                     onClick={() => handleConfirmPayment(p.id)}
-                    className="text-xs px-3 py-1 bg-green-500 text-white rounded-2xl hover:bg-green-600"
+                    className="text-[11px] px-3 py-1.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 cursor-pointer"
                   >
                     Confirm
                   </button>
@@ -162,13 +165,14 @@ function AdminAccounting() {
       {/* Payment Modal */}
       <Modal isOpen={!!showPayment} onClose={() => setShowPayment(null)} title={`Pay ${showPayment?.hodName}`}>
         <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
             <input
               type="number"
               value={paymentAmount}
               onChange={e => setPaymentAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
               min="0.01"
               step="0.01"
             />
@@ -179,12 +183,11 @@ function AdminAccounting() {
               type="text"
               value={paymentDesc}
               onChange={e => setPaymentDesc(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
               placeholder="Payment description"
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleMakePayment} className="w-full py-2 text-white rounded-2xl text-sm bg-green-600">
+          <button onClick={handleMakePayment} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer">
             Make Payment
           </button>
         </div>
@@ -237,22 +240,24 @@ function HodAccounting() {
   if (!accounting) return null;
 
   return (
-    <div className="space-y-10">
-      <h1 className="text-2xl font-bold" >My Accounting</h1>
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-light text-gray-900">My Accounting</h1>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">Admin To Collect</p>
-          <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.adminOwesHod)}</p>
-          <p className="text-xs text-green-500 mt-1">For service costs</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+        <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+          <p className="text-[11px] text-emerald-600 uppercase font-medium">Admin To Collect</p>
+          <p className="text-2xl font-light text-emerald-700">{formatCurrency(accounting.adminOwesHod)}</p>
+          <p className="text-[11px] text-emerald-500 mt-1">For service costs</p>
         </div>
-        <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">To Pay Admin</p>
-          <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
-          <p className="text-xs text-orange-500 mt-1">For consumer goods &amp; opening balance</p>
+        <div className="bg-red-50 rounded-2xl p-5 border border-red-100">
+          <p className="text-[11px] text-red-500 uppercase font-medium">To Pay Admin</p>
+          <p className="text-2xl font-light text-red-600">{formatCurrency(accounting.hodOwesAdmin)}</p>
+          <p className="text-[11px] text-red-400 mt-1">For consumer goods & opening balance</p>
           <button
             onClick={() => setShowPayment(true)}
-            className="mt-3 text-xs px-3 py-1.5 bg-orange-500 text-white rounded-2xl hover:bg-orange-600"
+            className="mt-3 text-[11px] px-3 py-1.5 bg-red-500 text-white rounded-xl hover:bg-red-600 cursor-pointer"
           >
             <Send size={12} className="inline mr-1" />Pay Admin
           </button>
@@ -260,26 +265,26 @@ function HodAccounting() {
       </div>
 
       {/* Transaction History */}
-      <div className="warm-card p-6">
-        <h2 className="text-lg font-semibold mb-4" >Transactions</h2>
+      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">Transactions</h2>
         {accounting.entries.length === 0 ? (
           <p className="text-gray-400 text-sm">No transactions yet</p>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {accounting.entries.map(e => (
-              <div key={e.id} className={`p-3 rounded-2xl text-sm ${
-                e.type === 'admin_owes_hod' ? 'bg-green-50 border border-green-100' : 'bg-orange-50 border border-orange-100'
+              <div key={e.id} className={`p-3 rounded-xl text-sm ${
+                e.type === 'admin_owes_hod' ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'
               }`}>
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">{formatCurrency(e.amount)}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    e.type === 'admin_owes_hod' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                  <span className="font-medium text-gray-900">{formatCurrency(e.amount)}</span>
+                  <span className={`text-[11px] px-2.5 py-0.5 rounded-full ${
+                    e.type === 'admin_owes_hod' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                   }`}>
                     {e.type === 'admin_owes_hod' ? 'To collect from admin' : 'To pay admin'}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{e.description}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(e.createdAt)}</p>
+                <p className="text-[11px] text-gray-500 mt-1">{e.description}</p>
+                <p className="text-[11px] text-gray-400 mt-0.5">{new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
               </div>
             ))}
           </div>
@@ -288,19 +293,19 @@ function HodAccounting() {
 
       {/* Pending Payments */}
       {pendingPayments.length > 0 && (
-        <div className="warm-card p-6 border border-yellow-100">
-          <h2 className="text-lg font-semibold mb-4 text-yellow-700">Pending Confirmations</h2>
+        <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200">
+          <h2 className="text-base font-semibold text-amber-700 mb-4">Pending Confirmations</h2>
           <div className="space-y-3">
             {pendingPayments.map(p => (
-              <div key={p.id} className="flex items-center justify-between p-3 bg-yellow-50 rounded-2xl">
+              <div key={p.id} className="flex items-center justify-between p-3 bg-white/60 rounded-xl">
                 <div>
-                  <p className="text-sm font-medium">{formatCurrency(p.amount)}</p>
-                  <p className="text-xs text-gray-500">{p.description}</p>
+                  <p className="text-sm font-medium text-gray-900">{formatCurrency(p.amount)}</p>
+                  <p className="text-[11px] text-gray-400">{p.description}</p>
                 </div>
                 {p.payeeId === currentUser?.id && (
                   <button
                     onClick={() => handleConfirmPayment(p.id)}
-                    className="text-xs px-3 py-1 bg-green-500 text-white rounded-2xl"
+                    className="text-[11px] px-3 py-1.5 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 cursor-pointer"
                   >
                     Confirm
                   </button>
@@ -314,16 +319,16 @@ function HodAccounting() {
       {/* Payment Modal */}
       <Modal isOpen={showPayment} onClose={() => setShowPayment(false)} title="Pay Admin">
         <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
-            <input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm" />
+            <input type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <input type="text" value={paymentDesc} onChange={e => setPaymentDesc(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm" />
+            <input type="text" value={paymentDesc} onChange={e => setPaymentDesc(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handlePayAdmin} className="w-full py-2 text-white rounded-2xl text-sm bg-orange-500">
+          <button onClick={handlePayAdmin} className="w-full bg-red-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 cursor-pointer">
             Send Payment
           </button>
         </div>
@@ -353,45 +358,44 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
   if (!accounting || !hod) return null;
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/accounting')} className="p-2 rounded-2xl hover:bg-gray-100">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold" >{hod.firstName}'s Account</h1>
-          <p className="text-gray-500 text-sm">{DEPARTMENT_LABELS[hod.department]}</p>
+    <div>
+      <button onClick={() => navigate('/accounting')} className="text-sm text-gray-500 hover:text-gray-700 mb-4 cursor-pointer flex items-center gap-1">
+        <ArrowLeft size={14} /> Back to Accounting
+      </button>
+
+      <div className="mb-6">
+        <h1 className="text-2xl font-light text-gray-900">{hod.firstName}'s Account</h1>
+        <p className="text-sm text-gray-400 mt-1">{DEPARTMENT_LABELS[hod.department]}</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+        <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-100">
+          <p className="text-[11px] text-emerald-600 uppercase font-medium">To Collect</p>
+          <p className="text-2xl font-light text-emerald-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
+        </div>
+        <div className="bg-red-50 rounded-2xl p-5 border border-red-100">
+          <p className="text-[11px] text-red-500 uppercase font-medium">To Pay</p>
+          <p className="text-2xl font-light text-red-600">{formatCurrency(accounting.adminOwesHod)}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-          <p className="text-xs text-green-600 uppercase font-medium">To Collect</p>
-          <p className="text-2xl font-bold text-green-700">{formatCurrency(accounting.hodOwesAdmin)}</p>
-        </div>
-        <div className="bg-orange-50 rounded-2xl p-5 border border-orange-100">
-          <p className="text-xs text-orange-600 uppercase font-medium">To Pay</p>
-          <p className="text-2xl font-bold text-orange-700">{formatCurrency(accounting.adminOwesHod)}</p>
-        </div>
-      </div>
-
-      <div className="warm-card p-6">
-        <h2 className="text-lg font-semibold mb-4" >Transaction History</h2>
+      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">Transaction History</h2>
         <div className="space-y-2 max-h-96 overflow-y-auto">
           {accounting.entries.map(e => (
-            <div key={e.id} className={`p-3 rounded-2xl text-sm ${
-              e.type === 'hod_owes_admin' ? 'bg-green-50 border border-green-100' : 'bg-orange-50 border border-orange-100'
+            <div key={e.id} className={`p-3 rounded-xl text-sm ${
+              e.type === 'hod_owes_admin' ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'
             }`}>
               <div className="flex items-center justify-between">
-                <span className="font-medium">{formatCurrency(e.amount)}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  e.type === 'hod_owes_admin' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                <span className="font-medium text-gray-900">{formatCurrency(e.amount)}</span>
+                <span className={`text-[11px] px-2.5 py-0.5 rounded-full ${
+                  e.type === 'hod_owes_admin' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
                 }`}>
                   {e.type === 'hod_owes_admin' ? 'To collect from HOD' : 'To pay HOD'}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">{e.description}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{formatDate(e.createdAt)}</p>
+              <p className="text-[11px] text-gray-500 mt-1">{e.description}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">{new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
             </div>
           ))}
         </div>

@@ -8,26 +8,23 @@ interface ModalProps {
   maxWidth?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children, maxWidth = '500px' }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, maxWidth = '32rem' }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div
-        className="relative bg-white rounded-3xl shadow-2xl w-full animate-scale-in max-h-[90vh] overflow-y-auto border border-[#e8e2d4]"
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-h-[85vh] flex flex-col"
         style={{ maxWidth }}
-        onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-5 border-b border-[#e8e2d4] sticky top-0 bg-white z-10 rounded-t-3xl">
-          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[#f5f0e5] transition-colors">
-            <X size={18} className="text-gray-400" />
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 cursor-pointer">
+            <X size={18} />
           </button>
         </div>
-        <div className="p-5">
-          {children}
-        </div>
+        <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );

@@ -1,170 +1,46 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
-:root {
-  --primary: #c9a227;
-  --primary-dark: #a88520;
-  --primary-light: #e8d48b;
-  --primary-50: #faf6e9;
-  --primary-100: #f0e6c4;
-  --accent: #2d2d2d;
-  --success: #34c759;
-  --warning: #ff9f0a;
-  --danger: #ff3b30;
-  --info: #5ac8fa;
-  --bg: #f5f0e5;
-  --bg-warm: #f8f3e8;
-  --card: #ffffff;
-  --card-dark: #2d2d2d;
-  --text-primary: #1a1a1a;
-  --text-secondary: #6b6b6b;
-  --text-muted: #999999;
-  --border: #e8e2d4;
-  --yellow-gradient: linear-gradient(135deg, #f5e6a3 0%, #e8c84a 100%);
+@theme {
+  --color-cream-50: #fefdf8;
+  --color-cream-100: #fdf9ed;
+  --color-cream-200: #f9f0d4;
+  --color-cream-300: #f3e4b5;
+  --color-cream-400: #edd891;
+  --color-cream-500: #e5c86a;
+  --color-gold-300: #f0d96b;
+  --color-gold-400: #e5c44a;
+  --color-gold-500: #d4b43a;
+  --color-gold-600: #b89a2e;
+  --color-dark-600: #4a4a4a;
+  --color-dark-700: #3a3a3a;
+  --color-dark-800: #2a2a2a;
+  --color-dark-900: #1a1a1a;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: #f5f0e0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
 }
 
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: var(--bg);
-  color: var(--text-primary);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
-
-#root {
-  min-height: 100vh;
-}
-
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c4baa5;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a89e8a;
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.35s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from { transform: translateX(-16px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.25s ease-out;
-}
-
-.progress-ring__circle {
-  transition: stroke-dashoffset 0.5s ease;
-  transform: rotate(-90deg);
-  transform-origin: 50% 50%;
-}
-
-.glass-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-}
-
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
-}
-
-table tbody tr {
-  transition: background-color 0.15s ease;
-}
-
-input[type="checkbox"] {
-  accent-color: var(--primary);
-}
-
-input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.15);
-}
-
-button:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
-.warm-card {
-  background: white;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-}
-
-.dark-card {
-  background: var(--card-dark);
-  border-radius: 20px;
-  color: white;
-}
-
-.pill-tab {
-  padding: 8px 18px;
-  border-radius: 30px;
-  font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.pill-tab.active {
-  background: var(--accent);
-  color: white;
-}
-
-.pill-tab:not(.active) {
-  color: var(--text-secondary);
-}
-
-.pill-tab:not(.active):hover {
-  background: rgba(0,0,0,0.05);
-}
-
-.stat-number {
-  font-size: 2.5rem;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.02em;
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

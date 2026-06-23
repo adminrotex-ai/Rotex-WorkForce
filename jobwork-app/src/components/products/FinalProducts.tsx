@@ -6,7 +6,6 @@ import {
   getActiveFinalProducts, createFinalProduct, addFinalProductStock,
   getFinalProductStockEntries, getFinalProductStockTotal,
 } from '../../database/operations';
-import { formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
 import { Boxes, Plus, Package, ChevronRight } from 'lucide-react';
 
@@ -62,17 +61,16 @@ export default function FinalProducts() {
   };
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Final Products</h1>
-          <p className="text-gray-500 text-sm">Track finished product stock</p>
+          <h1 className="text-2xl font-light text-gray-900">Final Products</h1>
+          <p className="text-sm text-gray-400 mt-1">Track finished product stock</p>
         </div>
         {canManage && (
           <button
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm font-medium hover:opacity-90"
-            style={{ backgroundColor: '#2d2d2d' }}
+            className="flex items-center gap-2 bg-[#2a2a2a] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
           >
             <Plus size={16} /> Add Product
           </button>
@@ -80,36 +78,36 @@ export default function FinalProducts() {
       </div>
 
       {products.length === 0 ? (
-        <div className="warm-card p-12 text-center">
-          <Boxes size={48} className="mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-400">No final products yet</p>
+        <div className="text-center py-12 text-gray-400">
+          <Boxes size={40} className="mx-auto mb-3 opacity-40" />
+          <p>No final products yet</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {products.map(p => {
             const total = stockTotals[p.id] ?? 0;
             const isExp = expanded === p.id;
             const productEntries = entries.filter(e => e.productId === p.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             return (
-              <div key={p.id} className="warm-card overflow-hidden">
+              <div key={p.id} className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
                 <div className="flex items-center justify-between p-4">
                   <button
                     onClick={() => setExpanded(isExp ? null : p.id)}
-                    className="flex items-center gap-3 flex-1 text-left"
+                    className="flex items-center gap-3 flex-1 text-left cursor-pointer"
                   >
-                    <div className="w-11 h-11 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
-                      <Package size={20} className="text-[#c9a227]" />
+                    <div className="w-11 h-11 rounded-xl bg-gold-300 flex items-center justify-center">
+                      <Package size={20} className="text-dark-800" />
                     </div>
                     <div>
-                      <p className="font-medium text-sm">{p.name}</p>
-                      <p className="text-xs text-gray-400">Stock available: <span className="font-semibold text-green-600">{total} {p.unit}</span></p>
+                      <p className="font-medium text-sm text-gray-900">{p.name}</p>
+                      <p className="text-[11px] text-gray-400">Stock available: <span className="font-semibold text-emerald-600">{total} {p.unit}</span></p>
                     </div>
                   </button>
                   <div className="flex items-center gap-2">
                     {canManage && (
                       <button
                         onClick={() => { setShowStock(p); setStockForm({ quantity: '', isOpening: false }); }}
-                        className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-2xl"
+                        className="px-3 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
                       >
                         + Add Stock
                       </button>
@@ -119,13 +117,13 @@ export default function FinalProducts() {
                 </div>
 
                 {isExp && (
-                  <div className="border-t border-gray-100 p-4 animate-fade-in">
+                  <div className="border-t border-gray-100 p-4">
                     {productEntries.length === 0 ? (
-                      <p className="text-xs text-gray-400">No stock entries</p>
+                      <p className="text-[11px] text-gray-400">No stock entries</p>
                     ) : (
                       <table className="w-full text-xs">
                         <thead>
-                          <tr className="text-left text-gray-500 border-b">
+                          <tr className="text-left text-gray-500 border-b border-gray-200">
                             <th className="pb-2 font-medium">Date (IST)</th>
                             <th className="pb-2 font-medium text-right">Added</th>
                             <th className="pb-2 font-medium text-right">Remaining</th>
@@ -135,9 +133,9 @@ export default function FinalProducts() {
                         <tbody>
                           {productEntries.map(e => (
                             <tr key={e.id} className="border-b border-gray-50">
-                              <td className="py-2">{formatDate(e.createdAt)}</td>
+                              <td className="py-2">{new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
                               <td className="py-2 text-right">{e.quantity} {p.unit}</td>
-                              <td className="py-2 text-right font-medium text-green-600">{e.remainingQuantity} {p.unit}</td>
+                              <td className="py-2 text-right font-medium text-emerald-600">{e.remainingQuantity} {p.unit}</td>
                               <td className="py-2">{e.isOpening ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded-full">Opening</span> : 'Stock'}</td>
                             </tr>
                           ))}
@@ -154,13 +152,14 @@ export default function FinalProducts() {
 
       <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setError(''); }} title="Add Final Product">
         <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
             <input
               type="text"
               value={productForm.name}
               onChange={e => setProductForm({ ...productForm, name: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
               placeholder="e.g. Steel Bracket A"
             />
           </div>
@@ -170,12 +169,11 @@ export default function FinalProducts() {
               type="text"
               value={productForm.unit}
               onChange={e => setProductForm({ ...productForm, unit: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
               placeholder="pcs, kg, units..."
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddProduct} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#2d2d2d' }}>
+          <button onClick={handleAddProduct} className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer">
             Add Product
           </button>
         </div>
@@ -183,6 +181,7 @@ export default function FinalProducts() {
 
       <Modal isOpen={!!showStock} onClose={() => { setShowStock(null); setError(''); }} title={`Add Stock - ${showStock?.name || ''}`}>
         <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Quantity ({showStock?.unit})</label>
             <input
@@ -191,7 +190,7 @@ export default function FinalProducts() {
               step="0.01"
               value={stockForm.quantity}
               onChange={e => setStockForm({ ...stockForm, quantity: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -202,8 +201,7 @@ export default function FinalProducts() {
             />
             Mark as opening stock
           </label>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAddStock} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#2d2d2d' }}>
+          <button onClick={handleAddStock} className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer">
             Add Stock
           </button>
         </div>
