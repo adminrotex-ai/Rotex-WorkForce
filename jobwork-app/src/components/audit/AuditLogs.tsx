@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { AuditLog } from '../../types';
 import { getAuditLogs } from '../../database/operations';
-import { formatDate } from '../../utils/helpers';
 import { ClipboardList, Filter } from 'lucide-react';
 
 const CATEGORIES: Array<{ value: AuditLog['category'] | 'all'; label: string }> = [
@@ -20,9 +19,9 @@ const CATEGORIES: Array<{ value: AuditLog['category'] | 'all'; label: string }> 
 const CATEGORY_COLORS: Record<string, string> = {
   batch: 'bg-blue-100 text-blue-700',
   user: 'bg-purple-100 text-purple-700',
-  cost: 'bg-green-100 text-green-700',
+  cost: 'bg-emerald-100 text-emerald-700',
   transfer: 'bg-cyan-100 text-cyan-700',
-  material: 'bg-yellow-100 text-yellow-700',
+  material: 'bg-amber-100 text-amber-700',
   consumer_goods: 'bg-orange-100 text-orange-700',
   payment: 'bg-emerald-100 text-emerald-700',
   deletion: 'bg-red-100 text-red-700',
@@ -52,23 +51,22 @@ export default function AuditLogs() {
     : logs;
 
   return (
-    <div className="space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold" >Audit Logs</h1>
-        <p className="text-gray-500 text-sm">Complete audit trail of all actions</p>
+    <div>
+      <div className="mb-6">
+        <h1 className="text-2xl font-light text-gray-900">Audit Logs</h1>
+        <p className="text-sm text-gray-400 mt-1">Complete audit trail of all actions</p>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-2 items-center mb-6">
         <Filter size={16} className="text-gray-400" />
         {CATEGORIES.map(c => (
           <button
             key={c.value}
             onClick={() => setFilter(c.value)}
-            className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-colors ${
-              filter === c.value ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer ${
+              filter === c.value ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'
             }`}
-            style={filter === c.value ? { backgroundColor: '#2d2d2d' } : {}}
           >
             {c.label}
           </button>
@@ -81,31 +79,31 @@ export default function AuditLogs() {
         value={search}
         onChange={e => setSearch(e.target.value)}
         placeholder="Search audit logs..."
-        className="w-full px-4 py-2 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#c9a227]"
+        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 mb-6"
       />
 
       {/* Logs */}
       <div className="space-y-3">
         {filtered.length === 0 ? (
-          <div className="warm-card p-12 text-center">
-            <ClipboardList size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-400">No audit logs found</p>
+          <div className="text-center py-12 text-gray-400">
+            <ClipboardList size={40} className="mx-auto mb-3 opacity-40" />
+            <p>No audit logs found</p>
           </div>
         ) : (
           filtered.map(log => (
-            <div key={log.id} className="warm-card p-4 animate-fade-in">
+            <div key={log.id} className="bg-white/60 backdrop-blur-sm rounded-2xl p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${CATEGORY_COLORS[log.category]}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${CATEGORY_COLORS[log.category]}`}>
                       {log.category.replace('_', ' ')}
                     </span>
-                    <span className="text-xs font-mono text-gray-400">{log.action}</span>
+                    <span className="text-[11px] font-mono text-gray-400">{log.action}</span>
                   </div>
                   <p className="text-sm text-gray-700">{log.details}</p>
-                  <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
+                  <div className="flex items-center gap-3 mt-2 text-[11px] text-gray-400">
                     <span>By: {log.userName}</span>
-                    <span>{formatDate(log.createdAt)}</span>
+                    <span>{new Date(log.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
                   </div>
                 </div>
               </div>

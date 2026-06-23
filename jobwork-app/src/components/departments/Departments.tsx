@@ -53,39 +53,38 @@ export default function Departments() {
   if (!isAdmin) return <p className="text-gray-400">Access denied</p>;
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Departments</h1>
-          <p className="text-gray-500 text-sm">Manage built-in and custom departments</p>
+          <h1 className="text-2xl font-light text-gray-900">Departments</h1>
+          <p className="text-sm text-gray-400 mt-1">Manage built-in and custom departments</p>
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 px-4 py-2.5 text-white rounded-2xl text-sm font-medium hover:opacity-90"
-          style={{ backgroundColor: '#2d2d2d' }}
+          className="flex items-center gap-2 bg-[#2a2a2a] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
         >
           <Plus size={16} /> Add Department
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
         {departments.map(d => (
-          <div key={d.key} className="warm-card p-5 flex items-center justify-between">
+          <div key={d.key} className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-[#c9a227]/10 flex items-center justify-center">
-                <Building2 size={20} className="text-[#c9a227]" />
+              <div className="w-11 h-11 rounded-xl bg-gold-300 flex items-center justify-center">
+                <Building2 size={20} className="text-dark-800" />
               </div>
               <div>
-                <p className="font-medium text-sm">{d.label}</p>
-                <p className="text-xs text-gray-400">
-                  {d.custom ? 'Custom' : 'Built-in'} &middot; key: {d.key}
+                <p className="font-medium text-sm text-gray-900">{d.label}</p>
+                <p className="text-[11px] text-gray-400">
+                  {d.custom ? 'Custom' : 'Built-in'} · key: {d.key}
                 </p>
               </div>
             </div>
             {d.custom ? (
               <button
                 onClick={() => setShowDelete({ key: d.key, label: d.label })}
-                className="p-2 rounded-2xl hover:bg-red-50 text-red-500"
+                className="p-2 rounded-xl hover:bg-red-50 text-red-400 cursor-pointer"
                 title="Delete department"
               >
                 <Trash2 size={16} />
@@ -97,12 +96,13 @@ export default function Departments() {
         ))}
       </div>
 
-      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-xs text-blue-700">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-[11px] text-blue-700">
         Built-in departments ({Object.values(DEFAULT_DEPARTMENT_LABELS).join(', ')}) are part of the production workflow and cannot be deleted. Custom departments are available everywhere users and accounting are tracked.
       </div>
 
       <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setError(''); setName(''); }} title="Add Department">
         <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Department Name</label>
             <input
@@ -110,26 +110,26 @@ export default function Departments() {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Quality Control"
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-[#c9a227]"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleAdd} className="w-full py-2.5 text-white rounded-2xl text-sm font-medium" style={{ backgroundColor: '#2d2d2d' }}>
+          <button onClick={handleAdd} className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer">
             Create Department
           </button>
         </div>
       </Modal>
 
-      <Modal isOpen={!!showDelete} onClose={() => { setShowDelete(null); setReason(''); setAdminPassword(''); setError(''); }} title="Delete Department">
+      <Modal isOpen={!!showDelete} onClose={() => { setShowDelete(null); setReason(''); setAdminPassword(''); setError(''); }} title="Delete Department" maxWidth="28rem">
         <div className="space-y-4">
           <p className="text-sm text-gray-600">Delete <strong>{showDelete?.label}</strong>?</p>
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Reason (required)</label>
             <textarea
               value={reason}
               onChange={e => setReason(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
               placeholder="Enter reason"
             />
           </div>
@@ -139,12 +139,14 @@ export default function Departments() {
               type="password"
               value={adminPassword}
               onChange={e => setAdminPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl text-sm"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
               placeholder="Enter admin password"
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button onClick={handleDelete} className="w-full py-2.5 bg-red-500 text-white rounded-2xl text-sm font-medium">Delete</button>
+          <div className="flex gap-3 justify-end mt-4">
+            <button onClick={() => { setShowDelete(null); setReason(''); setAdminPassword(''); setError(''); }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer">Cancel</button>
+            <button onClick={handleDelete} className="px-4 py-2 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 cursor-pointer">Delete</button>
+          </div>
         </div>
       </Modal>
     </div>

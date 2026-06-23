@@ -5,7 +5,6 @@ import type { RootState } from '../../store';
 import type { Batch } from '../../types';
 import { STAGE_LABELS } from '../../types';
 import { getActiveBatches, createBatch, deleteBatch, getHodBatchesInProgress } from '../../database/operations';
-import { formatDate } from '../../utils/helpers';
 import Modal from '../common/Modal';
 import { Plus, Trash2, Eye, Package } from 'lucide-react';
 
@@ -78,173 +77,112 @@ export default function BatchList() {
   const filtered = filter === 'all' ? batches : batches.filter(b => b.status === filter);
 
   return (
-    <div className="space-y-10">
-      <div className="flex items-center justify-between">
+    <div>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold" >Batches</h1>
-          <p className="text-gray-500 text-sm">{batches.length} total batches</p>
+          <h1 className="text-2xl font-light text-gray-900">Batch Management</h1>
+          <p className="text-sm text-gray-400 mt-1">{batches.length} batches</p>
         </div>
         {canCreateBatch && (
           <button
             onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 text-white rounded-2xl hover:opacity-90"
-            style={{ backgroundColor: '#2d2d2d' }}
+            className="flex items-center gap-2 bg-[#2a2a2a] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
           >
-            <Plus size={18} /><span className="text-sm font-medium">Create Batch</span>
+            <Plus size={16} /> Create Batch
           </button>
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 mb-6">
         {(['all', 'created', 'in_progress', 'completed'] as const).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-2xl text-sm font-medium transition-colors ${
-              filter === f ? 'text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+            className={`px-4 py-2 text-sm rounded-xl cursor-pointer ${
+              filter === f ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'
             }`}
-            style={filter === f ? { backgroundColor: '#2d2d2d' } : {}}
           >
             {f === 'all' ? 'All' : f.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
           </button>
         ))}
       </div>
 
-      {/* Batch List */}
-      {filtered.length === 0 ? (
-        <div className="warm-card p-12 text-center">
-          <Package size={48} className="mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-400">No batches found</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(batch => (
-            <div
-              key={batch.id}
-              className="warm-card p-4 hover:shadow-md transition-shadow cursor-pointer"
-             
-              onClick={() => navigate(`/batches/${batch.id}`)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#c9a227]/10">
-                    <Package size={22} className="text-[#c9a227]" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">{batch.batchNumber}</p>
-                    <p className="text-xs text-gray-400">
-                      {batch.totalPieces} pieces | Sizes: {batch.sizes.join(', ')} | Created: {formatDate(batch.createdAt)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      batch.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      batch.status === 'in_progress' ? 'bg-[#c9a227]/10 text-[#c9a227]' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {batch.status.replace('_', ' ')}
-                    </span>
-                    <p className="text-xs text-gray-400 mt-1">{STAGE_LABELS[batch.currentStage]}</p>
-                  </div>
-                  <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={() => navigate(`/batches/${batch.id}`)}
-                      className="p-2 rounded-2xl hover:bg-blue-50 text-blue-500"
-                    >
-                      <Eye size={16} />
-                    </button>
-                    {canDeleteBatch && (
-                      <button
-                        onClick={() => setShowDelete(batch)}
-                        className="p-2 rounded-2xl hover:bg-red-50 text-red-500"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
+      <div className="space-y-3">
+        {filtered.map(batch => (
+          <div key={batch.id} className="bg-white/60 rounded-2xl p-5 flex items-center justify-between">
+            <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate(`/batches/${batch.id}`)}>
+              <div className="w-12 h-12 rounded-xl bg-gold-300 flex items-center justify-center">
+                <Package size={20} className="text-dark-800" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{batch.batchNumber}</p>
+                <p className="text-[11px] text-gray-400">
+                  {batch.totalPieces} pieces · Sizes: {batch.sizes.join(', ')} · {new Date(batch.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                </p>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+            <div className="flex items-center gap-3">
+              <span className={`text-[11px] font-medium px-3 py-1.5 rounded-full ${
+                batch.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+                batch.status === 'in_progress' ? 'bg-gold-300 text-dark-800' :
+                'bg-gray-100 text-gray-600'
+              }`}>
+                {STAGE_LABELS[batch.currentStage]} · {batch.status.replace('_', ' ')}
+              </span>
+              <button onClick={() => navigate(`/batches/${batch.id}`)} className="p-2 text-gray-400 hover:text-gray-700 cursor-pointer">
+                <Eye size={16} />
+              </button>
+              {canDeleteBatch && (
+                <button onClick={() => setShowDelete(batch)} className="p-2 text-red-400 hover:text-red-600 cursor-pointer">
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-gray-400">
+            <Package size={40} className="mx-auto mb-3 opacity-40" />
+            <p>No batches found</p>
+          </div>
+        )}
+      </div>
 
-      {/* Create Batch Modal */}
       <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Create New Batch">
         <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Total Pieces</label>
-            <input
-              type="number"
-              value={form.totalPieces}
-              onChange={e => setForm({ ...form, totalPieces: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
-              placeholder="Enter total number of pieces"
-              min="1"
-            />
+            <input type="number" min="1" value={form.totalPieces} onChange={e => setForm({ ...form, totalPieces: e.target.value })} required className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Sizes (comma-separated)</label>
-            <input
-              type="text"
-              value={form.sizes}
-              onChange={e => setForm({ ...form, sizes: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-[#c9a227] text-sm"
-              placeholder="e.g. Small, Medium, Large"
-            />
+            <input type="text" value={form.sizes} onChange={e => setForm({ ...form, sizes: e.target.value })} className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" placeholder="e.g. Small, Medium, Large" />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button
-            onClick={handleCreate}
-            className="w-full py-2.5 text-white font-medium rounded-2xl hover:opacity-90 text-sm bg-[#2d2d2d]"
-          >
-            Create Batch
-          </button>
+          <button onClick={handleCreate} className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium cursor-pointer">Create Batch</button>
         </div>
       </Modal>
 
-      {/* Delete Batch Modal */}
       <Modal
         isOpen={!!showDelete}
         onClose={() => { setShowDelete(null); setDeleteReason(''); setDeleteAdminPassword(''); setError(''); }}
         title="Delete Batch"
+        maxWidth="28rem"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Delete batch <strong>{showDelete?.batchNumber}</strong>?
-          </p>
+          <p className="text-gray-600 mb-4">Delete {showDelete?.batchNumber}?</p>
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Reason (required)</label>
-            <textarea
-              value={deleteReason}
-              onChange={e => setDeleteReason(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-red-500 text-sm"
-              rows={3}
-              placeholder="Enter reason for deletion"
-            />
+            <textarea value={deleteReason} onChange={e => setDeleteReason(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" rows={3} placeholder="Enter reason for deletion..." />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password (required)</label>
-            <input
-              type="password"
-              value={deleteAdminPassword}
-              onChange={e => setDeleteAdminPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-2xl focus:outline-none focus:border-red-500 text-sm"
-              placeholder="Enter admin password to confirm"
-            />
+            <input type="password" value={deleteAdminPassword} onChange={e => setDeleteAdminPassword(e.target.value)} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400" placeholder="Enter admin password" />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <div className="flex gap-3">
-            <button
-              onClick={() => { setShowDelete(null); setDeleteReason(''); setDeleteAdminPassword(''); setError(''); }}
-              className="flex-1 py-2.5 border border-gray-300 rounded-2xl text-sm"
-            >
-              Cancel
-            </button>
-            <button onClick={handleDelete} className="flex-1 py-2.5 bg-red-500 text-white rounded-2xl text-sm hover:bg-red-600">Delete</button>
+          <div className="flex gap-3 justify-end mt-4">
+            <button onClick={() => { setShowDelete(null); setDeleteReason(''); setDeleteAdminPassword(''); setError(''); }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer">Cancel</button>
+            <button onClick={handleDelete} className="px-4 py-2 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 cursor-pointer">Delete</button>
           </div>
         </div>
       </Modal>
