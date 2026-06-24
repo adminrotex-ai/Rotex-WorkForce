@@ -183,6 +183,7 @@ export interface MaterialEntry {
   remainingQuantity: number;
   unit: string;
   isOpening?: boolean;
+  isRawMaterial?: boolean;
   enteredBy: string;
   createdAt: string;
 }

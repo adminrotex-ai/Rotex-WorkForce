@@ -32,6 +32,7 @@ export default function Materials() {
     quantity: '',
     unit: 'kg',
     billPhoto: '',
+    isRawMaterial: false,
   });
 
   const [openingForm, setOpeningForm] = useState({
@@ -39,6 +40,7 @@ export default function Materials() {
     price: '',
     quantity: '',
     unit: 'kg',
+    isRawMaterial: false,
   });
 
   useEffect(() => {
@@ -83,9 +85,10 @@ export default function Materials() {
       await addMaterialEntry(
         entryForm.materialTypeId, entryForm.supplierName, price, quantity,
         entryForm.unit, currentUser.id, currentUser.firstName, entryForm.billPhoto || undefined,
+        undefined, entryForm.isRawMaterial || undefined,
       );
       setShowAddEntry(false);
-      setEntryForm({ materialTypeId: '', supplierName: '', price: '', quantity: '', unit: 'kg', billPhoto: '' });
+      setEntryForm({ materialTypeId: '', supplierName: '', price: '', quantity: '', unit: 'kg', billPhoto: '', isRawMaterial: false });
       loadData();
     } catch (e: any) { setError(e.message); }
   };
@@ -102,9 +105,10 @@ export default function Materials() {
       await addMaterialEntry(
         openingForm.materialTypeId, 'Opening Stock', price, quantity,
         openingForm.unit, currentUser.id, currentUser.firstName, undefined, true,
+        openingForm.isRawMaterial || undefined,
       );
       setShowOpening(false);
-      setOpeningForm({ materialTypeId: '', price: '', quantity: '', unit: 'kg' });
+      setOpeningForm({ materialTypeId: '', price: '', quantity: '', unit: 'kg', isRawMaterial: false });
       loadData();
     } catch (e: any) { setError(e.message); }
   };
@@ -239,6 +243,7 @@ export default function Materials() {
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-900">{type?.name || 'Unknown'}</span>
                           {entry.isOpening && <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full font-medium whitespace-nowrap">Opening</span>}
+                          {entry.isRawMaterial && <span className="text-[10px] px-2 py-0.5 bg-green-50 text-green-700 rounded-full font-medium whitespace-nowrap">Raw Material</span>}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{entry.supplierName}</td>
@@ -352,6 +357,14 @@ export default function Materials() {
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
           </div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div className={`relative w-10 h-5 rounded-full transition-colors ${openingForm.isRawMaterial ? 'bg-green-500' : 'bg-gray-300'}`}>
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${openingForm.isRawMaterial ? 'translate-x-5' : ''}`} />
+              <input type="checkbox" checked={openingForm.isRawMaterial} onChange={e => setOpeningForm({ ...openingForm, isRawMaterial: e.target.checked })} className="sr-only" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Raw Material</span>
+            <span className="text-[11px] text-gray-400">(adds to store stock)</span>
+          </label>
           <button onClick={handleAddOpening} className="w-full bg-purple-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-purple-700 cursor-pointer">
             Save Opening Stock
           </button>
@@ -484,6 +497,14 @@ export default function Materials() {
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
             />
           </div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div className={`relative w-10 h-5 rounded-full transition-colors ${entryForm.isRawMaterial ? 'bg-green-500' : 'bg-gray-300'}`}>
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${entryForm.isRawMaterial ? 'translate-x-5' : ''}`} />
+              <input type="checkbox" checked={entryForm.isRawMaterial} onChange={e => setEntryForm({ ...entryForm, isRawMaterial: e.target.checked })} className="sr-only" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Raw Material</span>
+            <span className="text-[11px] text-gray-400">(adds to store stock)</span>
+          </label>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Bill Photo</label>
             <input
