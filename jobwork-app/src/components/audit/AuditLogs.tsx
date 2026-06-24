@@ -12,7 +12,7 @@ const CATEGORIES: Array<{ value: AuditLog['category'] | 'all'; label: string }> 
   { value: 'material', label: 'Materials' },
   { value: 'consumer_goods', label: 'Consumer Goods' },
   { value: 'payment', label: 'Payments' },
-  { value: 'deletion', label: 'Deletions' },
+  { value: 'deletion', label: 'Delete History' },
   { value: 'general', label: 'General' },
 ];
 
