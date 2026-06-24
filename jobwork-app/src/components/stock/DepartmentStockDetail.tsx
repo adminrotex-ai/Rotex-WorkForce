@@ -89,7 +89,6 @@ export default function DepartmentStockDetail() {
     const qty = parseFloat(transferForm.quantity);
     if (!Number.isFinite(qty) || qty <= 0) { setError('Enter a positive quantity'); return; }
     if (!transferForm.toDepartment) { setError('Select destination department'); return; }
-    if (!transferForm.targetHodId) { setError('Select target HOD'); return; }
 
     const isPressTransfer = transferForm.toDepartment === 'pressing';
     if (isPressTransfer && !transferForm.productTypeId) { setError('Select product type for pressing department'); return; }
@@ -101,7 +100,7 @@ export default function DepartmentStockDetail() {
         : undefined;
 
       await transferStock(
-        department, transferForm.toDepartment, transferForm.targetHodId,
+        department, transferForm.toDepartment, transferForm.targetHodId || undefined,
         qty, currentUser.id, currentUser.firstName,
         showTransfer.productId, showTransfer.size,
         transferForm.notes || undefined,
@@ -436,7 +435,7 @@ export default function DepartmentStockDetail() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Target HOD *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Target HOD <span className="text-gray-400 font-normal">(optional)</span></label>
             <select
               value={transferForm.targetHodId}
               onChange={e => setTransferForm({ ...transferForm, targetHodId: e.target.value })}

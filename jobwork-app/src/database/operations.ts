@@ -1378,7 +1378,7 @@ export async function editDepartmentStock(
 export async function transferStock(
   fromDepartment: string,
   toDepartment: string,
-  targetHodId: string,
+  targetHodId: string | undefined,
   quantity: number,
   transferredBy: string,
   transferredByName: string,
@@ -1453,7 +1453,7 @@ export async function transferStock(
     `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${finalSize ? ` (${finalSize})` : ''}`,
     JSON.stringify({ fromDepartment, toDepartment, targetHodId, quantity, productId: finalProductId, size: finalSize }));
 
-  const targetHod = await db.users.get(targetHodId);
+  const targetHod = targetHodId ? await db.users.get(targetHodId) : undefined;
   if (targetHod && targetHod.serviceCostRate && targetHod.serviceCostRate > 0) {
     await recordServiceCost(
       '', toDepartment, targetHod.serviceCostRate, quantity,
