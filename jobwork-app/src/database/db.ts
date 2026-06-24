@@ -5,7 +5,7 @@ import type {
   ServiceCost, AccountingEntry, PaymentRecord, AuditLog,
   ConsumerGoodInventory, ConsumerGoodReceipt, SyncQueueItem,
   CustomDepartment, FinalProductType, FinalProduct, FinalProductStockEntry,
-  DepartmentStock, StockTransfer, StockAdjustment,
+  DepartmentStock, StockTransfer, StockAdjustment, DispatchEntry,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -201,4 +201,5 @@ export const db = {
   departmentStock: new DocTable<DepartmentStock>('jw_department_stock'),
   stockTransfers: new DocTable<StockTransfer>('jw_stock_transfers'),
   stockAdjustments: new DocTable<StockAdjustment>('jw_stock_adjustments'),
+  dispatchEntries: new DocTable<DispatchEntry>('jw_dispatch_entries'),
 };

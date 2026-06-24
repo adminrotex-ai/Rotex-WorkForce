@@ -7,12 +7,12 @@ import { DEPARTMENT_LABELS } from '../../types';
 import {
   getDepartmentStock, addStockToDepartment, editDepartmentStock,
   transferStock, getStockTransfers, getActiveFinalProducts, getActiveFinalProductTypes,
-  getActiveUsers, getActiveDepartments, deleteDepartmentStock,
+  getActiveUsers, getActiveDepartments, deleteDepartmentStock, dispatchProduct,
 } from '../../database/operations';
 import Modal from '../common/Modal';
 import {
   ArrowLeft, Plus, ArrowRightLeft, Pencil, Trash2,
-  Package, Warehouse, ChevronRight, Layers, Ruler,
+  Package, Warehouse, ChevronRight, Layers, Ruler, Truck,
 } from 'lucide-react';
 
 interface NameGroup {
@@ -52,6 +52,8 @@ export default function DepartmentStockDetail() {
   const [transferForm, setTransferForm] = useState({ toDepartment: '', targetHodId: '', quantity: '', notes: '', productTypeId: '', destProductId: '', destSize: '' });
   const [editForm, setEditForm] = useState({ quantity: '', reason: '', password: '' });
   const [deleteForm, setDeleteForm] = useState({ reason: '', password: '' });
+  const [showDispatch, setShowDispatch] = useState<DepartmentStock | null>(null);
+  const [dispatchForm, setDispatchForm] = useState({ quantity: '', partyName: '', notes: '' });
   const [error, setError] = useState('');
   const [loaded, setLoaded] = useState(false);
 
@@ -156,6 +158,30 @@ export default function DepartmentStockDetail() {
     } catch (e: any) { setError(e.message); }
   };
 
+  const handleDispatch = async () => {
+    if (!currentUser || !showDispatch) return;
+    setError('');
+    const qty = parseFloat(dispatchForm.quantity);
+    if (!Number.isFinite(qty) || qty <= 0) { setError('Enter a positive quantity'); return; }
+    if (!dispatchForm.partyName.trim()) { setError('Party name is required'); return; }
+    try {
+      await dispatchProduct(
+        showDispatch.productId || '', productName(showDispatch.productId) || 'General Stock',
+        qty, showDispatch.unit, dispatchForm.partyName,
+        currentUser.id, currentUser.firstName,
+        showDispatch.size, dispatchForm.notes || undefined,
+      );
+      setShowDispatch(null);
+      setDispatchForm({ quantity: '', partyName: '', notes: '' });
+      load();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const isPackedProduct = (s: DepartmentStock) => {
+    const name = s.productId ? productName(s.productId) : '';
+    return name === 'Packed Product';
+  };
+
   const hodsForDept = (deptKey: string) => hods.filter(h => h.department === deptKey);
 
   const transferHodDept = transferForm.toDepartment || '';
@@ -231,6 +257,18 @@ export default function DepartmentStockDetail() {
 
   const stockActions = (s: DepartmentStock) => (
     <div className="flex items-center gap-1">
+      {isStore && isPackedProduct(s) && (
+        <button
+          onClick={() => {
+            setShowDispatch(s);
+            setError('');
+            setDispatchForm({ quantity: '', partyName: '', notes: '' });
+          }}
+          className="px-2.5 py-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-full cursor-pointer flex items-center gap-1"
+        >
+          <Truck size={12} /> Dispatch
+        </button>
+      )}
       <button
         onClick={() => {
           setShowTransfer(s);
@@ -772,6 +810,54 @@ export default function DepartmentStockDetail() {
           </div>
           <button onClick={handleDelete} className="w-full bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 cursor-pointer">
             Delete Stock Entry
+          </button>
+        </div>
+      </Modal>
+
+      {/* Dispatch Modal */}
+      <Modal isOpen={!!showDispatch} onClose={() => { setShowDispatch(null); setError(''); }} title={`Dispatch Packed Product${showDispatch?.size ? ` (${showDispatch.size})` : ''}`}>
+        <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          {showDispatch && (
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-[11px] text-emerald-700">
+              Available: <strong>{showDispatch.quantity} {showDispatch.unit}</strong>
+              {showDispatch.size && <> · Size: {showDispatch.size}</>}
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Party Name *</label>
+            <input
+              type="text"
+              value={dispatchForm.partyName}
+              onChange={e => setDispatchForm({ ...dispatchForm, partyName: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="Enter party / buyer name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              max={showDispatch?.quantity}
+              value={dispatchForm.quantity}
+              onChange={e => setDispatchForm({ ...dispatchForm, quantity: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={dispatchForm.notes}
+              onChange={e => setDispatchForm({ ...dispatchForm, notes: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="Any notes about this dispatch"
+            />
+          </div>
+          <button onClick={handleDispatch} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer">
+            Dispatch to Party
           </button>
         </div>
       </Modal>
