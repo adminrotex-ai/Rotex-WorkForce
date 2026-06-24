@@ -33,6 +33,8 @@ export default function ConsumerGoods() {
   const [stockInfo, setStockInfo] = useState<Record<string, { totalQty: number; latestPrice: number }>>({});
   const [tab, setTab] = useState<'items' | 'receipts'>('items');
   const [showDeleteReceipt, setShowDeleteReceipt] = useState<ConsumerGoodReceipt | null>(null);
+  const [receiptDeleteReason, setReceiptDeleteReason] = useState('');
+  const [receiptDeletePassword, setReceiptDeletePassword] = useState('');
 
   const [invForm, setInvForm] = useState({
     goodId: '',
@@ -222,9 +224,14 @@ export default function ConsumerGoods() {
 
   const handleDeleteReceipt = async () => {
     if (!showDeleteReceipt || !currentUser) return;
+    setError('');
+    if (!receiptDeleteReason.trim()) { setError('Reason is required'); return; }
+    if (!receiptDeletePassword.trim()) { setError('Admin password is required'); return; }
     try {
-      await deleteReceipt(showDeleteReceipt.id, currentUser.id, currentUser.firstName);
+      await deleteReceipt(showDeleteReceipt.id, currentUser.id, currentUser.firstName, receiptDeleteReason, receiptDeletePassword);
       setShowDeleteReceipt(null);
+      setReceiptDeleteReason('');
+      setReceiptDeletePassword('');
       setSelectedReceipt(null);
       loadData();
     } catch (e: any) {
@@ -686,7 +693,7 @@ export default function ConsumerGoods() {
       </Modal>
 
       {/* Delete Receipt Confirmation */}
-      <Modal isOpen={!!showDeleteReceipt} onClose={() => setShowDeleteReceipt(null)} title="Delete Receipt" maxWidth="28rem">
+      <Modal isOpen={!!showDeleteReceipt} onClose={() => { setShowDeleteReceipt(null); setReceiptDeleteReason(''); setReceiptDeletePassword(''); setError(''); }} title="Delete Receipt" maxWidth="28rem">
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
             Delete receipt <strong>{showDeleteReceipt?.receiptNumber}</strong> ({formatCurrency(showDeleteReceipt?.totalAmount || 0)}) issued to {showDeleteReceipt?.hodName}?
@@ -694,8 +701,29 @@ export default function ConsumerGoods() {
           <p className="text-[11px] text-gray-400">
             This will restore the stock to inventory and remove the accounting entry.
           </p>
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason for deletion</label>
+            <textarea
+              value={receiptDeleteReason}
+              onChange={e => setReceiptDeleteReason(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              rows={2}
+              placeholder="Why is this receipt being deleted?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password</label>
+            <input
+              type="password"
+              value={receiptDeletePassword}
+              onChange={e => setReceiptDeletePassword(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="Enter admin password to confirm"
+            />
+          </div>
           <div className="flex gap-3 justify-end">
-            <button onClick={() => setShowDeleteReceipt(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer">Cancel</button>
+            <button onClick={() => { setShowDeleteReceipt(null); setReceiptDeleteReason(''); setReceiptDeletePassword(''); setError(''); }} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl cursor-pointer">Cancel</button>
             <button onClick={handleDeleteReceipt} className="px-4 py-2 text-sm bg-red-500 text-white rounded-xl hover:bg-red-600 cursor-pointer">Delete</button>
           </div>
         </div>
