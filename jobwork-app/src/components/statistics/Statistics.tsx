@@ -125,7 +125,7 @@ export default function Statistics() {
                       {DEPARTMENT_LABELS[t.fromDepartment] || t.fromDepartment} → {DEPARTMENT_LABELS[t.toDepartment] || t.toDepartment}
                     </p>
                     <p className="text-[11px] text-gray-400">
-                      {t.size && `${t.size} · `}{new Date(t.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                      {t.targetHodName && `HOD: ${t.targetHodName} · `}{t.size && `${t.size} · `}{new Date(t.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                     </p>
                   </div>
                   <span className="text-sm font-medium">{t.quantity} {t.unit}</span>

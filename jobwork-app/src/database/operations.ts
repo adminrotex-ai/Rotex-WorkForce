@@ -1403,7 +1403,7 @@ export async function editDepartmentStock(
 export async function transferStock(
   fromDepartment: string,
   toDepartment: string,
-  targetHodId: string | undefined,
+  targetHodId: string,
   quantity: number,
   transferredBy: string,
   transferredByName: string,
@@ -1421,6 +1421,10 @@ export async function transferStock(
 
   if (toDepartment === 'pressing' && !destSize) {
     throw new Error('Size is compulsory for transfers to pressing department');
+  }
+
+  if (fromDepartment !== 'store' && toDepartment !== 'store') {
+    throw new Error('Non-store departments can only transfer stock back to store');
   }
 
   const sourceStock = await db.departmentStock.where({ department: fromDepartment, isActive: 1 }).toArray();
@@ -1458,11 +1462,15 @@ export async function transferStock(
     }
   }
 
+  const targetHod = await db.users.get(targetHodId);
+  const targetHodName = targetHod?.firstName || '';
+
   const transfer: StockTransfer = {
     id: generateId(),
     fromDepartment,
     toDepartment,
     targetHodId,
+    targetHodName,
     productId: finalProductId,
     size: finalSize,
     quantity,
@@ -1475,13 +1483,12 @@ export async function transferStock(
   await db.stockTransfers.add(transfer);
 
   await addAudit('STOCK_TRANSFERRED', 'transfer', 'stock_transfer', transfer.id, transferredBy, transferredByName,
-    `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${finalSize ? ` (${finalSize})` : ''}`,
-    JSON.stringify({ fromDepartment, toDepartment, targetHodId, quantity, productId: finalProductId, size: finalSize }));
+    `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${finalSize ? ` (${finalSize})` : ''} (HOD: ${targetHodName})`,
+    JSON.stringify({ fromDepartment, toDepartment, targetHodId, targetHodName, quantity, productId: finalProductId, size: finalSize }));
 
-  const targetHod = targetHodId ? await db.users.get(targetHodId) : undefined;
-  if (targetHod && targetHod.serviceCostRate && targetHod.serviceCostRate > 0) {
+  if (fromDepartment !== 'store' && toDepartment === 'store' && targetHod && targetHod.serviceCostRate && targetHod.serviceCostRate > 0) {
     await recordServiceCost(
-      '', toDepartment, targetHod.serviceCostRate, quantity,
+      '', fromDepartment, targetHod.serviceCostRate, quantity,
       transferredBy, transferredByName, finalSize, undefined, targetHodId,
     );
   }

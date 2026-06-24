@@ -63,7 +63,7 @@ export default function DepartmentStockDetail() {
     setProducts(p);
     setProductTypes(pt);
     setHods(users.filter(u => u.role === 'hod'));
-    setDepartments(depts.filter(d => d.key !== department));
+    setDepartments(isStore ? depts.filter(d => d.key !== department) : [{ key: 'store', label: 'Store' }]);
     setLoaded(true);
   };
 
@@ -92,6 +92,8 @@ export default function DepartmentStockDetail() {
     if (!Number.isFinite(qty) || qty <= 0) { setError('Enter a positive quantity'); return; }
     if (!transferForm.toDepartment) { setError('Select destination department'); return; }
 
+    if (!transferForm.targetHodId) { setError('Select target HOD'); return; }
+
     const isPressTransfer = transferForm.toDepartment === 'pressing';
     if (isPressTransfer && !transferForm.productTypeId) { setError('Select product type for pressing department'); return; }
     if (isPressTransfer && !transferForm.destSize) { setError('Select size for pressing department'); return; }
@@ -102,7 +104,7 @@ export default function DepartmentStockDetail() {
         : undefined;
 
       await transferStock(
-        department, transferForm.toDepartment, transferForm.targetHodId || undefined,
+        department, transferForm.toDepartment, transferForm.targetHodId,
         qty, currentUser.id, currentUser.firstName,
         showTransfer.productId, showTransfer.size,
         transferForm.notes || undefined,
@@ -295,6 +297,7 @@ export default function DepartmentStockDetail() {
                     <th className="px-4 py-2 font-medium">Product</th>
                     <th className="px-4 py-2 font-medium">Size</th>
                     <th className="px-4 py-2 font-medium text-right">Qty</th>
+                    <th className="px-4 py-2 font-medium">HOD</th>
                     <th className="px-4 py-2 font-medium">By</th>
                     <th className="px-4 py-2 font-medium">Notes</th>
                   </tr>
@@ -308,6 +311,7 @@ export default function DepartmentStockDetail() {
                       <td className="px-4 py-2">{t.productId ? productName(t.productId) : '—'}</td>
                       <td className="px-4 py-2">{t.size || '—'}</td>
                       <td className="px-4 py-2 text-right font-medium">{t.quantity} {t.unit}</td>
+                      <td className="px-4 py-2">{t.targetHodName || hods.find(h => h.id === t.targetHodId)?.firstName || '—'}</td>
                       <td className="px-4 py-2">{t.transferredByName}</td>
                       <td className="px-4 py-2 text-gray-400">{t.notes || '—'}</td>
                     </tr>
@@ -437,18 +441,19 @@ export default function DepartmentStockDetail() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Target HOD <span className="text-gray-400 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Target HOD *</label>
             <select
               value={transferForm.targetHodId}
               onChange={e => setTransferForm({ ...transferForm, targetHodId: e.target.value })}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
             >
               <option value="">Select HOD</option>
-              {transferForm.toDepartment && hodsForDept(transferForm.toDepartment).map(h => (
+              {(isStore ? (transferForm.toDepartment ? hodsForDept(transferForm.toDepartment) : []) : hodsForDept(department!)).map(h => (
                 <option key={h.id} value={h.id}>{h.firstName}</option>
               ))}
             </select>
-            {transferForm.toDepartment && hodsForDept(transferForm.toDepartment).length === 0 && (
+            {((isStore && transferForm.toDepartment && hodsForDept(transferForm.toDepartment).length === 0) ||
+              (!isStore && hodsForDept(department!).length === 0)) && (
               <p className="text-[11px] text-amber-600 mt-1">No HODs in this department</p>
             )}
           </div>
