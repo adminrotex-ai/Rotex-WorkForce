@@ -361,6 +361,25 @@ export interface StockAdjustment {
   createdAt: string;
 }
 
+export interface DispatchEntry {
+  id: string;
+  productId: string;
+  productName: string;
+  size?: string;
+  quantity: number;
+  unit: string;
+  partyName: string;
+  notes?: string;
+  dispatchedBy: string;
+  dispatchedByName: string;
+  createdAt: string;
+  deletedAt?: string;
+  deleteReason?: string;
+  deletedBy?: string;
+  deletedByName?: string;
+  isActive: boolean;
+}
+
 export interface SyncQueueItem {
   id: string;
   action: string;

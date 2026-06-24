@@ -8,7 +8,7 @@ import { loadCustomDepartmentsIntoLabels, preloadCommonData } from '../../databa
 import {
   LayoutDashboard, Users, Package, BarChart3, Wallet,
   ClipboardList, Warehouse, LogOut, Building2, Boxes,
-  ChevronRight, Menu, X, Settings, FileText
+  ChevronRight, Menu, X, Settings, FileText, Truck
 } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -38,6 +38,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { path: '/materials', label: 'Materials & Stock', icon: Warehouse, show: isAdmin || (isHod && currentUser.department === 'store') },
     { path: '/consumer-goods', label: 'Consumer Goods', icon: Settings, show: isAdmin || (isHod && (currentUser.department === 'store' || currentUser.department === 'welding' || currentUser.department === 'buffing')) },
     { path: '/products', label: 'Products', icon: Boxes, show: isAdmin || (isHod && currentUser.department === 'store') },
+    { path: '/dispatched', label: 'Dispatched Pieces', icon: Truck, show: isAdmin },
     { path: '/departments', label: 'Departments', icon: Building2, show: isAdmin },
     { path: '/accounting', label: 'Accounting', icon: Wallet, show: isAdmin || isHod },
     { path: '/statistics', label: 'Statistics', icon: BarChart3, show: true },

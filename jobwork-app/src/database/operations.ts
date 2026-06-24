@@ -11,7 +11,7 @@ import type {
   ConsumerGoodInventory, ConsumerGoodReceipt, ConsumerGoodReceiptItem,
   Department, BatchStage, UserRole, CustomDepartment,
   FinalProductType, FinalProduct, FinalProductStockEntry,
-  DepartmentStock, StockTransfer, StockAdjustment,
+  DepartmentStock, StockTransfer, StockAdjustment, DispatchEntry,
 } from '../types';
 
 function now(): string {
@@ -1732,4 +1732,95 @@ export async function getPieceEntriesByUser(userId: string): Promise<PieceEntry[
 
 export async function getAllBatches(): Promise<Batch[]> {
   return db.batches.toArray();
+}
+
+// ---- DISPATCH OPERATIONS ----
+
+export async function dispatchProduct(
+  productId: string,
+  productName: string,
+  quantity: number,
+  unit: string,
+  partyName: string,
+  dispatchedBy: string,
+  dispatchedByName: string,
+  size?: string,
+  notes?: string,
+): Promise<DispatchEntry> {
+  ensurePositive(quantity, 'Dispatch quantity');
+  if (!partyName.trim()) throw new Error('Party name is required');
+
+  const storeStock = await db.departmentStock.where({ department: 'store', isActive: 1 }).toArray();
+  const match = storeStock.find(s =>
+    (s.productId || '') === productId &&
+    (s.size || '') === (size || '')
+  );
+
+  if (!match || match.quantity < quantity) {
+    const available = match?.quantity ?? 0;
+    throw new Error(`Insufficient stock. Available: ${available}, Requested: ${quantity}`);
+  }
+
+  const newQty = match.quantity - quantity;
+  await db.departmentStock.update(match.id, {
+    quantity: newQty,
+    lastUpdatedBy: dispatchedBy,
+    lastUpdatedAt: now(),
+  });
+
+  const entry: DispatchEntry = {
+    id: generateId(),
+    productId,
+    productName,
+    size,
+    quantity,
+    unit,
+    partyName: partyName.trim(),
+    notes: notes?.trim() || undefined,
+    dispatchedBy,
+    dispatchedByName,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.dispatchEntries.add(entry);
+
+  await addAudit('PRODUCT_DISPATCHED', 'product', 'dispatch_entry', entry.id, dispatchedBy, dispatchedByName,
+    `Dispatched ${quantity} ${unit} of ${productName}${size ? ` (${size})` : ''} to ${partyName.trim()}`);
+
+  return entry;
+}
+
+export async function getDispatchEntries(): Promise<DispatchEntry[]> {
+  return db.dispatchEntries.where('isActive').equals(1).toArray();
+}
+
+export async function deleteDispatchEntry(
+  entryId: string,
+  reason: string,
+  deletedBy: string,
+  deletedByName: string,
+  adminPassword: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  if (!adminPassword) throw new Error('Admin password is required');
+  await requireAdminPassword(adminPassword);
+
+  const entry = await db.dispatchEntries.get(entryId);
+  if (!entry || !entry.isActive) throw new Error('Dispatch entry not found');
+
+  await db.dispatchEntries.update(entryId, {
+    isActive: false,
+    deletedAt: now(),
+    deleteReason: reason.trim(),
+    deletedBy,
+    deletedByName,
+  });
+
+  await addStockToDepartment(
+    'store', entry.quantity, entry.unit, deletedBy, deletedByName,
+    entry.productId, entry.size,
+  );
+
+  await addAudit('DISPATCH_DELETED', 'deletion', 'dispatch_entry', entryId, deletedBy, deletedByName,
+    `Deleted dispatch of ${entry.quantity} ${entry.unit} of ${entry.productName}${entry.size ? ` (${entry.size})` : ''} to ${entry.partyName}. Reason: ${reason.trim()}. Stock returned to store.`);
 }
