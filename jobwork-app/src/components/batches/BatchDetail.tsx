@@ -8,6 +8,7 @@ import {
   getBatchById, getBatchStageRecords, getBatchTransfers, getHodsByDepartment,
   transferPieces, recordPieceEntry, recordConsumerGoodUsage, recordServiceCost,
   sendRejectedToWelding, getActiveConsumerGoods, getBatchStatistics, getHodBatchesInProgress,
+  getActiveUsers,
 } from '../../database/operations';
 import { formatCurrency, getNextStage } from '../../utils/helpers';
 import Modal from '../common/Modal';
@@ -37,7 +38,8 @@ export default function BatchDetail() {
   const [transferForm, setTransferForm] = useState({ pieces: '', targetHodId: '', size: '' });
   const [pieceForm, setPieceForm] = useState({ accepted: '', rejected: '', size: '', notes: '' });
   const [consumerForm, setConsumerForm] = useState({ goodId: '', quantity: '', pricePerUnit: '' });
-  const [serviceForm, setServiceForm] = useState({ costPerPiece: '', pieces: '', size: '' });
+  const [serviceForm, setServiceForm] = useState({ costPerPiece: '', pieces: '', size: '', hodId: '' });
+  const [allHods, setAllHods] = useState<User[]>([]);
   const [rejectForm, setRejectForm] = useState({ pieces: '' });
 
   const isAdmin = currentUser?.role === 'admin';
@@ -61,6 +63,8 @@ export default function BatchDetail() {
     setTransfers(t);
     setConsumerGoods(goods);
     setStats(st);
+    const users = await getActiveUsers();
+    setAllHods(users.filter(u => u.role === 'hod'));
   };
 
   const getCurrentStageRecord = () => {
@@ -181,16 +185,21 @@ export default function BatchDetail() {
     const cost = parseFloat(serviceForm.costPerPiece);
     const pieces = parseInt(serviceForm.pieces);
     if (!cost || !pieces) { setError('Fill all fields'); return; }
+    if (!serviceForm.hodId) { setError('Select an HOD'); return; }
+
+    const selectedHod = allHods.find(h => h.id === serviceForm.hodId);
+    if (!selectedHod) { setError('Invalid HOD'); return; }
 
     const stageRecord = getMyStageRecord();
     try {
       await recordServiceCost(
-        batch.id, currentUser.department, cost, pieces,
+        batch.id, selectedHod.department, cost, pieces,
         currentUser.id, currentUser.firstName,
-        serviceForm.size || undefined, stageRecord?.id
+        serviceForm.size || undefined, stageRecord?.id,
+        selectedHod.id,
       );
       setShowServiceCost(false);
-      setServiceForm({ costPerPiece: '', pieces: '', size: '' });
+      setServiceForm({ costPerPiece: '', pieces: '', size: '', hodId: '' });
       loadData();
     } catch (e: any) {
       setError(e.message);
@@ -326,7 +335,7 @@ export default function BatchDetail() {
               <Send size={16} /> Transfer ({availableForTransfer} available)
             </button>
           )}
-          {canEnterCosts() && isHod && (
+          {isAdmin && (
             <button
               onClick={() => setShowServiceCost(true)}
               className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer"
@@ -631,6 +640,19 @@ export default function BatchDetail() {
       <Modal isOpen={showServiceCost} onClose={() => setShowServiceCost(false)} title="Record Service Cost">
         <div className="space-y-4">
           {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">HOD</label>
+            <select
+              value={serviceForm.hodId}
+              onChange={e => setServiceForm({ ...serviceForm, hodId: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+            >
+              <option value="">Select HOD</option>
+              {allHods.map(h => (
+                <option key={h.id} value={h.id}>{h.firstName} ({h.department})</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Cost per Piece (INR)</label>
             <input

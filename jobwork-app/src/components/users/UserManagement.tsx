@@ -66,12 +66,12 @@ export default function UserManagement() {
 
   const handleCreate = async () => {
     setError('');
-    if (!form.username || !form.password || !form.firstName) {
-      setError('All fields are required');
+    if (!form.firstName) {
+      setError('Name is required');
       return;
     }
-    if (form.role === 'hod' && !form.phone) {
-      setError('Phone number is required for HOD');
+    if (form.role !== 'hod' && (!form.username || !form.password)) {
+      setError('Username and password are required');
       return;
     }
     const openingBal = form.role === 'hod' && form.openingBalance.trim()
@@ -318,7 +318,7 @@ export default function UserManagement() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username {form.role === 'hod' && <span className="text-gray-400 font-normal">(optional)</span>}</label>
             <input
               type="text"
               value={form.username}
@@ -328,7 +328,7 @@ export default function UserManagement() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password {form.role === 'hod' && <span className="text-gray-400 font-normal">(optional)</span>}</label>
             <input
               type="password"
               value={form.password}

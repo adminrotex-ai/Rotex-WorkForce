@@ -144,16 +144,21 @@ export async function createUser(
   profilePicture?: string,
   openingBalance?: number,
 ): Promise<User> {
-  if (!username.trim() || !password.trim() || !firstName.trim()) {
-    throw new Error('Username, password and name are required');
+  if (!firstName.trim()) {
+    throw new Error('Name is required');
   }
-  const existing = await db.users.where('username').equals(username).first();
-  if (existing) throw new Error('Username already exists');
+  if (role !== 'hod' && (!username.trim() || !password.trim())) {
+    throw new Error('Username and password are required');
+  }
+  if (username.trim()) {
+    const existing = await db.users.where('username').equals(username).first();
+    if (existing) throw new Error('Username already exists');
+  }
 
   const user: User = {
     id: generateId(),
     username: username.trim(),
-    passwordHash: hashPassword(password),
+    passwordHash: password.trim() ? hashPassword(password) : '',
     firstName: firstName.trim(),
     role,
     department,
@@ -696,6 +701,7 @@ export async function recordServiceCost(
   entererName: string,
   size?: string,
   stageRecordId?: string,
+  hodId?: string,
 ): Promise<ServiceCost> {
   ensurePositive(costPerPiece, 'Cost per piece');
   ensurePositive(totalPieces, 'Total pieces');
@@ -719,9 +725,10 @@ export async function recordServiceCost(
     `Service cost for ${DEPARTMENT_LABELS[department] || department}: ₹${costPerPiece}/piece x ${totalPieces} = ₹${cost.totalCost} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
     JSON.stringify({ batchId, department, costPerPiece, totalPieces, totalCost: cost.totalCost, size }));
 
+  const accountingHodId = hodId || enteredBy;
   const admin = await db.users.where('role').equals('admin').first();
   if (admin) {
-    await addAccountingEntry(enteredBy, admin.id, 'admin_owes_hod', cost.totalCost,
+    await addAccountingEntry(accountingHodId, admin.id, 'admin_owes_hod', cost.totalCost,
       `Service cost: ${DEPARTMENT_LABELS[department] || department} - ₹${costPerPiece}/piece x ${totalPieces} for batch ${batch?.batchNumber}${size ? ` (size: ${size})` : ''}`,
       batchId, cost.id);
   }
