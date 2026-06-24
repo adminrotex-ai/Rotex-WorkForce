@@ -610,7 +610,7 @@ export async function getMaterialEntries(materialTypeId?: string): Promise<Mater
 
 export async function updateMaterialEntry(
   entryId: string,
-  updates: { supplierName?: string; price?: number; quantity?: number; unit?: string },
+  updates: { supplierName?: string; price?: number; quantity?: number; unit?: string; isRawMaterial?: boolean },
   reason: string,
   updatedBy: string,
   updaterName: string,
@@ -642,6 +642,10 @@ export async function updateMaterialEntry(
   if (updates.unit !== undefined && updates.unit !== entry.unit) {
     details.push(`unit: ${entry.unit} → ${updates.unit}`);
     changes.unit = updates.unit;
+  }
+  if (updates.isRawMaterial !== undefined && updates.isRawMaterial !== !!entry.isRawMaterial) {
+    details.push(`raw material: ${entry.isRawMaterial ? 'Yes' : 'No'} → ${updates.isRawMaterial ? 'Yes' : 'No'}`);
+    changes.isRawMaterial = updates.isRawMaterial;
   }
 
   if (details.length === 0) return;

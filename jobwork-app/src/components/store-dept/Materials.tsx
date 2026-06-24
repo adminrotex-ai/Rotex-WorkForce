@@ -23,7 +23,7 @@ export default function Materials() {
   const [deleteReason, setDeleteReason] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [showEditEntry, setShowEditEntry] = useState<MaterialEntry | null>(null);
-  const [editEntryForm, setEditEntryForm] = useState({ supplierName: '', price: '', quantity: '', unit: 'kg', reason: '' });
+  const [editEntryForm, setEditEntryForm] = useState({ supplierName: '', price: '', quantity: '', unit: 'kg', isRawMaterial: false, reason: '' });
   const [typeName, setTypeName] = useState('');
   const [error, setError] = useState('');
 
@@ -162,11 +162,11 @@ export default function Materials() {
     try {
       await updateMaterialEntry(
         showEditEntry.id,
-        { supplierName: editEntryForm.supplierName, price, quantity, unit: editEntryForm.unit },
+        { supplierName: editEntryForm.supplierName, price, quantity, unit: editEntryForm.unit, isRawMaterial: editEntryForm.isRawMaterial },
         editEntryForm.reason, currentUser.id, currentUser.firstName,
       );
       setShowEditEntry(null);
-      setEditEntryForm({ supplierName: '', price: '', quantity: '', unit: 'kg', reason: '' });
+      setEditEntryForm({ supplierName: '', price: '', quantity: '', unit: 'kg', isRawMaterial: false, reason: '' });
       loadData();
     } catch (e: any) { setError(e.message); }
   };
@@ -297,6 +297,7 @@ export default function Materials() {
                                   price: String(entry.price),
                                   quantity: String(entry.quantity),
                                   unit: entry.unit,
+                                  isRawMaterial: !!entry.isRawMaterial,
                                   reason: '',
                                 });
                                 setError('');
@@ -533,6 +534,14 @@ export default function Materials() {
               Total value: {formatCurrency(parseFloat(editEntryForm.quantity) * parseFloat(editEntryForm.price))}
             </p>
           )}
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div className={`relative w-10 h-5 rounded-full transition-colors ${editEntryForm.isRawMaterial ? 'bg-green-500' : 'bg-gray-300'}`}>
+              <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${editEntryForm.isRawMaterial ? 'translate-x-5' : ''}`} />
+              <input type="checkbox" checked={editEntryForm.isRawMaterial} onChange={e => setEditEntryForm({ ...editEntryForm, isRawMaterial: e.target.checked })} className="sr-only" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Raw Material</span>
+            <span className="text-[11px] text-gray-400">(adds to store stock)</span>
+          </label>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Edit *</label>
             <textarea
