@@ -128,7 +128,7 @@ export default function FinalProducts() {
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-sm text-gray-900">{p.name}</p>
-                        {p.size && <span className="text-[10px] px-2 py-0.5 bg-gold-100 text-gold-700 rounded-full font-medium">{p.size}</span>}
+                        {p.size && <span className="text-[11px] px-2 py-0.5 bg-gold-100 text-gold-700 rounded-full font-bold">{p.size} {p.unit}</span>}
                       </div>
                       <p className="text-[11px] text-gray-400">Stock available: <span className="font-semibold text-emerald-600">{total} {p.unit}</span></p>
                     </div>
