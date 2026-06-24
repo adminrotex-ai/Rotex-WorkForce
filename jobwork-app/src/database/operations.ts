@@ -608,6 +608,50 @@ export async function getMaterialEntries(materialTypeId?: string): Promise<Mater
   return db.materialEntries.toArray();
 }
 
+export async function updateMaterialEntry(
+  entryId: string,
+  updates: { supplierName?: string; price?: number; quantity?: number; unit?: string },
+  reason: string,
+  updatedBy: string,
+  updaterName: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Reason for edit is required');
+  const entry = await db.materialEntries.get(entryId);
+  if (!entry) throw new Error('Material entry not found');
+
+  const changes: Partial<MaterialEntry> = {};
+  const details: string[] = [];
+  const mt = await db.materialTypes.get(entry.materialTypeId);
+
+  if (updates.supplierName !== undefined && updates.supplierName !== entry.supplierName) {
+    details.push(`supplier: "${entry.supplierName}" → "${updates.supplierName}"`);
+    changes.supplierName = updates.supplierName;
+  }
+  if (updates.price !== undefined && updates.price !== entry.price) {
+    ensurePositive(updates.price, 'Price');
+    details.push(`price: ₹${entry.price} → ₹${updates.price}`);
+    changes.price = updates.price;
+  }
+  if (updates.quantity !== undefined && updates.quantity !== entry.quantity) {
+    ensurePositive(updates.quantity, 'Quantity');
+    const diff = updates.quantity - entry.quantity;
+    changes.quantity = updates.quantity;
+    changes.remainingQuantity = Math.max(0, entry.remainingQuantity + diff);
+    details.push(`quantity: ${entry.quantity} → ${updates.quantity} ${entry.unit}`);
+  }
+  if (updates.unit !== undefined && updates.unit !== entry.unit) {
+    details.push(`unit: ${entry.unit} → ${updates.unit}`);
+    changes.unit = updates.unit;
+  }
+
+  if (details.length === 0) return;
+
+  await db.materialEntries.update(entryId, changes);
+  await addAudit('MATERIAL_ENTRY_UPDATED', 'material', 'material_entry', entryId, updatedBy, updaterName,
+    `Edited ${mt?.name || 'material'} entry: ${details.join(', ')}. Reason: ${reason}`,
+    JSON.stringify({ entryId, changes, reason }));
+}
+
 export async function deleteMaterialType(
   materialTypeId: string,
   reason: string,

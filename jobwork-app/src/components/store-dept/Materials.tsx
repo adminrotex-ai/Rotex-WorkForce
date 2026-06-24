@@ -4,11 +4,11 @@ import type { RootState } from '../../store';
 import type { MaterialType, MaterialEntry } from '../../types';
 import {
   getActiveMaterialTypes, createMaterialType, addMaterialEntry, getMaterialEntries,
-  deleteMaterialType, deleteMaterialEntry,
+  deleteMaterialType, deleteMaterialEntry, updateMaterialEntry,
 } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { Plus, FolderOpen, Package, Boxes, Trash2 } from 'lucide-react';
+import { Plus, FolderOpen, Package, Boxes, Trash2, Pencil } from 'lucide-react';
 
 export default function Materials() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -22,6 +22,8 @@ export default function Materials() {
   const [showDeleteEntry, setShowDeleteEntry] = useState<MaterialEntry | null>(null);
   const [deleteReason, setDeleteReason] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
+  const [showEditEntry, setShowEditEntry] = useState<MaterialEntry | null>(null);
+  const [editEntryForm, setEditEntryForm] = useState({ supplierName: '', price: '', quantity: '', unit: 'kg', reason: '' });
   const [typeName, setTypeName] = useState('');
   const [error, setError] = useState('');
 
@@ -149,6 +151,26 @@ export default function Materials() {
     } catch (e: any) { setError(e.message); }
   };
 
+  const handleEditEntry = async () => {
+    if (!currentUser || !showEditEntry) return;
+    setError('');
+    if (!editEntryForm.reason.trim()) { setError('Reason for edit is required'); return; }
+    const price = parseFloat(editEntryForm.price);
+    const quantity = parseFloat(editEntryForm.quantity);
+    if (!Number.isFinite(price) || price <= 0) { setError('Price must be a positive number'); return; }
+    if (!Number.isFinite(quantity) || quantity <= 0) { setError('Quantity must be a positive number'); return; }
+    try {
+      await updateMaterialEntry(
+        showEditEntry.id,
+        { supplierName: editEntryForm.supplierName, price, quantity, unit: editEntryForm.unit },
+        editEntryForm.reason, currentUser.id, currentUser.firstName,
+      );
+      setShowEditEntry(null);
+      setEditEntryForm({ supplierName: '', price: '', quantity: '', unit: 'kg', reason: '' });
+      loadData();
+    } catch (e: any) { setError(e.message); }
+  };
+
   const canManage = currentUser?.role === 'admin' || (currentUser?.role === 'hod' && currentUser?.department === 'store');
 
   const filteredEntries = (selectedType ? entries.filter(e => e.materialTypeId === selectedType) : entries)
@@ -266,12 +288,32 @@ export default function Materials() {
                       </td>
                       {canManage && (
                         <td className="px-4 py-3 text-center">
-                          <button
-                            onClick={() => { setShowDeleteEntry(entry); setError(''); setDeleteReason(''); setDeletePassword(''); }}
-                            className="text-red-400 hover:text-red-600 cursor-pointer"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => {
+                                setShowEditEntry(entry);
+                                setEditEntryForm({
+                                  supplierName: entry.supplierName,
+                                  price: String(entry.price),
+                                  quantity: String(entry.quantity),
+                                  unit: entry.unit,
+                                  reason: '',
+                                });
+                                setError('');
+                              }}
+                              className="text-blue-400 hover:text-blue-600 cursor-pointer"
+                              title="Edit"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => { setShowDeleteEntry(entry); setError(''); setDeleteReason(''); setDeletePassword(''); }}
+                              className="text-red-400 hover:text-red-600 cursor-pointer"
+                              title="Delete"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
                         </td>
                       )}
                     </tr>
@@ -433,6 +475,76 @@ export default function Materials() {
           </div>
           <button onClick={handleDeleteEntry} className="w-full bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 cursor-pointer">
             Delete Entry
+          </button>
+        </div>
+      </Modal>
+
+      {/* Edit Material Entry Modal */}
+      <Modal isOpen={!!showEditEntry} onClose={() => { setShowEditEntry(null); setError(''); }} title={`Edit Entry — ${materialTypes.find(t => t.id === showEditEntry?.materialTypeId)?.name || ''}`}>
+        <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Name</label>
+            <input
+              type="text"
+              value={editEntryForm.supplierName}
+              onChange={e => setEditEntryForm({ ...editEntryForm, supplierName: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
+              <input
+                type="number"
+                min="0.01" step="0.01"
+                value={editEntryForm.quantity}
+                onChange={e => setEditEntryForm({ ...editEntryForm, quantity: e.target.value })}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+              <select
+                value={editEntryForm.unit}
+                onChange={e => setEditEntryForm({ ...editEntryForm, unit: e.target.value })}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              >
+                <option value="kg">kg</option>
+                <option value="pcs">pieces</option>
+                <option value="liters">liters</option>
+                <option value="meters">meters</option>
+                <option value="units">units</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price per Unit (INR) *</label>
+            <input
+              type="number"
+              min="0.01" step="0.01"
+              value={editEntryForm.price}
+              onChange={e => setEditEntryForm({ ...editEntryForm, price: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+            />
+          </div>
+          {editEntryForm.quantity && editEntryForm.price && (
+            <p className="text-sm font-medium text-gray-900">
+              Total value: {formatCurrency(parseFloat(editEntryForm.quantity) * parseFloat(editEntryForm.price))}
+            </p>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Edit *</label>
+            <textarea
+              value={editEntryForm.reason}
+              onChange={e => setEditEntryForm({ ...editEntryForm, reason: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              rows={2}
+              placeholder="Why is this entry being edited?"
+            />
+          </div>
+          <button onClick={handleEditEntry} className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 cursor-pointer">
+            Save Changes
           </button>
         </div>
       </Modal>
