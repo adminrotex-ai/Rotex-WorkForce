@@ -4,7 +4,6 @@ import type { RootState } from '../../store';
 import type { MaterialType, MaterialEntry } from '../../types';
 import {
   getActiveMaterialTypes, createMaterialType, addMaterialEntry, getMaterialEntries,
-  getMaterialStockTotal,
 } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import Modal from '../common/Modal';
@@ -15,7 +14,6 @@ export default function Materials() {
   const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
   const [entries, setEntries] = useState<MaterialEntry[]>([]);
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [stockTotals, setStockTotals] = useState<Record<string, { totalQty: number; latestPrice: number; unit: string }>>({});
   const [showAddType, setShowAddType] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState(false);
   const [showOpening, setShowOpening] = useState(false);
@@ -54,9 +52,6 @@ export default function Materials() {
     const types = await getActiveMaterialTypes();
     setMaterialTypes(types);
     setEntries(await getMaterialEntries());
-    const totals: Record<string, { totalQty: number; latestPrice: number; unit: string }> = {};
-    for (const t of types) totals[t.id] = await getMaterialStockTotal(t.id);
-    setStockTotals(totals);
   };
 
   const handleAddType = async () => {
@@ -152,27 +147,6 @@ export default function Materials() {
         </div>
       </div>
 
-      {/* Stock Totals */}
-      {materialTypes.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
-          {materialTypes.map(mt => {
-            const s = stockTotals[mt.id];
-            return (
-              <div key={mt.id} className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] text-gray-400 uppercase font-medium tracking-wider">{mt.name}</p>
-                  <p className="text-2xl font-light text-gold-600 mt-1">{s?.totalQty || 0} <span className="text-sm text-gray-400 font-normal">{s?.unit || ''}</span></p>
-                  {s && s.latestPrice > 0 && <p className="text-[11px] text-gray-400 mt-1">Latest: {formatCurrency(s.latestPrice)}/unit</p>}
-                </div>
-                <div className="w-12 h-12 rounded-xl bg-gold-300 flex items-center justify-center">
-                  <Package size={22} className="text-dark-800" />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
       {/* Material Type Filters */}
       <div className="flex flex-wrap gap-2 mb-6">
         <button
@@ -192,47 +166,63 @@ export default function Materials() {
         ))}
       </div>
 
-      {/* Entries */}
+      {/* Entries Table */}
       {filteredEntries.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Package size={40} className="mx-auto mb-3 opacity-40" />
           <p>No material entries found</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredEntries.map(entry => {
-            const type = materialTypes.find(t => t.id === entry.materialTypeId);
-            return (
-              <div key={entry.id} className="bg-white/60 backdrop-blur-sm rounded-2xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm text-gray-900">{type?.name || 'Unknown'}</p>
-                      {entry.isOpening && <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full font-medium">Opening Stock</span>}
-                    </div>
-                    <p className="text-[11px] text-gray-400">Supplier: {entry.supplierName}</p>
-                    <p className="text-[11px] text-gray-400">
-                      Qty: {entry.quantity} {entry.unit}
-                      {entry.remainingQuantity !== undefined && ` · Remaining: ${entry.remainingQuantity}`}
-                      {' '}· Price: {formatCurrency(entry.price)}
-                    </p>
-                    <p className="text-[11px] text-gray-400">{new Date(entry.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-gold-600">{formatCurrency(entry.price * entry.quantity)}</p>
-                    {entry.billPhoto && (
-                      <button
-                        onClick={() => window.open(entry.billPhoto, '_blank')}
-                        className="text-[11px] text-blue-500 hover:underline mt-1 cursor-pointer"
-                      >
-                        View Bill
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 bg-white/40">
+                  <th className="text-left px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Material</th>
+                  <th className="text-left px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Supplier</th>
+                  <th className="text-right px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Stock (Qty)</th>
+                  <th className="text-right px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Remaining</th>
+                  <th className="text-right px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Price/Unit</th>
+                  <th className="text-right px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Total Amount</th>
+                  <th className="text-right px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Date</th>
+                  <th className="text-center px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Bill</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredEntries.map((entry, idx) => {
+                  const type = materialTypes.find(t => t.id === entry.materialTypeId);
+                  return (
+                    <tr key={entry.id} className={`border-b border-gray-100 ${idx % 2 === 0 ? '' : 'bg-white/30'} hover:bg-gold-50/30`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{type?.name || 'Unknown'}</span>
+                          {entry.isOpening && <span className="text-[10px] px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full font-medium whitespace-nowrap">Opening</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{entry.supplierName}</td>
+                      <td className="px-4 py-3 text-right text-gray-900">{entry.quantity} {entry.unit}</td>
+                      <td className="px-4 py-3 text-right text-gray-900">{entry.remainingQuantity !== undefined ? `${entry.remainingQuantity} ${entry.unit}` : '—'}</td>
+                      <td className="px-4 py-3 text-right text-gray-900">{formatCurrency(entry.price)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-gold-600">{formatCurrency(entry.price * entry.quantity)}</td>
+                      <td className="px-4 py-3 text-right text-[11px] text-gray-400 whitespace-nowrap">{new Date(entry.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                      <td className="px-4 py-3 text-center">
+                        {entry.billPhoto ? (
+                          <button
+                            onClick={() => window.open(entry.billPhoto, '_blank')}
+                            className="text-[11px] text-blue-500 hover:underline cursor-pointer"
+                          >
+                            View
+                          </button>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
