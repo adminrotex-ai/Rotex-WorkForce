@@ -4,10 +4,11 @@ import type { RootState } from '../../store';
 import type { MaterialType, MaterialEntry } from '../../types';
 import {
   getActiveMaterialTypes, createMaterialType, addMaterialEntry, getMaterialEntries,
+  deleteMaterialType, deleteMaterialEntry,
 } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { Plus, FolderOpen, Package, Boxes } from 'lucide-react';
+import { Plus, FolderOpen, Package, Boxes, Trash2 } from 'lucide-react';
 
 export default function Materials() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -17,6 +18,10 @@ export default function Materials() {
   const [showAddType, setShowAddType] = useState(false);
   const [showAddEntry, setShowAddEntry] = useState(false);
   const [showOpening, setShowOpening] = useState(false);
+  const [showDeleteType, setShowDeleteType] = useState<MaterialType | null>(null);
+  const [showDeleteEntry, setShowDeleteEntry] = useState<MaterialEntry | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [typeName, setTypeName] = useState('');
   const [error, setError] = useState('');
 
@@ -115,6 +120,33 @@ export default function Materials() {
     }
   };
 
+  const handleDeleteType = async () => {
+    if (!currentUser || !showDeleteType) return;
+    setError('');
+    try {
+      await deleteMaterialType(showDeleteType.id, deleteReason, currentUser.id, currentUser.firstName, deletePassword);
+      setShowDeleteType(null);
+      setDeleteReason('');
+      setDeletePassword('');
+      if (selectedType === showDeleteType.id) setSelectedType(null);
+      loadData();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleDeleteEntry = async () => {
+    if (!currentUser || !showDeleteEntry) return;
+    setError('');
+    try {
+      await deleteMaterialEntry(showDeleteEntry.id, deleteReason, currentUser.id, currentUser.firstName, deletePassword);
+      setShowDeleteEntry(null);
+      setDeleteReason('');
+      setDeletePassword('');
+      loadData();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const canManage = currentUser?.role === 'admin' || (currentUser?.role === 'hod' && currentUser?.department === 'store');
+
   const filteredEntries = (selectedType ? entries.filter(e => e.materialTypeId === selectedType) : entries)
     .slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
@@ -156,13 +188,22 @@ export default function Materials() {
           All Types
         </button>
         {materialTypes.map(mt => (
-          <button
-            key={mt.id}
-            onClick={() => setSelectedType(mt.id)}
-            className={`px-4 py-2 text-sm rounded-xl cursor-pointer ${selectedType === mt.id ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'}`}
-          >
-            {mt.name}
-          </button>
+          <div key={mt.id} className="flex items-center gap-0">
+            <button
+              onClick={() => setSelectedType(mt.id)}
+              className={`px-4 py-2 text-sm rounded-xl cursor-pointer ${selectedType === mt.id ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'} ${canManage ? 'rounded-r-none' : ''}`}
+            >
+              {mt.name}
+            </button>
+            {canManage && (
+              <button
+                onClick={() => { setShowDeleteType(mt); setError(''); setDeleteReason(''); setDeletePassword(''); }}
+                className={`px-2 py-2 text-sm rounded-xl rounded-l-none cursor-pointer ${selectedType === mt.id ? 'bg-[#2a2a2a] text-red-400 hover:text-red-300' : 'bg-white/60 text-red-400 hover:text-red-600'}`}
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
         ))}
       </div>
 
@@ -186,6 +227,7 @@ export default function Materials() {
                   <th className="text-right px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Total Amount</th>
                   <th className="text-right px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Date</th>
                   <th className="text-center px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider">Bill</th>
+                  {canManage && <th className="text-center px-4 py-3 text-[11px] text-gray-500 uppercase font-semibold tracking-wider"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -217,6 +259,16 @@ export default function Materials() {
                           <span className="text-gray-300">—</span>
                         )}
                       </td>
+                      {canManage && (
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => { setShowDeleteEntry(entry); setError(''); setDeleteReason(''); setDeletePassword(''); }}
+                            className="text-red-400 hover:text-red-600 cursor-pointer"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -302,6 +354,72 @@ export default function Materials() {
           </div>
           <button onClick={handleAddOpening} className="w-full bg-purple-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-purple-700 cursor-pointer">
             Save Opening Stock
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete Material Type Modal */}
+      <Modal isOpen={!!showDeleteType} onClose={() => { setShowDeleteType(null); setError(''); }} title="Delete Material Type">
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-[11px] text-red-700">
+            This will deactivate the material type <strong>{showDeleteType?.name}</strong>. Existing entries will remain but no new entries can be added to this type.
+          </div>
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Deletion *</label>
+            <textarea
+              value={deleteReason}
+              onChange={e => setDeleteReason(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              rows={2}
+              placeholder="Why is this material type being deleted?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password *</label>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={e => setDeletePassword(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              placeholder="Enter admin password to confirm"
+            />
+          </div>
+          <button onClick={handleDeleteType} className="w-full bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 cursor-pointer">
+            Delete Material Type
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete Material Entry Modal */}
+      <Modal isOpen={!!showDeleteEntry} onClose={() => { setShowDeleteEntry(null); setError(''); }} title="Delete Material Entry">
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-[11px] text-red-700">
+            This will permanently delete the entry for <strong>{materialTypes.find(t => t.id === showDeleteEntry?.materialTypeId)?.name || 'Unknown'}</strong> — {showDeleteEntry?.quantity} {showDeleteEntry?.unit} at {showDeleteEntry ? formatCurrency(showDeleteEntry.price) : ''}/unit.
+          </div>
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Deletion *</label>
+            <textarea
+              value={deleteReason}
+              onChange={e => setDeleteReason(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              rows={2}
+              placeholder="Why is this entry being deleted?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password *</label>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={e => setDeletePassword(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              placeholder="Enter admin password to confirm"
+            />
+          </div>
+          <button onClick={handleDeleteEntry} className="w-full bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 cursor-pointer">
+            Delete Entry
           </button>
         </div>
       </Modal>

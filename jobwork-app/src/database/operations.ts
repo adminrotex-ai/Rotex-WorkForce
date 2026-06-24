@@ -580,6 +580,41 @@ export async function getMaterialEntries(materialTypeId?: string): Promise<Mater
   return db.materialEntries.toArray();
 }
 
+export async function deleteMaterialType(
+  materialTypeId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  if (!adminPassword) throw new Error('Admin password is required');
+  await requireAdminPassword(adminPassword);
+  const mt = await db.materialTypes.get(materialTypeId);
+  if (!mt) throw new Error('Material type not found');
+  await db.materialTypes.update(materialTypeId, { isActive: false });
+  await addAudit('MATERIAL_TYPE_DELETED', 'deletion', 'material_type', materialTypeId, deletedBy, deleterName,
+    `Deleted material type: ${mt.name}. Reason: ${reason}`);
+}
+
+export async function deleteMaterialEntry(
+  entryId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  if (!adminPassword) throw new Error('Admin password is required');
+  await requireAdminPassword(adminPassword);
+  const entry = await db.materialEntries.get(entryId);
+  if (!entry) throw new Error('Material entry not found');
+  const mt = await db.materialTypes.get(entry.materialTypeId);
+  await db.materialEntries.delete(entryId);
+  await addAudit('MATERIAL_ENTRY_DELETED', 'deletion', 'material_entry', entryId, deletedBy, deleterName,
+    `Deleted material entry: ${mt?.name || 'Unknown'}, qty: ${entry.quantity} ${entry.unit}, price: ₹${entry.price}. Reason: ${reason}`);
+}
+
 export async function getMaterialStockTotal(materialTypeId: string): Promise<{ totalQty: number; latestPrice: number; unit: string }> {
   const all = await db.materialEntries.where('materialTypeId').equals(materialTypeId).toArray();
   const totalQty = all.reduce((s, e) => s + (e.remainingQuantity ?? e.quantity), 0);
