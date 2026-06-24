@@ -140,6 +140,7 @@ export default function Reports() {
                   <th className="pb-2 font-medium">To</th>
                   <th className="pb-2 font-medium">Size</th>
                   <th className="pb-2 font-medium text-right">Qty</th>
+                  <th className="pb-2 font-medium">HOD</th>
                   <th className="pb-2 font-medium">By</th>
                   <th className="pb-2 font-medium">Notes</th>
                 </tr>
@@ -152,6 +153,7 @@ export default function Reports() {
                     <td className="py-2">{DEPARTMENT_LABELS[t.toDepartment] || t.toDepartment}</td>
                     <td className="py-2 text-gray-500">{t.size || '—'}</td>
                     <td className="py-2 text-right font-medium">{t.quantity} {t.unit}</td>
+                    <td className="py-2 text-gray-500">{t.targetHodName || '—'}</td>
                     <td className="py-2 text-gray-500">{t.transferredByName}</td>
                     <td className="py-2 text-gray-400">{t.notes || '—'}</td>
                   </tr>
