@@ -144,6 +144,7 @@ export async function createUser(
   phone?: string,
   profilePicture?: string,
   openingBalance?: number,
+  serviceCostRate?: number,
 ): Promise<User> {
   if (!firstName.trim()) {
     throw new Error('Name is required');
@@ -166,6 +167,7 @@ export async function createUser(
     phone: role === 'hod' ? phone : undefined,
     profilePicture: role === 'hod' ? profilePicture : undefined,
     openingBalance: role === 'hod' ? openingBalance : undefined,
+    serviceCostRate: role === 'hod' ? serviceCostRate : undefined,
     createdBy,
     createdAt: now(),
     isActive: true,
@@ -191,6 +193,19 @@ export async function createUser(
   await addAudit('USER_CREATED', 'user', 'user', user.id, createdBy, creatorName,
     `Created ${role} user "${firstName}" in ${DEPARTMENT_LABELS[department] || department} department${openingBalance !== undefined && openingBalance !== 0 ? ` with opening balance ₹${openingBalance}` : ''}`);
   return user;
+}
+
+export async function updateUserServiceCostRate(
+  userId: string,
+  rate: number,
+  updatedBy: string,
+  updaterName: string,
+) {
+  const user = await db.users.get(userId);
+  if (!user) throw new Error('User not found');
+  await db.users.update(userId, { serviceCostRate: rate });
+  await addAudit('USER_RATE_UPDATED', 'user', 'user', userId, updatedBy, updaterName,
+    `Updated service cost rate for ${user.firstName} to ₹${rate}/piece`);
 }
 
 export async function deleteUser(
@@ -1384,6 +1399,14 @@ export async function transferStock(
   await addAudit('STOCK_TRANSFERRED', 'transfer', 'stock_transfer', transfer.id, transferredBy, transferredByName,
     `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${inheritedSize ? ` (${inheritedSize})` : ''}`,
     JSON.stringify({ fromDepartment, toDepartment, targetHodId, quantity, productId: inheritedProductId, size: inheritedSize }));
+
+  const targetHod = await db.users.get(targetHodId);
+  if (targetHod && targetHod.serviceCostRate && targetHod.serviceCostRate > 0) {
+    await recordServiceCost(
+      '', toDepartment, targetHod.serviceCostRate, quantity,
+      transferredBy, transferredByName, inheritedSize, undefined, targetHodId,
+    );
+  }
 
   return transfer;
 }

@@ -88,6 +88,7 @@ export interface User {
   phone?: string;
   profilePicture?: string;
   openingBalance?: number;
+  serviceCostRate?: number;
   createdBy: string;
   createdAt: string;
   deletedAt?: string;

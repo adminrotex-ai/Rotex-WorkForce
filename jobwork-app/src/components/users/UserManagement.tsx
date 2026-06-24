@@ -6,7 +6,7 @@ import type { User, Department, ServiceCost } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
 import {
   getActiveUsers, getUsersByCreator, createUser, deleteUser, getActiveDepartments,
-  getServiceCosts, recordServiceCost, updateServiceCost,
+  getServiceCosts, recordServiceCost, updateServiceCost, updateUserServiceCostRate,
 } from '../../database/operations';
 import Modal from '../common/Modal';
 import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil } from 'lucide-react';
@@ -30,6 +30,8 @@ export default function UserManagement() {
   const [showEditServiceCost, setShowEditServiceCost] = useState<ServiceCost | null>(null);
   const [serviceCostForm, setServiceCostForm] = useState({ costPerPiece: '', pieces: '', size: '' });
   const [editCostPerPiece, setEditCostPerPiece] = useState('');
+  const [showEditRate, setShowEditRate] = useState<User | null>(null);
+  const [editRateValue, setEditRateValue] = useState('');
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -43,6 +45,7 @@ export default function UserManagement() {
     phone: '',
     profilePicture: '' as string,
     openingBalance: '',
+    serviceCostRate: '',
   });
 
   const isAdmin = currentUser?.role === 'admin';
@@ -87,16 +90,21 @@ export default function UserManagement() {
     if (openingBal !== undefined && !Number.isFinite(openingBal)) {
       setError('Opening balance must be a valid number'); return;
     }
+    const rate = form.role === 'hod' && form.serviceCostRate.trim()
+      ? parseFloat(form.serviceCostRate) : undefined;
+    if (rate !== undefined && (!Number.isFinite(rate) || rate < 0)) {
+      setError('Service cost rate must be a valid non-negative number'); return;
+    }
     try {
       await createUser(
         form.username, form.password, form.firstName,
         form.role, isHod ? currentUser!.department : form.department,
         currentUser!.id, currentUser!.firstName, form.phone,
         form.role === 'hod' ? form.profilePicture || undefined : undefined,
-        openingBal,
+        openingBal, rate,
       );
       setShowCreate(false);
-      setForm({ username: '', password: '', firstName: '', role: 'user', department: 'store', phone: '', profilePicture: '', openingBalance: '' });
+      setForm({ username: '', password: '', firstName: '', role: 'user', department: 'store', phone: '', profilePicture: '', openingBalance: '', serviceCostRate: '' });
       loadUsers();
     } catch (e: any) {
       setError(e.message);
@@ -163,6 +171,19 @@ export default function UserManagement() {
     } catch (e: any) { setError(e.message); }
   };
 
+  const handleEditRate = async () => {
+    if (!currentUser || !showEditRate) return;
+    setError('');
+    const rate = parseFloat(editRateValue);
+    if (!Number.isFinite(rate) || rate < 0) { setError('Rate must be a valid non-negative number'); return; }
+    try {
+      await updateUserServiceCostRate(showEditRate.id, rate, currentUser.id, currentUser.firstName);
+      setShowEditRate(null);
+      setEditRateValue('');
+      loadUsers();
+    } catch (e: any) { setError(e.message); }
+  };
+
   const allUsers = users.filter(u => u.id !== currentUser?.id);
   const hodsByDept = (dept: Department) => allUsers.filter(u => u.department === dept && u.role === 'hod');
   const usersByHod = (hodId: string) => allUsers.filter(u => u.createdBy === hodId && u.role === 'user');
@@ -217,6 +238,7 @@ export default function UserManagement() {
                                     Username: {hod.username}
                                     {hod.phone && ` · Phone: ${hod.phone}`}
                                     {hod.openingBalance !== undefined && hod.openingBalance !== 0 && ` · Opening: ${formatCurrency(hod.openingBalance)}`}
+                                    {hod.serviceCostRate !== undefined && hod.serviceCostRate > 0 && ` · Rate: ₹${hod.serviceCostRate}/pc`}
                                   </p>
                                 )}
                               </div>
@@ -229,6 +251,15 @@ export default function UserManagement() {
                                   title="Service Costs"
                                 >
                                   <DollarSign size={16} />
+                                </button>
+                              )}
+                              {isAdmin && (
+                                <button
+                                  onClick={() => { setShowEditRate(hod); setEditRateValue(hod.serviceCostRate?.toString() || ''); setError(''); }}
+                                  className="p-2 rounded-xl hover:bg-amber-50 text-amber-500 cursor-pointer"
+                                  title="Edit Service Cost Rate"
+                                >
+                                  <Pencil size={14} />
                                 </button>
                               )}
                               <button
@@ -499,6 +530,21 @@ export default function UserManagement() {
                   Positive = HOD owes admin. Negative = admin owes HOD. Leave blank for zero.
                 </p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Service Cost Rate (₹/piece)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={form.serviceCostRate}
+                  onChange={e => setForm({ ...form, serviceCostRate: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                  placeholder="e.g. 5.00"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Auto-applied when stock is sent to this HOD. Leave blank if no fixed rate.
+                </p>
+              </div>
             </>
           )}
 
@@ -695,6 +741,34 @@ export default function UserManagement() {
               Delete
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Edit Service Cost Rate Modal */}
+      <Modal isOpen={!!showEditRate} onClose={() => { setShowEditRate(null); setError(''); }} title={`Edit Rate — ${showEditRate?.firstName}`} maxWidth="26rem">
+        <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Service Cost Rate (₹/piece)</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={editRateValue}
+              onChange={e => setEditRateValue(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="e.g. 5.00"
+            />
+            <p className="text-[11px] text-gray-400 mt-1">
+              This rate is auto-applied when stock is sent to this HOD. Set to 0 to disable.
+            </p>
+          </div>
+          <button
+            onClick={handleEditRate}
+            className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
+          >
+            Save Rate
+          </button>
         </div>
       </Modal>
     </div>
