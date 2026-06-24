@@ -1138,6 +1138,23 @@ export async function getActiveFinalProducts(): Promise<FinalProduct[]> {
   return db.finalProducts.where('isActive').equals(1).toArray();
 }
 
+export async function deleteFinalProduct(
+  productId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  if (!adminPassword) throw new Error('Admin password is required');
+  await requireAdminPassword(adminPassword);
+  const product = await db.finalProducts.get(productId);
+  if (!product) throw new Error('Product not found');
+  await db.finalProducts.update(productId, { isActive: false, deletedAt: now() });
+  await addAudit('PRODUCT_DELETED', 'deletion', 'final_product', productId, deletedBy, deleterName,
+    `Deleted final product: ${product.name}${product.size ? ` (${product.size})` : ''}. Reason: ${reason}`);
+}
+
 export async function addFinalProductStock(
   productId: string,
   quantity: number,
