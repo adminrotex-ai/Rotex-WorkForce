@@ -552,6 +552,7 @@ export async function addMaterialEntry(
   entererName: string,
   billPhoto?: string,
   isOpening?: boolean,
+  isRawMaterial?: boolean,
 ): Promise<MaterialEntry> {
   ensurePositive(price, 'Price');
   ensurePositive(quantity, 'Quantity');
@@ -568,16 +569,19 @@ export async function addMaterialEntry(
     remainingQuantity: quantity,
     unit,
     isOpening,
+    isRawMaterial,
     enteredBy,
     createdAt: now(),
   };
   await db.materialEntries.add(entry);
   const mt = await db.materialTypes.get(materialTypeId);
   await addAudit(isOpening ? 'MATERIAL_OPENING_STOCK' : 'MATERIAL_ENTRY_ADDED', 'material', 'material_entry', entry.id, enteredBy, entererName,
-    `${isOpening ? 'Opening stock' : 'Added entry'}: ${mt?.name} ${isOpening ? '' : `from ${supplierName}`}, qty: ${quantity} ${unit}, price: ₹${price}`,
-    JSON.stringify({ materialTypeId, supplierName, price, quantity, isOpening }));
+    `${isOpening ? 'Opening stock' : 'Added entry'}: ${mt?.name} ${isOpening ? '' : `from ${supplierName}`}, qty: ${quantity} ${unit}, price: ₹${price}${isRawMaterial ? ' [Raw Material]' : ''}`,
+    JSON.stringify({ materialTypeId, supplierName, price, quantity, isOpening, isRawMaterial }));
 
-  await addStockToDepartment('store', quantity, unit, enteredBy, entererName);
+  if (isRawMaterial) {
+    await addStockToDepartment('store', quantity, unit, enteredBy, entererName);
+  }
 
   return entry;
 }
