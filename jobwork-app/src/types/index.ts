@@ -290,6 +290,7 @@ export interface ConsumerGoodReceiptItem {
 export interface FinalProduct {
   id: string;
   name: string;
+  size?: string;
   unit: string;
   createdBy: string;
   createdAt: string;

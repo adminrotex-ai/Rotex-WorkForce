@@ -1072,11 +1072,13 @@ export async function createFinalProduct(
   unit: string,
   createdBy: string,
   creatorName: string,
+  size?: string,
 ): Promise<FinalProduct> {
   if (!name.trim()) throw new Error('Product name is required');
   const product: FinalProduct = {
     id: generateId(),
     name: name.trim(),
+    size: size?.trim() || undefined,
     unit: unit.trim() || 'pcs',
     createdBy,
     createdAt: now(),
@@ -1084,7 +1086,7 @@ export async function createFinalProduct(
   };
   await db.finalProducts.add(product);
   await addAudit('PRODUCT_CREATED', 'product', 'final_product', product.id, createdBy, creatorName,
-    `Created final product: ${name}`);
+    `Created final product: ${name}${size ? ` (Size: ${size})` : ''}`);
   return product;
 }
 
