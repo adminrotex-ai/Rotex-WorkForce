@@ -17,7 +17,7 @@ export default function FinalProducts() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showStock, setShowStock] = useState<FinalProduct | null>(null);
-  const [productForm, setProductForm] = useState({ name: '', unit: 'pcs' });
+  const [productForm, setProductForm] = useState({ name: '', size: '', unit: 'pcs' });
   const [stockForm, setStockForm] = useState({ quantity: '', isOpening: false });
   const [error, setError] = useState('');
 
@@ -40,9 +40,9 @@ export default function FinalProducts() {
     if (!currentUser) return;
     setError('');
     try {
-      await createFinalProduct(productForm.name, productForm.unit, currentUser.id, currentUser.firstName);
+      await createFinalProduct(productForm.name, productForm.unit, currentUser.id, currentUser.firstName, productForm.size);
       setShowAdd(false);
-      setProductForm({ name: '', unit: 'pcs' });
+      setProductForm({ name: '', size: '', unit: 'pcs' });
       load();
     } catch (e: any) { setError(e.message); }
   };
@@ -99,7 +99,10 @@ export default function FinalProducts() {
                       <Package size={20} className="text-dark-800" />
                     </div>
                     <div>
-                      <p className="font-medium text-sm text-gray-900">{p.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm text-gray-900">{p.name}</p>
+                        {p.size && <span className="text-[10px] px-2 py-0.5 bg-gold-100 text-gold-700 rounded-full font-medium">{p.size}</span>}
+                      </div>
                       <p className="text-[11px] text-gray-400">Stock available: <span className="font-semibold text-emerald-600">{total} {p.unit}</span></p>
                     </div>
                   </button>
@@ -161,6 +164,16 @@ export default function FinalProducts() {
               onChange={e => setProductForm({ ...productForm, name: e.target.value })}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
               placeholder="e.g. Steel Bracket A"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Size <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={productForm.size}
+              onChange={e => setProductForm({ ...productForm, size: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="e.g. 12 inch, Large, 500ml"
             />
           </div>
           <div>
