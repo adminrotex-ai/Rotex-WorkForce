@@ -1001,7 +1001,12 @@ export async function deleteReceipt(
   receiptId: string,
   deletedBy: string,
   deletedByName: string,
+  reason: string,
+  adminPassword: string,
 ) {
+  if (!reason.trim()) throw new Error('Reason is required');
+  await requireAdminPassword(adminPassword);
+
   const receipt = await db.consumerGoodReceipts.get(receiptId);
   if (!receipt) throw new Error('Receipt not found');
 
@@ -1022,7 +1027,7 @@ export async function deleteReceipt(
   await db.consumerGoodReceipts.delete(receiptId);
 
   await addAudit('RECEIPT_DELETED', 'deletion', 'receipt', receiptId, deletedBy, deletedByName,
-    `Deleted receipt ${receipt.receiptNumber} (₹${receipt.totalAmount}) issued to ${receipt.hodName}`);
+    `Deleted receipt ${receipt.receiptNumber} (₹${receipt.totalAmount}) issued to ${receipt.hodName}. Reason: ${reason}`);
 }
 
 // ---- FINAL PRODUCT OPERATIONS ----
