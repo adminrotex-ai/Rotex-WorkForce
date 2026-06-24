@@ -92,8 +92,7 @@ export default function DepartmentStockDetail() {
     if (!Number.isFinite(qty) || qty <= 0) { setError('Enter a positive quantity'); return; }
     if (!transferForm.toDepartment) { setError('Select destination department'); return; }
 
-    const destHods = hodsForDept(transferForm.toDepartment);
-    if (destHods.length > 0 && !transferForm.targetHodId) { setError('Select target HOD'); return; }
+    if (isStore && !transferForm.targetHodId) { setError('Select target HOD'); return; }
 
     const isPressTransfer = transferForm.toDepartment === 'pressing';
     if (isPressTransfer && !transferForm.productTypeId) { setError('Select product type for pressing department'); return; }
@@ -448,7 +447,7 @@ export default function DepartmentStockDetail() {
           {transferForm.toDepartment && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Target HOD {transferHodList.length > 0 ? '*' : ''}
+                Target HOD {(isStore || transferHodList.length > 0) ? '*' : ''}
               </label>
               {transferHodList.length > 0 ? (
                 <select
