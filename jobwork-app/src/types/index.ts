@@ -337,7 +337,7 @@ export interface StockTransfer {
   id: string;
   fromDepartment: string;
   toDepartment: string;
-  targetHodId: string;
+  targetHodId?: string;
   productId?: string;
   size?: string;
   quantity: number;
