@@ -10,7 +10,7 @@ import type {
   ServiceCost, AccountingEntry, PaymentRecord, AuditLog,
   ConsumerGoodInventory, ConsumerGoodReceipt, ConsumerGoodReceiptItem,
   Department, BatchStage, UserRole, CustomDepartment,
-  FinalProduct, FinalProductStockEntry,
+  FinalProductType, FinalProduct, FinalProductStockEntry,
 } from '../types';
 
 function now(): string {
@@ -1067,17 +1067,61 @@ export async function deleteReceipt(
 
 // ---- FINAL PRODUCT OPERATIONS ----
 
+// ---- FINAL PRODUCT TYPE OPERATIONS ----
+
+export async function createFinalProductType(
+  name: string,
+  createdBy: string,
+  creatorName: string,
+): Promise<FinalProductType> {
+  if (!name.trim()) throw new Error('Product type name is required');
+  const pt: FinalProductType = {
+    id: generateId(),
+    name: name.trim(),
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.finalProductTypes.add(pt);
+  await addAudit('PRODUCT_TYPE_CREATED', 'product', 'final_product_type', pt.id, createdBy, creatorName,
+    `Created product type: ${name}`);
+  return pt;
+}
+
+export async function getActiveFinalProductTypes(): Promise<FinalProductType[]> {
+  return db.finalProductTypes.where('isActive').equals(1).toArray();
+}
+
+export async function deleteFinalProductType(
+  typeId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  if (!adminPassword) throw new Error('Admin password is required');
+  await requireAdminPassword(adminPassword);
+  const pt = await db.finalProductTypes.get(typeId);
+  if (!pt) throw new Error('Product type not found');
+  await db.finalProductTypes.update(typeId, { isActive: false });
+  await addAudit('PRODUCT_TYPE_DELETED', 'deletion', 'final_product_type', typeId, deletedBy, deleterName,
+    `Deleted product type: ${pt.name}. Reason: ${reason}`);
+}
+
 export async function createFinalProduct(
   name: string,
   unit: string,
   createdBy: string,
   creatorName: string,
   size?: string,
+  productTypeId?: string,
 ): Promise<FinalProduct> {
   if (!name.trim()) throw new Error('Product name is required');
   const product: FinalProduct = {
     id: generateId(),
     name: name.trim(),
+    productTypeId: productTypeId || undefined,
     size: size?.trim() || undefined,
     unit: unit.trim() || 'pcs',
     createdBy,

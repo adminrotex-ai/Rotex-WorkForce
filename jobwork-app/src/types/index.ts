@@ -287,9 +287,18 @@ export interface ConsumerGoodReceiptItem {
   supplierName?: string;
 }
 
+export interface FinalProductType {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
 export interface FinalProduct {
   id: string;
   name: string;
+  productTypeId?: string;
   size?: string;
   unit: string;
   createdBy: string;

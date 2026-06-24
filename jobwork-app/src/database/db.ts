@@ -4,7 +4,7 @@ import type {
   ConsumerGoodItem, MaterialType, MaterialEntry, ConsumerGoodUsage,
   ServiceCost, AccountingEntry, PaymentRecord, AuditLog,
   ConsumerGoodInventory, ConsumerGoodReceipt, SyncQueueItem,
-  CustomDepartment, FinalProduct, FinalProductStockEntry,
+  CustomDepartment, FinalProductType, FinalProduct, FinalProductStockEntry,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -163,6 +163,7 @@ export const db = {
   consumerGoodReceipts: new DocTable<ConsumerGoodReceipt>('jw_consumer_good_receipts'),
   syncQueue: new DocTable<SyncQueueItem>('jw_sync_queue'),
   customDepartments: new DocTable<CustomDepartment>('jw_custom_departments'),
+  finalProductTypes: new DocTable<FinalProductType>('jw_final_product_types'),
   finalProducts: new DocTable<FinalProduct>('jw_final_products'),
   finalProductStock: new DocTable<FinalProductStockEntry>('jw_final_product_stock'),
 };
