@@ -1,23 +1,27 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store';
-import type { FinalProduct, FinalProductStockEntry } from '../../types';
+import type { FinalProduct, FinalProductType, FinalProductStockEntry } from '../../types';
 import {
   getActiveFinalProducts, createFinalProduct, addFinalProductStock,
   getFinalProductStockEntries, getFinalProductStockTotal,
+  getActiveFinalProductTypes, createFinalProductType,
 } from '../../database/operations';
 import Modal from '../common/Modal';
-import { Boxes, Plus, Package, ChevronRight } from 'lucide-react';
+import { Boxes, Plus, Package, ChevronRight, FolderOpen } from 'lucide-react';
 
 export default function FinalProducts() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
   const [products, setProducts] = useState<FinalProduct[]>([]);
+  const [productTypes, setProductTypes] = useState<FinalProductType[]>([]);
   const [stockTotals, setStockTotals] = useState<Record<string, number>>({});
   const [entries, setEntries] = useState<FinalProductStockEntry[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddType, setShowAddType] = useState(false);
   const [showStock, setShowStock] = useState<FinalProduct | null>(null);
-  const [productForm, setProductForm] = useState({ name: '', size: '', unit: 'pcs' });
+  const [productForm, setProductForm] = useState({ productTypeId: '', size: '', unit: 'pcs' });
+  const [typeName, setTypeName] = useState('');
   const [stockForm, setStockForm] = useState({ quantity: '', isOpening: false });
   const [error, setError] = useState('');
 
@@ -30,6 +34,7 @@ export default function FinalProducts() {
   const load = async () => {
     const list = await getActiveFinalProducts();
     setProducts(list);
+    setProductTypes(await getActiveFinalProductTypes());
     setEntries(await getFinalProductStockEntries());
     const totals: Record<string, number> = {};
     for (const p of list) totals[p.id] = await getFinalProductStockTotal(p.id);
@@ -39,10 +44,24 @@ export default function FinalProducts() {
   const handleAddProduct = async () => {
     if (!currentUser) return;
     setError('');
+    if (!productForm.productTypeId) { setError('Select a product type'); return; }
+    const selectedPt = productTypes.find(pt => pt.id === productForm.productTypeId);
+    if (!selectedPt) { setError('Invalid product type'); return; }
     try {
-      await createFinalProduct(productForm.name, productForm.unit, currentUser.id, currentUser.firstName, productForm.size);
+      await createFinalProduct(selectedPt.name, productForm.unit, currentUser.id, currentUser.firstName, productForm.size, productForm.productTypeId);
       setShowAdd(false);
-      setProductForm({ name: '', size: '', unit: 'pcs' });
+      setProductForm({ productTypeId: '', size: '', unit: 'pcs' });
+      load();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleAddType = async () => {
+    if (!currentUser) return;
+    setError('');
+    try {
+      await createFinalProductType(typeName, currentUser.id, currentUser.firstName);
+      setShowAddType(false);
+      setTypeName('');
       load();
     } catch (e: any) { setError(e.message); }
   };
@@ -68,12 +87,20 @@ export default function FinalProducts() {
           <p className="text-sm text-gray-400 mt-1">Track finished product stock</p>
         </div>
         {canManage && (
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-2 bg-[#2a2a2a] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
-          >
-            <Plus size={16} /> Add Product
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowAddType(true)}
+              className="flex items-center gap-2 bg-[#2a2a2a] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
+            >
+              <FolderOpen size={16} /> Add Product Type
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 cursor-pointer"
+            >
+              <Plus size={16} /> Add Product
+            </button>
+          </div>
         )}
       </div>
 
@@ -157,14 +184,20 @@ export default function FinalProducts() {
         <div className="space-y-4">
           {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-            <input
-              type="text"
-              value={productForm.name}
-              onChange={e => setProductForm({ ...productForm, name: e.target.value })}
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Type</label>
+            <select
+              value={productForm.productTypeId}
+              onChange={e => setProductForm({ ...productForm, productTypeId: e.target.value })}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              placeholder="e.g. Steel Bracket A"
-            />
+            >
+              <option value="">Select product type</option>
+              {productTypes.map(pt => (
+                <option key={pt.id} value={pt.id}>{pt.name}</option>
+              ))}
+            </select>
+            {productTypes.length === 0 && (
+              <p className="text-[11px] text-amber-600 mt-1">No product types yet. Add one first using "Add Product Type".</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Size <span className="text-gray-400 font-normal">(optional)</span></label>
@@ -188,6 +221,25 @@ export default function FinalProducts() {
           </div>
           <button onClick={handleAddProduct} className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer">
             Add Product
+          </button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={showAddType} onClose={() => { setShowAddType(false); setError(''); }} title="Add Product Type">
+        <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Type Name</label>
+            <input
+              type="text"
+              value={typeName}
+              onChange={e => setTypeName(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="e.g. Stainless Steel Utensil, Copper Fitting"
+            />
+          </div>
+          <button onClick={handleAddType} className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer">
+            Add Type
           </button>
         </div>
       </Modal>
