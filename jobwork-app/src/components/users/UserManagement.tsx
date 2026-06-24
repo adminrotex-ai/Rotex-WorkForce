@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../store';
-import type { User, Department, Batch, ServiceCost } from '../../types';
+import type { User, Department, ServiceCost } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
 import {
   getActiveUsers, getUsersByCreator, createUser, deleteUser, getActiveDepartments,
-  getServiceCosts, recordServiceCost, updateServiceCost, getActiveBatches,
+  getServiceCosts, recordServiceCost, updateServiceCost,
 } from '../../database/operations';
 import Modal from '../common/Modal';
 import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil } from 'lucide-react';
@@ -26,10 +26,9 @@ export default function UserManagement() {
   const [expandedHod, setExpandedHod] = useState<string | null>(null);
   const [showServiceCosts, setShowServiceCosts] = useState<User | null>(null);
   const [hodServiceCosts, setHodServiceCosts] = useState<ServiceCost[]>([]);
-  const [batches, setBatches] = useState<Batch[]>([]);
   const [showAddServiceCost, setShowAddServiceCost] = useState(false);
   const [showEditServiceCost, setShowEditServiceCost] = useState<ServiceCost | null>(null);
-  const [serviceCostForm, setServiceCostForm] = useState({ batchId: '', costPerPiece: '', pieces: '', size: '' });
+  const [serviceCostForm, setServiceCostForm] = useState({ costPerPiece: '', pieces: '', size: '' });
   const [editCostPerPiece, setEditCostPerPiece] = useState('');
 
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -127,12 +126,8 @@ export default function UserManagement() {
   const openServiceCosts = async (hod: User) => {
     setShowServiceCosts(hod);
     setError('');
-    const [costs, b] = await Promise.all([
-      getServiceCosts({ department: hod.department }),
-      getActiveBatches(),
-    ]);
+    const costs = await getServiceCosts({ department: hod.department });
     setHodServiceCosts(costs.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-    setBatches(b);
   };
 
   const handleAddServiceCost = async () => {
@@ -140,18 +135,17 @@ export default function UserManagement() {
     setError('');
     const cost = parseFloat(serviceCostForm.costPerPiece);
     const pieces = parseInt(serviceCostForm.pieces);
-    if (!serviceCostForm.batchId) { setError('Select a batch'); return; }
     if (!Number.isFinite(cost) || cost <= 0) { setError('Cost per piece must be positive'); return; }
     if (!Number.isFinite(pieces) || pieces <= 0) { setError('Number of pieces must be positive'); return; }
     try {
       await recordServiceCost(
-        serviceCostForm.batchId, showServiceCosts.department, cost, pieces,
+        '', showServiceCosts.department, cost, pieces,
         currentUser.id, currentUser.firstName,
         serviceCostForm.size || undefined, undefined,
         showServiceCosts.id,
       );
       setShowAddServiceCost(false);
-      setServiceCostForm({ batchId: '', costPerPiece: '', pieces: '', size: '' });
+      setServiceCostForm({ costPerPiece: '', pieces: '', size: '' });
       openServiceCosts(showServiceCosts);
     } catch (e: any) { setError(e.message); }
   };
@@ -528,7 +522,7 @@ export default function UserManagement() {
           <div className="flex items-center justify-between">
             <p className="text-[11px] text-gray-400">{hodServiceCosts.length} cost entries</p>
             <button
-              onClick={() => { setShowAddServiceCost(true); setError(''); setServiceCostForm({ batchId: '', costPerPiece: '', pieces: '', size: '' }); }}
+              onClick={() => { setShowAddServiceCost(true); setError(''); setServiceCostForm({ costPerPiece: '', pieces: '', size: '' }); }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[11px] font-medium rounded-full hover:bg-emerald-700 cursor-pointer"
             >
               <DollarSign size={12} /> Add Service Cost
@@ -542,7 +536,7 @@ export default function UserManagement() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left">
-                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold">Batch</th>
+                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold">Size</th>
                     <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Cost/Piece</th>
                     <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Pieces</th>
                     <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Total</th>
@@ -551,30 +545,26 @@ export default function UserManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {hodServiceCosts.map(sc => {
-                    const batch = batches.find(b => b.id === sc.batchId);
-                    return (
-                      <tr key={sc.id} className="border-b border-gray-50">
-                        <td className="py-2 text-gray-900">
-                          {batch?.batchNumber || 'N/A'}
-                          {sc.size && <span className="text-[10px] ml-1 text-gray-400">({sc.size})</span>}
-                        </td>
-                        <td className="py-2 text-right text-gray-900">{formatCurrency(sc.costPerPiece)}</td>
-                        <td className="py-2 text-right text-gray-900">{sc.totalPieces}</td>
-                        <td className="py-2 text-right font-semibold text-emerald-600">{formatCurrency(sc.totalCost)}</td>
-                        <td className="py-2 text-right text-[11px] text-gray-400 whitespace-nowrap">{new Date(sc.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
-                        <td className="py-2 text-center">
-                          <button
-                            onClick={() => { setShowEditServiceCost(sc); setEditCostPerPiece(String(sc.costPerPiece)); setError(''); }}
-                            className="p-1 text-blue-500 hover:text-blue-700 cursor-pointer"
-                            title="Edit"
-                          >
-                            <Pencil size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {hodServiceCosts.map(sc => (
+                    <tr key={sc.id} className="border-b border-gray-50">
+                      <td className="py-2 text-gray-900">
+                        {sc.size || <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="py-2 text-right text-gray-900">{formatCurrency(sc.costPerPiece)}</td>
+                      <td className="py-2 text-right text-gray-900">{sc.totalPieces}</td>
+                      <td className="py-2 text-right font-semibold text-emerald-600">{formatCurrency(sc.totalCost)}</td>
+                      <td className="py-2 text-right text-[11px] text-gray-400 whitespace-nowrap">{new Date(sc.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                      <td className="py-2 text-center">
+                        <button
+                          onClick={() => { setShowEditServiceCost(sc); setEditCostPerPiece(String(sc.costPerPiece)); setError(''); }}
+                          className="p-1 text-blue-500 hover:text-blue-700 cursor-pointer"
+                          title="Edit"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -586,19 +576,6 @@ export default function UserManagement() {
       <Modal isOpen={showAddServiceCost} onClose={() => { setShowAddServiceCost(false); setError(''); }} title={`Add Service Cost — ${showServiceCosts?.firstName || ''}`}>
         <div className="space-y-4">
           {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
-            <select
-              value={serviceCostForm.batchId}
-              onChange={e => setServiceCostForm({ ...serviceCostForm, batchId: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-            >
-              <option value="">Select batch</option>
-              {batches.map(b => (
-                <option key={b.id} value={b.id}>{b.batchNumber}</option>
-              ))}
-            </select>
-          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Cost per Piece (INR)</label>
             <input

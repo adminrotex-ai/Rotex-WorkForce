@@ -11,6 +11,7 @@ import type {
   ConsumerGoodInventory, ConsumerGoodReceipt, ConsumerGoodReceiptItem,
   Department, BatchStage, UserRole, CustomDepartment,
   FinalProductType, FinalProduct, FinalProductStockEntry,
+  DepartmentStock, StockTransfer, StockAdjustment,
 } from '../types';
 
 function now(): string {
@@ -1196,6 +1197,220 @@ export async function getFinalProductStockEntries(productId?: string): Promise<F
 export async function getFinalProductStockTotal(productId: string): Promise<number> {
   const entries = await db.finalProductStock.where('productId').equals(productId).toArray();
   return entries.reduce((s, e) => s + (e.remainingQuantity ?? e.quantity), 0);
+}
+
+// ---- DEPARTMENT STOCK OPERATIONS ----
+
+export async function getDepartmentStock(department?: string): Promise<DepartmentStock[]> {
+  if (department) {
+    return db.departmentStock.where({ department, isActive: 1 }).toArray();
+  }
+  return db.departmentStock.where('isActive').equals(1).toArray();
+}
+
+export async function getDepartmentStockById(id: string): Promise<DepartmentStock | undefined> {
+  return db.departmentStock.get(id);
+}
+
+export async function addStockToDepartment(
+  department: string,
+  quantity: number,
+  unit: string,
+  addedBy: string,
+  addedByName: string,
+  productId?: string,
+  size?: string,
+): Promise<DepartmentStock> {
+  ensurePositive(quantity, 'Quantity');
+
+  if (department === 'pressing' && !size) {
+    throw new Error('Size is compulsory for pressing department stock');
+  }
+
+  const existing = await db.departmentStock.where({ department, isActive: 1 }).toArray();
+  const match = existing.find(s =>
+    (s.productId || '') === (productId || '') &&
+    (s.size || '') === (size || '')
+  );
+
+  if (match) {
+    const newQty = match.quantity + quantity;
+    await db.departmentStock.update(match.id, {
+      quantity: newQty,
+      lastUpdatedBy: addedBy,
+      lastUpdatedAt: now(),
+    });
+    await addAudit('STOCK_ADDED', 'transfer', 'department_stock', match.id, addedBy, addedByName,
+      `Added ${quantity} ${unit} to ${DEPARTMENT_LABELS[department] || department}${size ? ` (${size})` : ''}. New total: ${newQty}`);
+    return { ...match, quantity: newQty, lastUpdatedBy: addedBy, lastUpdatedAt: now() };
+  }
+
+  const stock: DepartmentStock = {
+    id: generateId(),
+    department,
+    productId: productId || undefined,
+    size: size || undefined,
+    quantity,
+    unit,
+    lastUpdatedBy: addedBy,
+    lastUpdatedAt: now(),
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.departmentStock.add(stock);
+  await addAudit('STOCK_ADDED', 'transfer', 'department_stock', stock.id, addedBy, addedByName,
+    `Added ${quantity} ${unit} to ${DEPARTMENT_LABELS[department] || department}${size ? ` (${size})` : ''}`);
+  return stock;
+}
+
+export async function editDepartmentStock(
+  stockId: string,
+  newQuantity: number,
+  reason: string,
+  adjustedBy: string,
+  adjustedByName: string,
+  adminPassword: string,
+): Promise<void> {
+  ensureNonNegative(newQuantity, 'Quantity');
+  if (!reason.trim()) throw new Error('Reason for adjustment is required');
+  await requireAdminPassword(adminPassword);
+
+  const stock = await db.departmentStock.get(stockId);
+  if (!stock) throw new Error('Stock entry not found');
+
+  const adjustment: StockAdjustment = {
+    id: generateId(),
+    departmentStockId: stockId,
+    department: stock.department,
+    previousQuantity: stock.quantity,
+    newQuantity,
+    reason: reason.trim(),
+    adjustedBy,
+    adjustedByName,
+    createdAt: now(),
+  };
+  await db.stockAdjustments.add(adjustment);
+
+  await db.departmentStock.update(stockId, {
+    quantity: newQuantity,
+    lastUpdatedBy: adjustedBy,
+    lastUpdatedAt: now(),
+  });
+
+  await addAudit('STOCK_ADJUSTED', 'transfer', 'department_stock', stockId, adjustedBy, adjustedByName,
+    `Adjusted stock in ${DEPARTMENT_LABELS[stock.department] || stock.department}${stock.size ? ` (${stock.size})` : ''}: ${stock.quantity} → ${newQuantity}. Reason: ${reason}`);
+}
+
+export async function transferStock(
+  fromDepartment: string,
+  toDepartment: string,
+  targetHodId: string,
+  quantity: number,
+  transferredBy: string,
+  transferredByName: string,
+  productId?: string,
+  size?: string,
+  notes?: string,
+): Promise<StockTransfer> {
+  ensurePositive(quantity, 'Transfer quantity');
+
+  if (fromDepartment === 'pressing' && !size) {
+    throw new Error('Size is compulsory for transfers from pressing department');
+  }
+
+  const sourceStock = await db.departmentStock.where({ department: fromDepartment, isActive: 1 }).toArray();
+  const sourceMatch = sourceStock.find(s =>
+    (s.productId || '') === (productId || '') &&
+    (s.size || '') === (size || '')
+  );
+
+  if (!sourceMatch || sourceMatch.quantity < quantity) {
+    const available = sourceMatch?.quantity ?? 0;
+    throw new Error(`Insufficient stock. Available: ${available}, Requested: ${quantity}`);
+  }
+
+  const unit = sourceMatch.unit;
+
+  const newSourceQty = sourceMatch.quantity - quantity;
+  await db.departmentStock.update(sourceMatch.id, {
+    quantity: newSourceQty,
+    lastUpdatedBy: transferredBy,
+    lastUpdatedAt: now(),
+  });
+
+  const inheritedSize = size || sourceMatch.size;
+  const inheritedProductId = productId || sourceMatch.productId;
+
+  await addStockToDepartment(
+    toDepartment, quantity, unit, transferredBy, transferredByName,
+    inheritedProductId, inheritedSize,
+  );
+
+  // Auto-add to final product stock when packaging→store
+  if (fromDepartment === 'packaging' && toDepartment === 'store' && inheritedProductId) {
+    const product = await db.finalProducts.get(inheritedProductId);
+    if (product && product.isActive) {
+      await addFinalProductStock(inheritedProductId, quantity, transferredBy, transferredByName);
+    }
+  }
+
+  const transfer: StockTransfer = {
+    id: generateId(),
+    fromDepartment,
+    toDepartment,
+    targetHodId,
+    productId: inheritedProductId,
+    size: inheritedSize,
+    quantity,
+    unit,
+    transferredBy,
+    transferredByName,
+    notes: notes?.trim() || undefined,
+    createdAt: now(),
+  };
+  await db.stockTransfers.add(transfer);
+
+  await addAudit('STOCK_TRANSFERRED', 'transfer', 'stock_transfer', transfer.id, transferredBy, transferredByName,
+    `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${inheritedSize ? ` (${inheritedSize})` : ''}`,
+    JSON.stringify({ fromDepartment, toDepartment, targetHodId, quantity, productId: inheritedProductId, size: inheritedSize }));
+
+  return transfer;
+}
+
+export async function getStockTransfers(filters?: {
+  fromDepartment?: string;
+  toDepartment?: string;
+}): Promise<StockTransfer[]> {
+  const all = await db.stockTransfers.toArray();
+  if (!filters) return all;
+  return all.filter(t => {
+    if (filters.fromDepartment && t.fromDepartment !== filters.fromDepartment) return false;
+    if (filters.toDepartment && t.toDepartment !== filters.toDepartment) return false;
+    return true;
+  });
+}
+
+export async function getStockAdjustments(department?: string): Promise<StockAdjustment[]> {
+  if (department) {
+    return db.stockAdjustments.where('department').equals(department).toArray();
+  }
+  return db.stockAdjustments.toArray();
+}
+
+export async function deleteDepartmentStock(
+  stockId: string,
+  reason: string,
+  deletedBy: string,
+  deleterName: string,
+  adminPassword: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  await requireAdminPassword(adminPassword);
+  const stock = await db.departmentStock.get(stockId);
+  if (!stock) throw new Error('Stock entry not found');
+  await db.departmentStock.update(stockId, { isActive: false });
+  await addAudit('STOCK_DELETED', 'deletion', 'department_stock', stockId, deletedBy, deleterName,
+    `Deleted stock in ${DEPARTMENT_LABELS[stock.department] || stock.department}${stock.size ? ` (${stock.size})` : ''}, qty: ${stock.quantity}. Reason: ${reason}`);
 }
 
 // ---- AUDIT OPERATIONS ----

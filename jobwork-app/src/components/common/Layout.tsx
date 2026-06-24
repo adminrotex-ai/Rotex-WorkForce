@@ -32,7 +32,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, show: true },
-    { path: '/batches', label: 'Batch Management', icon: Package, show: true },
+    { path: '/stock', label: 'Stock Management', icon: Package, show: isAdmin },
+    { path: '/batches', label: 'Batch Management', icon: Package, show: false },
     { path: '/users', label: isAdmin ? 'User Management' : 'My Users', icon: Users, show: isAdmin || isHod },
     { path: '/materials', label: 'Materials & Stock', icon: Warehouse, show: isAdmin || (isHod && currentUser.department === 'store') },
     { path: '/consumer-goods', label: 'Consumer Goods', icon: Settings, show: isAdmin || (isHod && (currentUser.department === 'store' || currentUser.department === 'welding' || currentUser.department === 'buffing')) },

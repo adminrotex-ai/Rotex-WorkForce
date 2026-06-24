@@ -2,19 +2,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store';
-import type { User } from '../../types';
+import type { User, ServiceCost } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
-import { getUserStatistics, getUsersByCreator, getUserById } from '../../database/operations';
+import { getUserById, getUsersByCreator, getServiceCosts, getAccountingForHod } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
-import { ArrowLeft, CheckCircle, XCircle, Package, BarChart3 } from 'lucide-react';
+import { ArrowLeft, DollarSign, BarChart3 } from 'lucide-react';
 
 export default function UserStatReport() {
   const { userId } = useParams<{ userId: string }>();
   const { currentUser } = useSelector((s: RootState) => s.auth);
   const navigate = useNavigate();
-  const [stats, setStats] = useState<any>(null);
   const [user, setUser] = useState<User | null>(null);
   const [subUsers, setSubUsers] = useState<User[]>([]);
+  const [serviceCosts, setServiceCosts] = useState<ServiceCost[]>([]);
+  const [accounting, setAccounting] = useState<{ hodOwesAdmin: number; adminOwesHod: number } | null>(null);
 
   useEffect(() => {
     if (userId) loadData();
@@ -22,19 +23,25 @@ export default function UserStatReport() {
 
   const loadData = async () => {
     if (!userId) return;
-    const [s, u, subs] = await Promise.all([
-      getUserStatistics(userId),
+    const [u, subs] = await Promise.all([
       getUserById(userId),
       getUsersByCreator(userId),
     ]);
-    setStats(s);
     setUser(u || null);
     setSubUsers(subs);
+    if (u) {
+      const [costs, acc] = await Promise.all([
+        getServiceCosts({ department: u.department }),
+        u.role === 'hod' ? getAccountingForHod(u.id) : Promise.resolve(null),
+      ]);
+      setServiceCosts(costs.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setAccounting(acc);
+    }
   };
 
-  if (!stats || !user) return <div className="flex items-center justify-center h-64"><p className="text-gray-400">Loading...</p></div>;
+  if (!user) return <div className="flex items-center justify-center h-64"><p className="text-gray-400">Loading...</p></div>;
 
-  const isAdmin = currentUser?.role === 'admin';
+  const totalServiceCost = serviceCosts.reduce((s, c) => s + c.totalCost, 0);
 
   return (
     <div>
@@ -45,144 +52,57 @@ export default function UserStatReport() {
       <div className="mb-6">
         <h1 className="text-2xl font-light text-gray-900">{user.firstName}'s Report</h1>
         <p className="text-sm text-gray-400 mt-1">
-          {user.role.toUpperCase()} · {DEPARTMENT_LABELS[user.department]}
-          {isAdmin && ` · Username: ${user.username}`}
+          {user.role.toUpperCase()} · {DEPARTMENT_LABELS[user.department] || user.department}
+          {currentUser?.role === 'admin' && user.username && ` · Username: ${user.username}`}
         </p>
       </div>
 
-      {/* Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gold-300 flex items-center justify-center shrink-0"><Package size={20} className="text-dark-800" /></div>
+          <div className="w-12 h-12 rounded-xl bg-emerald-200 flex items-center justify-center shrink-0"><DollarSign size={20} className="text-dark-800" /></div>
           <div>
-            <p className="text-2xl font-light text-gray-900">{stats.totalPieces}</p>
-            <p className="text-sm text-gray-600">Total Pieces</p>
+            <p className="text-2xl font-light text-emerald-600">{formatCurrency(totalServiceCost)}</p>
+            <p className="text-sm text-gray-600">Service Costs</p>
           </div>
         </div>
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-200 flex items-center justify-center shrink-0"><CheckCircle size={20} className="text-dark-800" /></div>
-          <div>
-            <p className="text-2xl font-light text-emerald-600">{stats.totalAccepted}</p>
-            <p className="text-sm text-gray-600">Accepted</p>
-            <p className="text-[11px] text-gray-400">{stats.acceptanceRate.toFixed(1)}% rate</p>
-          </div>
-        </div>
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-red-200 flex items-center justify-center shrink-0"><XCircle size={20} className="text-dark-800" /></div>
-          <div>
-            <p className="text-2xl font-light text-red-500">{stats.totalRejected}</p>
-            <p className="text-sm text-gray-600">Rejected</p>
-            <p className="text-[11px] text-gray-400">{stats.rejectionRate.toFixed(1)}% rate</p>
-          </div>
-        </div>
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-200 flex items-center justify-center shrink-0"><Package size={20} className="text-dark-800" /></div>
-          <div>
-            <p className="text-2xl font-light text-gray-900">{stats.batchCount}</p>
-            <p className="text-sm text-gray-600">Batches Worked</p>
-          </div>
-        </div>
+        {accounting && (
+          <>
+            <div className="bg-emerald-50 rounded-2xl p-5">
+              <p className="text-sm text-emerald-600 mb-1">To Collect</p>
+              <p className="text-2xl font-light text-emerald-700">{formatCurrency(accounting.adminOwesHod)}</p>
+              <p className="text-[11px] text-emerald-500">Admin owes HOD</p>
+            </div>
+            <div className="bg-red-50 rounded-2xl p-5">
+              <p className="text-sm text-red-500 mb-1">To Pay</p>
+              <p className="text-2xl font-light text-red-600">{formatCurrency(accounting.hodOwesAdmin)}</p>
+              <p className="text-[11px] text-red-400">HOD owes admin</p>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Cost Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5">
-          <p className="text-[11px] text-gray-400 uppercase font-medium">Consumer Goods Used</p>
-          <p className="text-2xl font-light text-orange-500 mt-1">{formatCurrency(stats.totalConsumerCost)}</p>
-        </div>
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5">
-          <p className="text-[11px] text-gray-400 uppercase font-medium">Service Cost</p>
-          <p className="text-2xl font-light text-emerald-600 mt-1">{formatCurrency(stats.totalServiceCost)}</p>
-        </div>
-      </div>
-
-      {/* Piece Entries */}
-      {stats.pieceEntries.length > 0 && (
+      {serviceCosts.length > 0 && (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Piece Entry History</h2>
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Service Cost History</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 border-b border-gray-200">
                   <th className="pb-2 font-medium">Date</th>
-                  <th className="pb-2 font-medium text-right">Accepted</th>
-                  <th className="pb-2 font-medium text-right">Rejected</th>
-                  <th className="pb-2 font-medium text-right">Total</th>
                   <th className="pb-2 font-medium">Size</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.pieceEntries.map((e: any) => (
-                  <tr key={e.id} className="border-b border-gray-50">
-                    <td className="py-2 text-[11px] text-gray-400">{new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
-                    <td className="py-2 text-right text-emerald-600">{e.acceptedPieces}</td>
-                    <td className="py-2 text-right text-red-500">{e.rejectedPieces}</td>
-                    <td className="py-2 text-right font-medium text-gray-900">{e.totalPieces}</td>
-                    <td className="py-2 text-gray-500">{e.size || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Consumer Goods Usage */}
-      {stats.consumerUsages.length > 0 && (
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Consumer Goods Usage</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="pb-2 font-medium">Date</th>
-                  <th className="pb-2 font-medium">Department</th>
-                  <th className="pb-2 font-medium text-right">Quantity</th>
-                  <th className="pb-2 font-medium text-right">Price/Unit</th>
-                  <th className="pb-2 font-medium text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.consumerUsages.map((u: any) => (
-                  <tr key={u.id} className="border-b border-gray-50">
-                    <td className="py-2 text-[11px] text-gray-400">{new Date(u.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
-                    <td className="py-2 capitalize text-gray-500">{u.department}</td>
-                    <td className="py-2 text-right">{u.quantity}</td>
-                    <td className="py-2 text-right">{formatCurrency(u.pricePerUnit)}</td>
-                    <td className="py-2 text-right font-medium text-gray-900">{formatCurrency(u.totalCost)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Service Costs */}
-      {stats.serviceCosts.length > 0 && (
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Service Costs</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="pb-2 font-medium">Date</th>
-                  <th className="pb-2 font-medium">Department</th>
                   <th className="pb-2 font-medium text-right">Cost/Piece</th>
                   <th className="pb-2 font-medium text-right">Pieces</th>
                   <th className="pb-2 font-medium text-right">Total</th>
-                  <th className="pb-2 font-medium">Size</th>
                 </tr>
               </thead>
               <tbody>
-                {stats.serviceCosts.map((s: any) => (
-                  <tr key={s.id} className="border-b border-gray-50">
-                    <td className="py-2 text-[11px] text-gray-400">{new Date(s.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
-                    <td className="py-2 capitalize text-gray-500">{s.department}</td>
-                    <td className="py-2 text-right">{formatCurrency(s.costPerPiece)}</td>
-                    <td className="py-2 text-right">{s.totalPieces}</td>
-                    <td className="py-2 text-right font-medium text-gray-900">{formatCurrency(s.totalCost)}</td>
-                    <td className="py-2 text-gray-500">{s.size || '-'}</td>
+                {serviceCosts.map(sc => (
+                  <tr key={sc.id} className="border-b border-gray-50">
+                    <td className="py-2 text-[11px] text-gray-400">{new Date(sc.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                    <td className="py-2 text-gray-500">{sc.size || '—'}</td>
+                    <td className="py-2 text-right">{formatCurrency(sc.costPerPiece)}</td>
+                    <td className="py-2 text-right">{sc.totalPieces}</td>
+                    <td className="py-2 text-right font-medium text-gray-900">{formatCurrency(sc.totalCost)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -191,7 +111,6 @@ export default function UserStatReport() {
         </div>
       )}
 
-      {/* Sub-Users (for HODs) */}
       {user.role === 'hod' && subUsers.length > 0 && (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-4">Team Members</h2>
