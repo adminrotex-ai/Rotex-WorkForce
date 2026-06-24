@@ -23,7 +23,7 @@ export default function Departments() {
 
   useEffect(() => { load(); }, []);
 
-  const load = async () => setDepartments(await getActiveDepartments());
+  const load = async () => { setDepartments(await getActiveDepartments()); };
 
   const handleAdd = async () => {
     if (!currentUser) return;

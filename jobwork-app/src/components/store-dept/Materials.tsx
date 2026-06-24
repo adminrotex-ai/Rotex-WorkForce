@@ -27,6 +27,8 @@ export default function Materials() {
   const [typeName, setTypeName] = useState('');
   const [error, setError] = useState('');
 
+  const [loaded, setLoaded] = useState(false);
+
   const [entryForm, setEntryForm] = useState({
     materialTypeId: '',
     supplierName: '',
@@ -61,6 +63,7 @@ export default function Materials() {
     const types = await getActiveMaterialTypes();
     setMaterialTypes(types);
     setEntries(await getMaterialEntries());
+    setLoaded(true);
   };
 
   const handleAddType = async () => {
@@ -234,12 +237,12 @@ export default function Materials() {
       </div>
 
       {/* Entries Table */}
-      {filteredEntries.length === 0 ? (
+      {loaded && filteredEntries.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Package size={40} className="mx-auto mb-3 opacity-40" />
           <p>No material entries found</p>
         </div>
-      ) : (
+      ) : filteredEntries.length > 0 ? (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -324,7 +327,7 @@ export default function Materials() {
             </table>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Add Material Type Modal */}
       <Modal isOpen={showAddType} onClose={() => { setShowAddType(false); setError(''); }} title="Add Material Type">

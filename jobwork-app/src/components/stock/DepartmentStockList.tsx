@@ -10,6 +10,7 @@ export default function DepartmentStockList() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
   const [allStock, setAllStock] = useState<DepartmentStock[]>([]);
   const [departments, setDepartments] = useState<Array<{ key: string; label: string }>>([]);
+  const [loaded, setLoaded] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => { load(); }, []);
@@ -21,6 +22,7 @@ export default function DepartmentStockList() {
     ]);
     setAllStock(stock);
     setDepartments(depts);
+    setLoaded(true);
   };
 
   const deptStock = (deptKey: string) => allStock.filter(s => s.department === deptKey);
@@ -42,12 +44,12 @@ export default function DepartmentStockList() {
         </div>
       </div>
 
-      {departments.length === 0 ? (
+      {loaded && departments.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Warehouse size={40} className="mx-auto mb-3 opacity-40" />
           <p>No departments found</p>
         </div>
-      ) : (
+      ) : departments.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {departments.map(dept => {
             const stock = deptStock(dept.key);
@@ -86,7 +88,7 @@ export default function DepartmentStockList() {
             );
           })}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

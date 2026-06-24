@@ -32,6 +32,7 @@ export default function AuditLogs() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [filter, setFilter] = useState<AuditLog['category'] | 'all'>('all');
   const [search, setSearch] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     loadLogs();
@@ -40,6 +41,7 @@ export default function AuditLogs() {
   const loadLogs = async () => {
     const filters = filter !== 'all' ? { category: filter } : undefined;
     setLogs(await getAuditLogs(filters));
+    setLoaded(true);
   };
 
   const filtered = search
@@ -84,12 +86,12 @@ export default function AuditLogs() {
 
       {/* Logs */}
       <div className="space-y-3">
-        {filtered.length === 0 ? (
+        {loaded && filtered.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <ClipboardList size={40} className="mx-auto mb-3 opacity-40" />
             <p>No audit logs found</p>
           </div>
-        ) : (
+        ) : filtered.length > 0 ? (
           filtered.map(log => (
             <div key={log.id} className="bg-white/60 backdrop-blur-sm rounded-2xl p-4">
               <div className="flex items-start justify-between">
@@ -109,7 +111,7 @@ export default function AuditLogs() {
               </div>
             </div>
           ))
-        )}
+        ) : null}
       </div>
     </div>
   );

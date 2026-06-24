@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import type { RootState } from '../../store';
 import { logout } from '../../store/slices/authSlice';
 import { DEPARTMENT_LABELS } from '../../types';
-import { loadCustomDepartmentsIntoLabels } from '../../database/operations';
+import { loadCustomDepartmentsIntoLabels, preloadCommonData } from '../../database/operations';
 import {
   LayoutDashboard, Users, Package, BarChart3, Wallet,
   ClipboardList, Warehouse, LogOut, Building2, Boxes,
@@ -24,7 +24,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const isHod = currentUser.role === 'hod';
 
   const [, forceTick] = useState(0);
-  useEffect(() => { loadCustomDepartmentsIntoLabels().then(() => forceTick(t => t + 1)); }, []);
+  useEffect(() => { loadCustomDepartmentsIntoLabels().then(() => { forceTick(t => t + 1); preloadCommonData(); }); }, []);
   useEffect(() => {
     const id = setInterval(() => forceTick(t => t + 1), 60_000);
     return () => clearInterval(id);

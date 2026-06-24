@@ -21,6 +21,7 @@ export default function Statistics() {
   const [departments, setDepartments] = useState<Array<{ key: string; label: string }>>([]);
   const [expandedDept, setExpandedDept] = useState<Department | null>(null);
   const [expandedHod, setExpandedHod] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
   const isHod = currentUser?.role === 'hod';
@@ -41,6 +42,7 @@ export default function Statistics() {
     setTransfers(t);
     setTotalServiceCost(costs.reduce((sum, c) => sum + c.totalCost, 0));
     setDepartments(depts);
+    setLoaded(true);
   };
 
   const hodsByDept = (dept: Department) =>
@@ -129,7 +131,7 @@ export default function Statistics() {
                   <span className="text-sm font-medium">{t.quantity} {t.unit}</span>
                 </div>
               ))}
-              {transfers.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No transfers yet</p>}
+              {loaded && transfers.length === 0 && <p className="text-sm text-gray-400 text-center py-4">No transfers yet</p>}
             </div>
           </div>
         </div>

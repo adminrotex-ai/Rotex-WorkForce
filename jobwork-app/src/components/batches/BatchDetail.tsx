@@ -249,11 +249,7 @@ export default function BatchDetail() {
     setShowTransfer(true);
   };
 
-  if (!batch) return (
-    <div className="flex items-center justify-center h-64">
-      <p className="text-gray-400">Loading batch...</p>
-    </div>
-  );
+  if (!batch) return null;
 
   const currentStageRecord = getMyStageRecord();
   const availableForTransfer = currentStageRecord

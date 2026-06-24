@@ -55,6 +55,7 @@ export default function ConsumerGoods() {
   const isStoreHod = currentUser?.role === 'hod' && currentUser.department === 'store';
   const canManage = isAdmin || isStoreHod;
   const canAddStock = isAdmin || isStoreHod;
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -81,6 +82,7 @@ export default function ConsumerGoods() {
       info[item.id] = await getAvailableStockTotal(item.id);
     }
     setStockInfo(info);
+    setLoaded(true);
   };
 
   const handleAdd = async () => {
@@ -357,7 +359,7 @@ export default function ConsumerGoods() {
 
       {tab === 'items' && (
         <div className="space-y-3">
-          {items.length === 0 ? (
+          {loaded && items.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <Package size={40} className="mx-auto mb-3 opacity-40" />
               <p>No consumer goods added yet</p>
@@ -448,7 +450,7 @@ export default function ConsumerGoods() {
 
       {tab === 'receipts' && (
         <div className="space-y-3">
-          {receipts.length === 0 ? (
+          {loaded && receipts.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
               <FileText size={40} className="mx-auto mb-3 opacity-40" />
               <p>No receipts yet</p>
