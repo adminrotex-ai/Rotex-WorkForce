@@ -52,9 +52,11 @@ export default function ConsumerGoods() {
   });
 
   const isAdmin = currentUser?.role === 'admin';
-  const isStoreHod = currentUser?.role === 'hod' && currentUser.department === 'store';
+  const isHod = currentUser?.role === 'hod';
+  const isStoreHod = isHod && currentUser?.department === 'store';
   const canManage = isAdmin || isStoreHod;
   const canAddStock = isAdmin || isStoreHod;
+  const canIssue = isAdmin || isHod;
 
   useEffect(() => {
     loadData();
@@ -68,7 +70,7 @@ export default function ConsumerGoods() {
     ]);
     setItems(itemsData);
     setInventory(invData);
-    setHods(hodsData.filter(u => u.role === 'hod' && u.department !== 'store'));
+    setHods(hodsData.filter(u => u.role === 'hod' && u.id !== currentUser?.id));
 
     if (isAdmin) {
       setReceipts(await getAllReceipts());
@@ -328,7 +330,7 @@ export default function ConsumerGoods() {
               <Package size={16} /> Add Stock
             </button>
           )}
-          {canAddStock && (
+          {canIssue && (
             <button
               onClick={() => { setShowIssue(true); setError(''); }}
               className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer"
