@@ -11,7 +11,7 @@ import {
 } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { Plus, Edit, Trash2, Package, ChevronRight, Send, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, Package, ChevronRight, Send, FileText, Printer } from 'lucide-react';
 
 export default function ConsumerGoods() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -239,6 +239,66 @@ export default function ConsumerGoods() {
     }
   };
 
+  const handlePrintReceipt = (receipt: ConsumerGoodReceipt) => {
+    const rows = receipt.items.map((item, i) =>
+      `<tr>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb">${i + 1}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb">${item.consumerGoodName}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:right">${item.quantity}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:right">${formatCurrency(item.pricePerUnit)}</td>
+        <td style="padding:6px 8px;border-bottom:1px solid #e5e7eb;text-align:right">${formatCurrency(item.totalCost)}</td>
+      </tr>`
+    ).join('');
+
+    const html = `<!DOCTYPE html>
+<html><head><title>Receipt ${receipt.receiptNumber}</title>
+<style>
+  body{font-family:Arial,sans-serif;margin:0;padding:24px;color:#111}
+  .header{text-align:center;margin-bottom:20px;border-bottom:2px solid #111;padding-bottom:12px}
+  .header h1{font-size:20px;margin:0 0 4px}
+  .header p{font-size:12px;color:#555;margin:2px 0}
+  .info{display:flex;justify-content:space-between;margin-bottom:16px;font-size:13px}
+  .info div{flex:1}
+  .info .label{color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.5px}
+  .info .value{font-weight:600;margin-top:2px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:16px}
+  thead th{text-align:left;padding:8px;border-bottom:2px solid #333;font-size:11px;text-transform:uppercase;color:#555;letter-spacing:0.5px}
+  thead th:nth-child(n+3){text-align:right}
+  .total-row td{border-top:2px solid #333;font-weight:700;font-size:15px;padding:10px 8px}
+  .footer{margin-top:40px;display:flex;justify-content:space-between;font-size:12px;color:#555}
+  .sign-line{border-top:1px solid #999;width:160px;text-align:center;padding-top:4px;margin-top:40px}
+  @media print{body{padding:16px}@page{margin:12mm}}
+</style></head><body>
+<div class="header">
+  <h1>Rotex WorkForce</h1>
+  <p>Consumer Goods Issue Receipt</p>
+</div>
+<div class="info">
+  <div><span class="label">Receipt No.</span><div class="value">${receipt.receiptNumber}</div></div>
+  <div><span class="label">Date</span><div class="value">${new Date(receipt.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div></div>
+  <div><span class="label">Issued To</span><div class="value">${receipt.hodName} (${DEPARTMENT_LABELS[receipt.department] || receipt.department})</div></div>
+  <div><span class="label">Issued By</span><div class="value">${receipt.issuedByName}</div></div>
+</div>
+<table>
+  <thead><tr><th>#</th><th>Item</th><th>Qty</th><th>Price/Unit</th><th>Total</th></tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr class="total-row"><td colspan="4" style="text-align:right">Total Amount:</td><td style="text-align:right">${formatCurrency(receipt.totalAmount)}</td></tr></tfoot>
+</table>
+<div class="footer">
+  <div class="sign-line">Receiver's Signature</div>
+  <div class="sign-line">Issuer's Signature</div>
+</div>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=800,height=600');
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      win.print();
+    }
+  };
+
   const issueTotal = issueForm.items.reduce((sum, i) => {
     const qty = parseFloat(i.quantity) || 0;
     return sum + qty * i.price;
@@ -409,6 +469,13 @@ export default function ConsumerGoods() {
                 </div>
                 <div className="flex items-center gap-3">
                   <p className="font-semibold text-sm text-gray-900">{formatCurrency(receipt.totalAmount)}</p>
+                  <button
+                    onClick={e => { e.stopPropagation(); handlePrintReceipt(receipt); }}
+                    className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-500 cursor-pointer"
+                    title="Print Receipt"
+                  >
+                    <Printer size={14} />
+                  </button>
                   {canManage && (
                     <button
                       onClick={e => { e.stopPropagation(); setShowDeleteReceipt(receipt); }}
@@ -480,14 +547,22 @@ export default function ConsumerGoods() {
               This amount ({formatCurrency(selectedReceipt.totalAmount)}) has been added to {selectedReceipt.hodName}'s account as owed to admin.
             </div>
 
-            {canManage && (
+            <div className="flex gap-3">
               <button
-                onClick={() => setShowDeleteReceipt(selectedReceipt)}
-                className="w-full flex items-center justify-center gap-2 bg-red-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 cursor-pointer"
+                onClick={() => handlePrintReceipt(selectedReceipt)}
+                className="flex-1 flex items-center justify-center gap-2 bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
               >
-                <Trash2 size={14} /> Delete Receipt
+                <Printer size={14} /> Print Receipt
               </button>
-            )}
+              {canManage && (
+                <button
+                  onClick={() => setShowDeleteReceipt(selectedReceipt)}
+                  className="flex items-center justify-center gap-2 bg-red-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-red-600 cursor-pointer"
+                >
+                  <Trash2 size={14} /> Delete
+                </button>
+              )}
+            </div>
           </div>
         )}
       </Modal>
