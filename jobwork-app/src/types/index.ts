@@ -318,6 +318,46 @@ export interface FinalProductStockEntry {
   createdAt: string;
 }
 
+export interface DepartmentStock {
+  id: string;
+  department: string;
+  productId?: string;
+  size?: string;
+  quantity: number;
+  unit: string;
+  lastUpdatedBy: string;
+  lastUpdatedAt: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
+export interface StockTransfer {
+  id: string;
+  fromDepartment: string;
+  toDepartment: string;
+  targetHodId: string;
+  productId?: string;
+  size?: string;
+  quantity: number;
+  unit: string;
+  transferredBy: string;
+  transferredByName: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface StockAdjustment {
+  id: string;
+  departmentStockId: string;
+  department: string;
+  previousQuantity: number;
+  newQuantity: number;
+  reason: string;
+  adjustedBy: string;
+  adjustedByName: string;
+  createdAt: string;
+}
+
 export interface SyncQueueItem {
   id: string;
   action: string;

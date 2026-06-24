@@ -10,6 +10,8 @@ import Layout from './components/common/Layout';
 import Dashboard from './components/dashboard/Dashboard';
 import BatchList from './components/batches/BatchList';
 import BatchDetail from './components/batches/BatchDetail';
+import DepartmentStockList from './components/stock/DepartmentStockList';
+import DepartmentStockDetail from './components/stock/DepartmentStockDetail';
 import UserManagement from './components/users/UserManagement';
 import Statistics from './components/statistics/Statistics';
 import UserStatReport from './components/statistics/UserStatReport';
@@ -48,6 +50,8 @@ function AppRoutes() {
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/batches" element={<ProtectedRoute><BatchList /></ProtectedRoute>} />
         <Route path="/batches/:id" element={<ProtectedRoute><BatchDetail /></ProtectedRoute>} />
+        <Route path="/stock" element={<ProtectedRoute><AdminRoute><DepartmentStockList /></AdminRoute></ProtectedRoute>} />
+        <Route path="/stock/:department" element={<ProtectedRoute><AdminRoute><DepartmentStockDetail /></AdminRoute></ProtectedRoute>} />
         <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
         <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
         <Route path="/statistics/user/:userId" element={<ProtectedRoute><UserStatReport /></ProtectedRoute>} />

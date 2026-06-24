@@ -1,235 +1,161 @@
 import { useState, useEffect } from 'react';
-import { getPeriodStatistics, getBatchStatistics, getActiveBatches } from '../../database/operations';
+import { getDepartmentStock, getStockTransfers, getServiceCosts, getActiveDepartments } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
-import type { Batch } from '../../types';
-import { STAGE_LABELS, type BatchStage } from '../../types';
+import type { DepartmentStock, StockTransfer, ServiceCost } from '../../types';
+import { DEPARTMENT_LABELS } from '../../types';
 
 export default function Reports() {
-  const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('month');
-  const [stats, setStats] = useState<any>(null);
-  const [batches, setBatches] = useState<Batch[]>([]);
-  const [selectedBatch, setSelectedBatch] = useState<string>('');
-  const [batchStats, setBatchStats] = useState<any>(null);
+  const [allStock, setAllStock] = useState<DepartmentStock[]>([]);
+  const [transfers, setTransfers] = useState<StockTransfer[]>([]);
+  const [serviceCosts, setServiceCosts] = useState<ServiceCost[]>([]);
+  const [departments, setDepartments] = useState<Array<{ key: string; label: string }>>([]);
+  const [deptFilter, setDeptFilter] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, [period]);
-
-  useEffect(() => {
-    if (selectedBatch) {
-      getBatchStatistics(selectedBatch).then(setBatchStats);
-    }
-  }, [selectedBatch]);
+  useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [s, b] = await Promise.all([
-      getPeriodStatistics(period),
-      getActiveBatches(),
+    const [s, t, sc, depts] = await Promise.all([
+      getDepartmentStock(),
+      getStockTransfers(),
+      getServiceCosts({}),
+      getActiveDepartments(),
     ]);
-    setStats(s);
-    setBatches(b);
+    setAllStock(s);
+    setTransfers(t.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    setServiceCosts(sc.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    setDepartments(depts);
   };
+
+  const filteredTransfers = deptFilter
+    ? transfers.filter(t => t.fromDepartment === deptFilter || t.toDepartment === deptFilter)
+    : transfers;
+
+  const filteredCosts = deptFilter
+    ? serviceCosts.filter(c => c.department === deptFilter)
+    : serviceCosts;
+
+  const totalServiceCost = filteredCosts.reduce((s, c) => s + c.totalCost, 0);
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-light text-gray-900">Reports</h1>
-        <p className="text-sm text-gray-400 mt-1">Generate detailed reports</p>
+        <p className="text-sm text-gray-400 mt-1">Stock, transfers, and cost reports</p>
       </div>
 
-      {/* Period Selector */}
-      <div className="flex gap-2 mb-6">
-        {(['week', 'month', 'year', 'all'] as const).map(p => (
+      <div className="flex gap-2 mb-6 flex-wrap">
+        <button
+          onClick={() => setDeptFilter('')}
+          className={`px-4 py-2 text-sm rounded-xl cursor-pointer ${!deptFilter ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'}`}
+        >
+          All Departments
+        </button>
+        {departments.map(d => (
           <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            className={`px-4 py-2 text-sm rounded-xl cursor-pointer ${
-              period === p ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'
-            }`}
+            key={d.key}
+            onClick={() => setDeptFilter(d.key)}
+            className={`px-4 py-2 text-sm rounded-xl cursor-pointer ${deptFilter === d.key ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'}`}
           >
-            {p === 'all' ? 'All Time' : p.charAt(0).toUpperCase() + p.slice(1)}
+            {d.label}
           </button>
         ))}
       </div>
 
-      {/* Period Summary */}
-      {stats && (
-        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">
-            {period === 'all' ? 'All Time' : period.charAt(0).toUpperCase() + period.slice(1)} Report
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div>
-              <p className="text-[11px] text-gray-400">Batches</p>
-              <p className="text-xl font-light text-gray-900">{stats.batchCount}</p>
-            </div>
-            <div>
-              <p className="text-[11px] text-gray-400">Total Pieces</p>
-              <p className="text-xl font-light text-gray-900">{stats.totalPieces}</p>
-            </div>
-            <div>
-              <p className="text-[11px] text-gray-400">Accepted / Rejected</p>
-              <p className="text-xl font-light">
-                <span className="text-emerald-600">{stats.totalAccepted}</span> / <span className="text-red-500">{stats.totalRejected}</span>
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] text-gray-400">Total Cost</p>
-              <p className="text-xl font-light text-gray-900">{formatCurrency(stats.totalConsumerCost + stats.totalServiceCost)}</p>
-            </div>
-          </div>
+      {/* Stock Summary */}
+      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">Stock Summary</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          {departments.map(dept => {
+            const deptItems = allStock.filter(s => s.department === dept.key);
+            const total = deptItems.reduce((s, item) => s + item.quantity, 0);
+            return (
+              <div key={dept.key} className={`p-3 rounded-xl ${deptFilter === dept.key ? 'bg-gold-300/30 border border-gold-400/30' : 'bg-white/40'}`}>
+                <p className="text-[11px] text-gray-400">{dept.label}</p>
+                <p className="text-lg font-light text-gray-900">{total}</p>
+                <p className="text-[11px] text-gray-400">{deptItems.length} entries</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-              <p className="text-[11px] text-blue-600 uppercase font-medium">Consumer Goods Cost</p>
-              <p className="text-lg font-light text-blue-700">{formatCurrency(stats.totalConsumerCost)}</p>
-            </div>
-            <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-              <p className="text-[11px] text-emerald-600 uppercase font-medium">Service Cost</p>
-              <p className="text-lg font-light text-emerald-700">{formatCurrency(stats.totalServiceCost)}</p>
-            </div>
+      {/* Service Cost Summary */}
+      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">Service Cost Report</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
+          <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+            <p className="text-[11px] text-emerald-600 uppercase font-medium">Total Service Cost</p>
+            <p className="text-lg font-light text-emerald-700">{formatCurrency(totalServiceCost)}</p>
           </div>
-
-          {/* Raw Material vs Finished Product */}
-          <div className="mt-6 p-4 rounded-xl bg-gold-300/20 border border-gold-400/20">
-            <h3 className="text-sm font-semibold text-dark-800 mb-3">Raw Material to Finished Product Ratio</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-[11px] text-gray-400">Raw Material (from Foundry)</p>
-                <p className="text-lg font-light text-gray-900">{stats.totalPieces} pcs</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-gray-400">Accepted Output</p>
-                <p className="text-lg font-light text-emerald-600">{stats.totalAccepted} pcs</p>
-              </div>
-              <div>
-                <p className="text-[11px] text-gray-400">Yield Rate</p>
-                <p className="text-lg font-light text-gray-900">
-                  {stats.totalPieces > 0 ? ((stats.totalAccepted / stats.totalPieces) * 100).toFixed(1) : 0}%
-                </p>
-              </div>
-            </div>
+          <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+            <p className="text-[11px] text-blue-600 uppercase font-medium">Cost Entries</p>
+            <p className="text-lg font-light text-blue-700">{filteredCosts.length}</p>
           </div>
         </div>
-      )}
 
-      {/* Batch-wise Report */}
+        {filteredCosts.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-200">
+                  <th className="pb-2 font-medium">Date</th>
+                  <th className="pb-2 font-medium">Department</th>
+                  <th className="pb-2 font-medium">Size</th>
+                  <th className="pb-2 font-medium text-right">Cost/Piece</th>
+                  <th className="pb-2 font-medium text-right">Pieces</th>
+                  <th className="pb-2 font-medium text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCosts.slice(0, 20).map(sc => (
+                  <tr key={sc.id} className="border-b border-gray-50">
+                    <td className="py-2 text-[11px] text-gray-400">{new Date(sc.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                    <td className="py-2 text-gray-900">{DEPARTMENT_LABELS[sc.department] || sc.department}</td>
+                    <td className="py-2 text-gray-500">{sc.size || '—'}</td>
+                    <td className="py-2 text-right">{formatCurrency(sc.costPerPiece)}</td>
+                    <td className="py-2 text-right">{sc.totalPieces}</td>
+                    <td className="py-2 text-right font-medium">{formatCurrency(sc.totalCost)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Transfer History */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Batch-wise Report</h2>
-        <select
-          value={selectedBatch}
-          onChange={e => setSelectedBatch(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400 mb-4"
-        >
-          <option value="">Select a batch</option>
-          {batches.map(b => (
-            <option key={b.id} value={b.id}>{b.batchNumber} - {b.totalPieces} pcs ({b.status})</option>
-          ))}
-        </select>
-
-        {batchStats && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="p-3 bg-white/40 rounded-xl">
-                <p className="text-[11px] text-gray-400">Total Pieces</p>
-                <p className="text-lg font-light text-gray-900">{batchStats.batch?.totalPieces}</p>
-              </div>
-              <div className="p-3 bg-white/40 rounded-xl">
-                <p className="text-[11px] text-gray-400">Current Stage</p>
-                <p className="text-sm font-medium text-gray-900">{STAGE_LABELS[batchStats.batch?.currentStage as BatchStage]}</p>
-              </div>
-              <div className="p-3 bg-white/40 rounded-xl">
-                <p className="text-[11px] text-gray-400">Consumer Goods</p>
-                <p className="text-lg font-light text-blue-600">{formatCurrency(batchStats.totalConsumerCost)}</p>
-              </div>
-              <div className="p-3 bg-white/40 rounded-xl">
-                <p className="text-[11px] text-gray-400">Service Cost</p>
-                <p className="text-lg font-light text-emerald-600">{formatCurrency(batchStats.totalServiceCost)}</p>
-              </div>
-            </div>
-
-            {/* Cost by department */}
-            {Object.entries(batchStats.costBreakdown).length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Cost by Department</h3>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-200">
-                      <th className="pb-2 font-medium">Department</th>
-                      <th className="pb-2 font-medium text-right">Consumer Goods</th>
-                      <th className="pb-2 font-medium text-right">Service Cost</th>
-                      <th className="pb-2 font-medium text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(batchStats.costBreakdown).map(([dept, costs]: [string, any]) => (
-                      <tr key={dept} className="border-b border-gray-50">
-                        <td className="py-2 capitalize">{dept}</td>
-                        <td className="py-2 text-right">{formatCurrency(costs.consumerGoods)}</td>
-                        <td className="py-2 text-right">{formatCurrency(costs.serviceCost)}</td>
-                        <td className="py-2 text-right font-medium">{formatCurrency(costs.consumerGoods + costs.serviceCost)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Consumer goods detail for the batch */}
-            {batchStats.consumerUsages.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Consumer Goods Detail</h3>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-200">
-                      <th className="pb-2 font-medium">Department</th>
-                      <th className="pb-2 font-medium text-right">Qty</th>
-                      <th className="pb-2 font-medium text-right">Price/Unit</th>
-                      <th className="pb-2 font-medium text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {batchStats.consumerUsages.map((u: any) => (
-                      <tr key={u.id} className="border-b border-gray-50">
-                        <td className="py-1.5 capitalize">{u.department}</td>
-                        <td className="py-1.5 text-right">{u.quantity}</td>
-                        <td className="py-1.5 text-right">{formatCurrency(u.pricePerUnit)}</td>
-                        <td className="py-1.5 text-right font-medium">{formatCurrency(u.totalCost)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Service costs detail */}
-            {batchStats.serviceCosts.length > 0 && (
-              <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-2">Service Costs Detail</h3>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-200">
-                      <th className="pb-2 font-medium">Department</th>
-                      <th className="pb-2 font-medium">Size</th>
-                      <th className="pb-2 font-medium text-right">Cost/Piece</th>
-                      <th className="pb-2 font-medium text-right">Pieces</th>
-                      <th className="pb-2 font-medium text-right">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {batchStats.serviceCosts.map((s: any) => (
-                      <tr key={s.id} className="border-b border-gray-50">
-                        <td className="py-1.5 capitalize">{s.department}</td>
-                        <td className="py-1.5">{s.size || 'All'}</td>
-                        <td className="py-1.5 text-right">{formatCurrency(s.costPerPiece)}</td>
-                        <td className="py-1.5 text-right">{s.totalPieces}</td>
-                        <td className="py-1.5 text-right font-medium">{formatCurrency(s.totalCost)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+        <h2 className="text-base font-semibold text-gray-900 mb-4">Transfer History</h2>
+        {filteredTransfers.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-4">No transfers found</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-200">
+                  <th className="pb-2 font-medium">Date</th>
+                  <th className="pb-2 font-medium">From</th>
+                  <th className="pb-2 font-medium">To</th>
+                  <th className="pb-2 font-medium">Size</th>
+                  <th className="pb-2 font-medium text-right">Qty</th>
+                  <th className="pb-2 font-medium">By</th>
+                  <th className="pb-2 font-medium">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTransfers.slice(0, 30).map(t => (
+                  <tr key={t.id} className="border-b border-gray-50">
+                    <td className="py-2 text-[11px] text-gray-400">{new Date(t.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                    <td className="py-2">{DEPARTMENT_LABELS[t.fromDepartment] || t.fromDepartment}</td>
+                    <td className="py-2">{DEPARTMENT_LABELS[t.toDepartment] || t.toDepartment}</td>
+                    <td className="py-2 text-gray-500">{t.size || '—'}</td>
+                    <td className="py-2 text-right font-medium">{t.quantity} {t.unit}</td>
+                    <td className="py-2 text-gray-500">{t.transferredByName}</td>
+                    <td className="py-2 text-gray-400">{t.notes || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
