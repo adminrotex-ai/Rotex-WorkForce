@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store';
-import type { DepartmentStock, StockTransfer, FinalProduct, User } from '../../types';
+import type { DepartmentStock, StockTransfer, FinalProduct, FinalProductType, User } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
 import {
   getDepartmentStock, addStockToDepartment, editDepartmentStock,
-  transferStock, getStockTransfers, getActiveFinalProducts,
+  transferStock, getStockTransfers, getActiveFinalProducts, getActiveFinalProductTypes,
   getActiveUsers, getActiveDepartments, deleteDepartmentStock,
 } from '../../database/operations';
 import Modal from '../common/Modal';
@@ -23,6 +23,7 @@ export default function DepartmentStockDetail() {
   const [stock, setStock] = useState<DepartmentStock[]>([]);
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [products, setProducts] = useState<FinalProduct[]>([]);
+  const [productTypes, setProductTypes] = useState<FinalProductType[]>([]);
   const [hods, setHods] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Array<{ key: string; label: string }>>([]);
 
@@ -33,11 +34,12 @@ export default function DepartmentStockDetail() {
   const [showHistory, setShowHistory] = useState(false);
 
   const [addForm, setAddForm] = useState({ productId: '', size: '', quantity: '', unit: 'pcs' });
-  const [transferForm, setTransferForm] = useState({ toDepartment: '', targetHodId: '', quantity: '', notes: '' });
+  const [transferForm, setTransferForm] = useState({ toDepartment: '', targetHodId: '', quantity: '', notes: '', productTypeId: '', destProductId: '', destSize: '' });
   const [editForm, setEditForm] = useState({ quantity: '', reason: '', password: '' });
   const [deleteForm, setDeleteForm] = useState({ reason: '', password: '' });
   const [error, setError] = useState('');
 
+  const isStore = department === 'store';
   const isPressing = department === 'pressing';
   const isWelding = department === 'welding';
   const deptLabel = DEPARTMENT_LABELS[department || ''] || department || '';
@@ -46,10 +48,11 @@ export default function DepartmentStockDetail() {
 
   const load = async () => {
     if (!department) return;
-    const [s, t, p, users, depts] = await Promise.all([
+    const [s, t, p, pt, users, depts] = await Promise.all([
       getDepartmentStock(department),
       getStockTransfers(),
       getActiveFinalProducts(),
+      getActiveFinalProductTypes(),
       getActiveUsers(),
       getActiveDepartments(),
     ]);
@@ -57,6 +60,7 @@ export default function DepartmentStockDetail() {
     setTransfers(t.filter(tr => tr.fromDepartment === department || tr.toDepartment === department)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setProducts(p);
+    setProductTypes(pt);
     setHods(users.filter(u => u.role === 'hod'));
     setDepartments(depts.filter(d => d.key !== department));
   };
@@ -86,15 +90,26 @@ export default function DepartmentStockDetail() {
     if (!Number.isFinite(qty) || qty <= 0) { setError('Enter a positive quantity'); return; }
     if (!transferForm.toDepartment) { setError('Select destination department'); return; }
     if (!transferForm.targetHodId) { setError('Select target HOD'); return; }
+
+    const isPressTransfer = transferForm.toDepartment === 'pressing';
+    if (isPressTransfer && !transferForm.productTypeId) { setError('Select product type for pressing department'); return; }
+    if (isPressTransfer && !transferForm.destSize) { setError('Select size for pressing department'); return; }
+
     try {
+      const destProduct = isPressTransfer
+        ? products.find(p => p.productTypeId === transferForm.productTypeId && p.size === transferForm.destSize)
+        : undefined;
+
       await transferStock(
         department, transferForm.toDepartment, transferForm.targetHodId,
         qty, currentUser.id, currentUser.firstName,
         showTransfer.productId, showTransfer.size,
         transferForm.notes || undefined,
+        isPressTransfer ? (destProduct?.id || undefined) : undefined,
+        isPressTransfer ? transferForm.destSize : undefined,
       );
       setShowTransfer(null);
-      setTransferForm({ toDepartment: '', targetHodId: '', quantity: '', notes: '' });
+      setTransferForm({ toDepartment: '', targetHodId: '', quantity: '', notes: '', productTypeId: '', destProductId: '', destSize: '' });
       load();
     } catch (e: any) { setError(e.message); }
   };
@@ -125,6 +140,24 @@ export default function DepartmentStockDetail() {
 
   const hodsForDept = (deptKey: string) => hods.filter(h => h.department === deptKey);
   const productName = (pid?: string) => products.find(p => p.id === pid)?.name || '';
+  const productTypeName = (pid?: string) => {
+    const prod = products.find(p => p.id === pid);
+    if (!prod?.productTypeId) return '';
+    return productTypes.find(pt => pt.id === prod.productTypeId)?.name || '';
+  };
+
+  const sizesForProductType = (typeId: string) => {
+    const filtered = products.filter(p => p.productTypeId === typeId && p.size);
+    const unique = [...new Set(filtered.map(p => p.size!))];
+    return unique.sort();
+  };
+
+  const sortedStock = [...stock].sort((a, b) => {
+    const aTypeName = productTypeName(a.productId);
+    const bTypeName = productTypeName(b.productId);
+    if (aTypeName !== bTypeName) return aTypeName.localeCompare(bTypeName);
+    return (a.size || '').localeCompare(b.size || '');
+  });
 
   if (!currentUser || currentUser.role !== 'admin') return null;
 
@@ -147,16 +180,18 @@ export default function DepartmentStockDetail() {
           >
             <ArrowRightLeft size={16} /> Transfers
           </button>
-          <button
-            onClick={() => { setShowAdd(true); setError(''); setAddForm({ productId: '', size: '', quantity: '', unit: 'pcs' }); }}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 cursor-pointer"
-          >
-            <Plus size={16} /> Add Stock
-          </button>
+          {isStore && (
+            <button
+              onClick={() => { setShowAdd(true); setError(''); setAddForm({ productId: '', size: '', quantity: '', unit: 'pcs' }); }}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 cursor-pointer"
+            >
+              <Plus size={16} /> Add Stock
+            </button>
+          )}
         </div>
       </div>
 
-      {stock.length === 0 ? (
+      {sortedStock.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Warehouse size={40} className="mx-auto mb-3 opacity-40" />
           <p>No stock in this department</p>
@@ -166,6 +201,7 @@ export default function DepartmentStockDetail() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b border-gray-200">
+                <th className="px-4 py-3 font-medium">Product Type</th>
                 <th className="px-4 py-3 font-medium">Product</th>
                 <th className="px-4 py-3 font-medium">Size</th>
                 <th className="px-4 py-3 font-medium text-right">Quantity</th>
@@ -174,59 +210,69 @@ export default function DepartmentStockDetail() {
               </tr>
             </thead>
             <tbody>
-              {stock.map(s => (
-                <tr key={s.id} className="border-b border-gray-50 hover:bg-white/40">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Package size={14} className="text-gray-400" />
-                      <span>{s.productId ? productName(s.productId) : 'General Stock'}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {s.size ? (
-                      <span className="text-[11px] px-2 py-0.5 bg-gold-100 text-gold-700 rounded-full font-bold">{s.size}</span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold text-emerald-600">{s.quantity}</td>
-                  <td className="px-4 py-3 text-gray-500">{s.unit}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => {
-                          setShowTransfer(s);
-                          setError('');
-                          setTransferForm({ toDepartment: '', targetHodId: '', quantity: '', notes: '' });
-                        }}
-                        className="px-2.5 py-1 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
-                      >
-                        Transfer
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowEdit(s);
-                          setError('');
-                          setEditForm({ quantity: String(s.quantity), reason: '', password: '' });
-                        }}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 cursor-pointer"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowDelete(s);
-                          setError('');
-                          setDeleteForm({ reason: '', password: '' });
-                        }}
-                        className="p-1.5 text-red-400 hover:text-red-600 cursor-pointer"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {sortedStock.map(s => {
+                const typeName = productTypeName(s.productId);
+                return (
+                  <tr key={s.id} className="border-b border-gray-50 hover:bg-white/40">
+                    <td className="px-4 py-3">
+                      {typeName ? (
+                        <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">{typeName}</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Package size={14} className="text-gray-400" />
+                        <span>{s.productId ? productName(s.productId) : 'General Stock'}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {s.size ? (
+                        <span className="text-[11px] px-2 py-0.5 bg-gold-100 text-gold-700 rounded-full font-bold">{s.size}</span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right font-semibold text-emerald-600">{s.quantity}</td>
+                    <td className="px-4 py-3 text-gray-500">{s.unit}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => {
+                            setShowTransfer(s);
+                            setError('');
+                            setTransferForm({ toDepartment: '', targetHodId: '', quantity: '', notes: '', productTypeId: '', destProductId: '', destSize: '' });
+                          }}
+                          className="px-2.5 py-1 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
+                        >
+                          Transfer
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowEdit(s);
+                            setError('');
+                            setEditForm({ quantity: String(s.quantity), reason: '', password: '' });
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowDelete(s);
+                            setError('');
+                            setDeleteForm({ reason: '', password: '' });
+                          }}
+                          className="p-1.5 text-red-400 hover:text-red-600 cursor-pointer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -272,7 +318,7 @@ export default function DepartmentStockDetail() {
         </div>
       )}
 
-      {/* Add Stock Modal */}
+      {/* Add Stock Modal — Store Only */}
       <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setError(''); }} title={`Add Stock — ${deptLabel}`}>
         <div className="space-y-4">
           {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
@@ -380,7 +426,7 @@ export default function DepartmentStockDetail() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Destination Department *</label>
             <select
               value={transferForm.toDepartment}
-              onChange={e => setTransferForm({ ...transferForm, toDepartment: e.target.value, targetHodId: '' })}
+              onChange={e => setTransferForm({ ...transferForm, toDepartment: e.target.value, targetHodId: '', productTypeId: '', destProductId: '', destSize: '' })}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
             >
               <option value="">Select department</option>
@@ -405,6 +451,53 @@ export default function DepartmentStockDetail() {
               <p className="text-[11px] text-amber-600 mt-1">No HODs in this department</p>
             )}
           </div>
+
+          {transferForm.toDepartment === 'pressing' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product Type *</label>
+                <select
+                  value={transferForm.productTypeId}
+                  onChange={e => setTransferForm({ ...transferForm, productTypeId: e.target.value, destProductId: '', destSize: '' })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                >
+                  <option value="">Select product type</option>
+                  {productTypes.map(pt => (
+                    <option key={pt.id} value={pt.id}>{pt.name}</option>
+                  ))}
+                </select>
+              </div>
+              {transferForm.productTypeId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Size *</label>
+                  {sizesForProductType(transferForm.productTypeId).length === 0 ? (
+                    <p className="text-[11px] text-amber-600 p-2 bg-amber-50 rounded-lg">No sizes available for this product type. Add final products with sizes first.</p>
+                  ) : (
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-2">
+                      {sizesForProductType(transferForm.productTypeId).map(size => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => {
+                            const matchProduct = products.find(p => p.productTypeId === transferForm.productTypeId && p.size === size);
+                            setTransferForm({ ...transferForm, destSize: size, destProductId: matchProduct?.id || '' });
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-colors ${
+                            transferForm.destSize === size
+                              ? 'bg-gold-300 text-dark-800 font-medium'
+                              : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>
             <input
