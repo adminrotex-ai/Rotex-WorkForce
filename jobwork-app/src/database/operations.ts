@@ -1385,11 +1385,17 @@ export async function transferStock(
   productId?: string,
   size?: string,
   notes?: string,
+  destProductId?: string,
+  destSize?: string,
 ): Promise<StockTransfer> {
   ensurePositive(quantity, 'Transfer quantity');
 
   if (fromDepartment === 'pressing' && !size) {
     throw new Error('Size is compulsory for transfers from pressing department');
+  }
+
+  if (toDepartment === 'pressing' && !destSize) {
+    throw new Error('Size is compulsory for transfers to pressing department');
   }
 
   const sourceStock = await db.departmentStock.where({ department: fromDepartment, isActive: 1 }).toArray();
@@ -1412,19 +1418,18 @@ export async function transferStock(
     lastUpdatedAt: now(),
   });
 
-  const inheritedSize = toDepartment === 'welding' ? undefined : (size || sourceMatch.size);
-  const inheritedProductId = productId || sourceMatch.productId;
+  const finalProductId = destProductId || productId || sourceMatch.productId;
+  const finalSize = toDepartment === 'welding' ? undefined : (destSize || size || sourceMatch.size);
 
   await addStockToDepartment(
     toDepartment, quantity, unit, transferredBy, transferredByName,
-    inheritedProductId, inheritedSize,
+    finalProductId, finalSize,
   );
 
-  // Auto-add to final product stock when packaging→store
-  if (fromDepartment === 'packaging' && toDepartment === 'store' && inheritedProductId) {
-    const product = await db.finalProducts.get(inheritedProductId);
+  if (fromDepartment === 'packaging' && toDepartment === 'store' && finalProductId) {
+    const product = await db.finalProducts.get(finalProductId);
     if (product && product.isActive) {
-      await addFinalProductStock(inheritedProductId, quantity, transferredBy, transferredByName);
+      await addFinalProductStock(finalProductId, quantity, transferredBy, transferredByName);
     }
   }
 
@@ -1433,8 +1438,8 @@ export async function transferStock(
     fromDepartment,
     toDepartment,
     targetHodId,
-    productId: inheritedProductId,
-    size: inheritedSize,
+    productId: finalProductId,
+    size: finalSize,
     quantity,
     unit,
     transferredBy,
@@ -1445,14 +1450,14 @@ export async function transferStock(
   await db.stockTransfers.add(transfer);
 
   await addAudit('STOCK_TRANSFERRED', 'transfer', 'stock_transfer', transfer.id, transferredBy, transferredByName,
-    `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${inheritedSize ? ` (${inheritedSize})` : ''}`,
-    JSON.stringify({ fromDepartment, toDepartment, targetHodId, quantity, productId: inheritedProductId, size: inheritedSize }));
+    `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${finalSize ? ` (${finalSize})` : ''}`,
+    JSON.stringify({ fromDepartment, toDepartment, targetHodId, quantity, productId: finalProductId, size: finalSize }));
 
   const targetHod = await db.users.get(targetHodId);
   if (targetHod && targetHod.serviceCostRate && targetHod.serviceCostRate > 0) {
     await recordServiceCost(
       '', toDepartment, targetHod.serviceCostRate, quantity,
-      transferredBy, transferredByName, inheritedSize, undefined, targetHodId,
+      transferredBy, transferredByName, finalSize, undefined, targetHodId,
     );
   }
 
