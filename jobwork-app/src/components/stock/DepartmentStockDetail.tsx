@@ -12,8 +12,20 @@ import {
 import Modal from '../common/Modal';
 import {
   ArrowLeft, Plus, ArrowRightLeft, Pencil, Trash2,
-  Package, Warehouse,
+  Package, Warehouse, ChevronRight, Layers, Ruler,
 } from 'lucide-react';
+
+interface NameGroup {
+  name: string;
+  types: TypeGroup[];
+  totalQty: number;
+}
+
+interface TypeGroup {
+  typeName: string;
+  sizes: DepartmentStock[];
+  totalQty: number;
+}
 
 export default function DepartmentStockDetail() {
   const { department } = useParams<{ department: string }>();
@@ -32,6 +44,9 @@ export default function DepartmentStockDetail() {
   const [showEdit, setShowEdit] = useState<DepartmentStock | null>(null);
   const [showDelete, setShowDelete] = useState<DepartmentStock | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+
+  const [expandedName, setExpandedName] = useState<string | null>(null);
+  const [expandedType, setExpandedType] = useState<string | null>(null);
 
   const [addForm, setAddForm] = useState({ productId: '', size: '', quantity: '', unit: 'pcs' });
   const [transferForm, setTransferForm] = useState({ toDepartment: '', targetHodId: '', quantity: '', notes: '', productTypeId: '', destProductId: '', destSize: '' });
@@ -159,6 +174,44 @@ export default function DepartmentStockDetail() {
     return unique.sort();
   };
 
+  const buildStoreGroups = (): NameGroup[] => {
+    const nameMap = new Map<string, DepartmentStock[]>();
+    for (const s of stock) {
+      const name = s.productId ? productName(s.productId) : 'General Stock';
+      const list = nameMap.get(name) || [];
+      list.push(s);
+      nameMap.set(name, list);
+    }
+
+    const groups: NameGroup[] = [];
+    for (const [name, items] of nameMap) {
+      const typeMap = new Map<string, DepartmentStock[]>();
+      for (const item of items) {
+        const tName = item.productId ? (productTypeName(item.productId) || 'General') : 'General';
+        const list = typeMap.get(tName) || [];
+        list.push(item);
+        typeMap.set(tName, list);
+      }
+
+      const types: TypeGroup[] = [];
+      for (const [typeName, typeItems] of typeMap) {
+        types.push({
+          typeName,
+          sizes: typeItems.sort((a, b) => (a.size || '').localeCompare(b.size || '')),
+          totalQty: typeItems.reduce((s, i) => s + i.quantity, 0),
+        });
+      }
+
+      groups.push({
+        name,
+        types,
+        totalQty: items.reduce((s, i) => s + i.quantity, 0),
+      });
+    }
+
+    return groups;
+  };
+
   const sortedStock = [...stock].sort((a, b) => {
     const aTypeName = productTypeName(a.productId);
     const bTypeName = productTypeName(b.productId);
@@ -166,7 +219,54 @@ export default function DepartmentStockDetail() {
     return (a.size || '').localeCompare(b.size || '');
   });
 
+  const toggleName = (name: string) => {
+    if (expandedName === name) {
+      setExpandedName(null);
+      setExpandedType(null);
+    } else {
+      setExpandedName(name);
+      setExpandedType(null);
+    }
+  };
+
+  const stockActions = (s: DepartmentStock) => (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => {
+          setShowTransfer(s);
+          setError('');
+          setTransferForm({ toDepartment: isStore ? '' : 'store', targetHodId: '', quantity: '', notes: '', productTypeId: '', destProductId: '', destSize: '' });
+        }}
+        className="px-2.5 py-1 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
+      >
+        Transfer
+      </button>
+      <button
+        onClick={() => {
+          setShowEdit(s);
+          setError('');
+          setEditForm({ quantity: String(s.quantity), reason: '', password: '' });
+        }}
+        className="p-1.5 text-gray-400 hover:text-gray-600 cursor-pointer"
+      >
+        <Pencil size={14} />
+      </button>
+      <button
+        onClick={() => {
+          setShowDelete(s);
+          setError('');
+          setDeleteForm({ reason: '', password: '' });
+        }}
+        className="p-1.5 text-red-400 hover:text-red-600 cursor-pointer"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+
   if (!currentUser || currentUser.role !== 'admin') return null;
+
+  const storeGroups = isStore ? buildStoreGroups() : [];
 
   return (
     <div>
@@ -198,10 +298,88 @@ export default function DepartmentStockDetail() {
         </div>
       </div>
 
-      {loaded && sortedStock.length === 0 ? (
+      {loaded && stock.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Warehouse size={40} className="mx-auto mb-3 opacity-40" />
           <p>No stock in this department</p>
+        </div>
+      ) : isStore && storeGroups.length > 0 ? (
+        <div className="space-y-3">
+          {storeGroups.map(group => {
+            const isNameExp = expandedName === group.name;
+            return (
+              <div key={group.name} className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
+                <button
+                  onClick={() => toggleName(group.name)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-white/40 cursor-pointer"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gold-300 flex items-center justify-center">
+                      <Package size={20} className="text-dark-800" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-sm text-gray-900">{group.name}</p>
+                      <p className="text-[11px] text-gray-400">
+                        {group.types.length} {group.types.length === 1 ? 'type' : 'types'} · Total: <span className="font-semibold text-emerald-600">{group.totalQty}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className={`text-gray-400 transition-transform ${isNameExp ? 'rotate-90' : ''}`} />
+                </button>
+
+                {isNameExp && (
+                  <div className="border-t border-gray-100 p-3 space-y-2">
+                    {group.types.map(typeGroup => {
+                      const typeKey = `${group.name}::${typeGroup.typeName}`;
+                      const isTypeExp = expandedType === typeKey;
+                      return (
+                        <div key={typeGroup.typeName} className="border border-gray-100 rounded-xl overflow-hidden">
+                          <button
+                            onClick={() => setExpandedType(isTypeExp ? null : typeKey)}
+                            className="w-full flex items-center justify-between p-3 hover:bg-white/40 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <Layers size={16} className="text-blue-700" />
+                              </div>
+                              <div className="text-left">
+                                <p className="font-medium text-sm text-gray-900">{typeGroup.typeName}</p>
+                                <p className="text-[11px] text-gray-400">
+                                  {typeGroup.sizes.length} {typeGroup.sizes.length === 1 ? 'entry' : 'entries'} · Stock: <span className="font-semibold text-emerald-600">{typeGroup.totalQty}</span>
+                                </p>
+                              </div>
+                            </div>
+                            <ChevronRight size={16} className={`text-gray-400 transition-transform ${isTypeExp ? 'rotate-90' : ''}`} />
+                          </button>
+
+                          {isTypeExp && (
+                            <div className="border-t border-gray-100 p-2 space-y-1.5">
+                              {typeGroup.sizes.map(s => (
+                                <div key={s.id} className="flex items-center justify-between p-3 border border-gray-50 rounded-xl hover:bg-white/40">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                                      <Ruler size={14} className="text-amber-700" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-sm text-gray-900">{s.size || 'No Size'}</p>
+                                      <p className="text-[11px] text-gray-400">
+                                        Qty: <span className="font-semibold text-emerald-600">{s.quantity} {s.unit}</span>
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {stockActions(s)}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : sortedStock.length > 0 ? (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
@@ -245,36 +423,7 @@ export default function DepartmentStockDetail() {
                     <td className="px-4 py-3 text-gray-500">{s.unit}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => {
-                            setShowTransfer(s);
-                            setError('');
-                            setTransferForm({ toDepartment: isStore ? '' : 'store', targetHodId: '', quantity: '', notes: '', productTypeId: '', destProductId: '', destSize: '' });
-                          }}
-                          className="px-2.5 py-1 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
-                        >
-                          Transfer
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowEdit(s);
-                            setError('');
-                            setEditForm({ quantity: String(s.quantity), reason: '', password: '' });
-                          }}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 cursor-pointer"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowDelete(s);
-                            setError('');
-                            setDeleteForm({ reason: '', password: '' });
-                          }}
-                          className="p-1.5 text-red-400 hover:text-red-600 cursor-pointer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {stockActions(s)}
                       </div>
                     </td>
                   </tr>

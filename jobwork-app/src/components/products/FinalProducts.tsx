@@ -8,26 +8,7 @@ import {
   getActiveFinalProductTypes, createFinalProductType, deleteFinalProduct,
 } from '../../database/operations';
 import Modal from '../common/Modal';
-import { Boxes, Plus, Package, ChevronRight, FolderOpen, Trash2, Layers, Ruler } from 'lucide-react';
-
-interface ProductGroup {
-  name: string;
-  types: TypeGroup[];
-  totalStock: number;
-}
-
-interface TypeGroup {
-  typeId: string;
-  typeName: string;
-  sizes: SizeGroup[];
-  totalStock: number;
-}
-
-interface SizeGroup {
-  product: FinalProduct;
-  entries: FinalProductStockEntry[];
-  totalStock: number;
-}
+import { Boxes, Plus, Package, ChevronRight, FolderOpen, Trash2 } from 'lucide-react';
 
 export default function FinalProducts() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -35,9 +16,7 @@ export default function FinalProducts() {
   const [productTypes, setProductTypes] = useState<FinalProductType[]>([]);
   const [stockTotals, setStockTotals] = useState<Record<string, number>>({});
   const [entries, setEntries] = useState<FinalProductStockEntry[]>([]);
-  const [expandedName, setExpandedName] = useState<string | null>(null);
-  const [expandedType, setExpandedType] = useState<string | null>(null);
-  const [expandedSize, setExpandedSize] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [showAddType, setShowAddType] = useState(false);
   const [showStock, setShowStock] = useState<FinalProduct | null>(null);
@@ -66,52 +45,6 @@ export default function FinalProducts() {
     setStockTotals(totals);
     setLoaded(true);
   };
-
-  const buildGroups = (): ProductGroup[] => {
-    const nameMap = new Map<string, FinalProduct[]>();
-    for (const p of products) {
-      const list = nameMap.get(p.name) || [];
-      list.push(p);
-      nameMap.set(p.name, list);
-    }
-
-    const groups: ProductGroup[] = [];
-    for (const [name, prods] of nameMap) {
-      const typeMap = new Map<string, FinalProduct[]>();
-      for (const p of prods) {
-        const typeKey = p.productTypeId || '__none__';
-        const list = typeMap.get(typeKey) || [];
-        list.push(p);
-        typeMap.set(typeKey, list);
-      }
-
-      const types: TypeGroup[] = [];
-      for (const [typeKey, typeProds] of typeMap) {
-        const pt = typeKey !== '__none__' ? productTypes.find(t => t.id === typeKey) : undefined;
-        const sizes: SizeGroup[] = typeProds.map(p => ({
-          product: p,
-          entries: entries.filter(e => e.productId === p.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-          totalStock: stockTotals[p.id] ?? 0,
-        }));
-        types.push({
-          typeId: typeKey,
-          typeName: pt?.name || 'General',
-          sizes,
-          totalStock: sizes.reduce((s, sg) => s + sg.totalStock, 0),
-        });
-      }
-
-      groups.push({
-        name,
-        types,
-        totalStock: types.reduce((s, tg) => s + tg.totalStock, 0),
-      });
-    }
-
-    return groups;
-  };
-
-  const groups = buildGroups();
 
   const handleAddProduct = async () => {
     if (!currentUser) return;
@@ -163,28 +96,6 @@ export default function FinalProducts() {
     } catch (e: any) { setError(e.message); }
   };
 
-  const toggleName = (name: string) => {
-    if (expandedName === name) {
-      setExpandedName(null);
-      setExpandedType(null);
-      setExpandedSize(null);
-    } else {
-      setExpandedName(name);
-      setExpandedType(null);
-      setExpandedSize(null);
-    }
-  };
-
-  const toggleType = (key: string) => {
-    if (expandedType === key) {
-      setExpandedType(null);
-      setExpandedSize(null);
-    } else {
-      setExpandedType(key);
-      setExpandedSize(null);
-    }
-  };
-
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -210,143 +121,82 @@ export default function FinalProducts() {
         )}
       </div>
 
-      {loaded && groups.length === 0 ? (
+      {loaded && products.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Boxes size={40} className="mx-auto mb-3 opacity-40" />
           <p>No final products yet</p>
         </div>
-      ) : groups.length > 0 ? (
+      ) : products.length > 0 ? (
         <div className="space-y-3">
-          {groups.map(group => {
-            const isNameExp = expandedName === group.name;
+          {products.map(p => {
+            const total = stockTotals[p.id] ?? 0;
+            const isExp = expanded === p.id;
+            const productEntries = entries.filter(e => e.productId === p.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
             return (
-              <div key={group.name} className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
-                <button
-                  onClick={() => toggleName(group.name)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-white/40 cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
+              <div key={p.id} className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
+                <div className="flex items-center justify-between p-4">
+                  <button
+                    onClick={() => setExpanded(isExp ? null : p.id)}
+                    className="flex items-center gap-3 flex-1 text-left cursor-pointer"
+                  >
                     <div className="w-11 h-11 rounded-xl bg-gold-300 flex items-center justify-center">
                       <Package size={20} className="text-dark-800" />
                     </div>
-                    <div className="text-left">
-                      <p className="font-medium text-sm text-gray-900">{group.name}</p>
-                      <p className="text-[11px] text-gray-400">
-                        {group.types.length} {group.types.length === 1 ? 'type' : 'types'} · Total stock: <span className="font-semibold text-emerald-600">{group.totalStock}</span>
-                      </p>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm text-gray-900">{p.name}</p>
+                        {p.size && <span className="text-[11px] px-2 py-0.5 bg-gold-100 text-gold-700 rounded-full font-bold">{p.size} {p.unit}</span>}
+                      </div>
+                      <p className="text-[11px] text-gray-400">Stock available: <span className="font-semibold text-emerald-600">{total} {p.unit}</span></p>
                     </div>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    {canManage && (
+                      <>
+                        <button
+                          onClick={() => { setShowStock(p); setStockForm({ quantity: '', isOpening: false }); }}
+                          className="px-3 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
+                        >
+                          + Add Stock
+                        </button>
+                        <button
+                          onClick={() => { setShowDeleteProduct(p); setError(''); setDeleteReason(''); setDeletePassword(''); }}
+                          className="p-1.5 text-red-400 hover:text-red-600 cursor-pointer"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </>
+                    )}
+                    <ChevronRight size={16} className={`text-gray-400 transition-transform ${isExp ? 'rotate-90' : ''}`} />
                   </div>
-                  <ChevronRight size={16} className={`text-gray-400 transition-transform ${isNameExp ? 'rotate-90' : ''}`} />
-                </button>
+                </div>
 
-                {isNameExp && (
-                  <div className="border-t border-gray-100 p-3 space-y-2">
-                    {group.types.map(typeGroup => {
-                      const typeKey = `${group.name}::${typeGroup.typeId}`;
-                      const isTypeExp = expandedType === typeKey;
-                      return (
-                        <div key={typeGroup.typeId} className="border border-gray-100 rounded-xl overflow-hidden">
-                          <button
-                            onClick={() => toggleType(typeKey)}
-                            className="w-full flex items-center justify-between p-3 hover:bg-white/40 cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <Layers size={16} className="text-blue-700" />
-                              </div>
-                              <div className="text-left">
-                                <p className="font-medium text-sm text-gray-900">{typeGroup.typeName}</p>
-                                <p className="text-[11px] text-gray-400">
-                                  {typeGroup.sizes.length} {typeGroup.sizes.length === 1 ? 'size' : 'sizes'} · Stock: <span className="font-semibold text-emerald-600">{typeGroup.totalStock}</span>
-                                </p>
-                              </div>
-                            </div>
-                            <ChevronRight size={16} className={`text-gray-400 transition-transform ${isTypeExp ? 'rotate-90' : ''}`} />
-                          </button>
-
-                          {isTypeExp && (
-                            <div className="border-t border-gray-100 p-3 space-y-2">
-                              {typeGroup.sizes.map(sizeGroup => {
-                                const sizeKey = `${typeKey}::${sizeGroup.product.id}`;
-                                const isSizeExp = expandedSize === sizeKey;
-                                const p = sizeGroup.product;
-                                return (
-                                  <div key={p.id} className="border border-gray-100 rounded-xl overflow-hidden">
-                                    <div className="flex items-center justify-between p-3">
-                                      <button
-                                        onClick={() => setExpandedSize(isSizeExp ? null : sizeKey)}
-                                        className="flex items-center gap-3 flex-1 text-left cursor-pointer"
-                                      >
-                                        <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                                          <Ruler size={14} className="text-amber-700" />
-                                        </div>
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <p className="font-medium text-sm text-gray-900">{p.size || 'No Size'}</p>
-                                            <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{p.unit}</span>
-                                          </div>
-                                          <p className="text-[11px] text-gray-400">
-                                            Stock: <span className="font-semibold text-emerald-600">{sizeGroup.totalStock} {p.unit}</span>
-                                          </p>
-                                        </div>
-                                      </button>
-                                      <div className="flex items-center gap-2">
-                                        {canManage && (
-                                          <>
-                                            <button
-                                              onClick={() => { setShowStock(p); setStockForm({ quantity: '', isOpening: false }); }}
-                                              className="px-3 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
-                                            >
-                                              + Stock
-                                            </button>
-                                            <button
-                                              onClick={() => { setShowDeleteProduct(p); setError(''); setDeleteReason(''); setDeletePassword(''); }}
-                                              className="p-1.5 text-red-400 hover:text-red-600 cursor-pointer"
-                                            >
-                                              <Trash2 size={14} />
-                                            </button>
-                                          </>
-                                        )}
-                                        <ChevronRight size={14} className={`text-gray-400 transition-transform ${isSizeExp ? 'rotate-90' : ''}`} />
-                                      </div>
-                                    </div>
-
-                                    {isSizeExp && (
-                                      <div className="border-t border-gray-100 p-3">
-                                        {sizeGroup.entries.length === 0 ? (
-                                          <p className="text-[11px] text-gray-400">No stock entries</p>
-                                        ) : (
-                                          <table className="w-full text-xs">
-                                            <thead>
-                                              <tr className="text-left text-gray-500 border-b border-gray-200">
-                                                <th className="pb-2 font-medium">Date (IST)</th>
-                                                <th className="pb-2 font-medium text-right">Added</th>
-                                                <th className="pb-2 font-medium text-right">Remaining</th>
-                                                <th className="pb-2 font-medium">Type</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {sizeGroup.entries.map(e => (
-                                                <tr key={e.id} className="border-b border-gray-50">
-                                                  <td className="py-2">{new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
-                                                  <td className="py-2 text-right">{e.quantity} {p.unit}</td>
-                                                  <td className="py-2 text-right font-medium text-emerald-600">{e.remainingQuantity} {p.unit}</td>
-                                                  <td className="py-2">{e.isOpening ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded-full">Opening</span> : 'Stock'}</td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                {isExp && (
+                  <div className="border-t border-gray-100 p-4">
+                    {productEntries.length === 0 ? (
+                      <p className="text-[11px] text-gray-400">No stock entries</p>
+                    ) : (
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-left text-gray-500 border-b border-gray-200">
+                            <th className="pb-2 font-medium">Date (IST)</th>
+                            <th className="pb-2 font-medium text-right">Added</th>
+                            <th className="pb-2 font-medium text-right">Remaining</th>
+                            <th className="pb-2 font-medium">Type</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {productEntries.map(e => (
+                            <tr key={e.id} className="border-b border-gray-50">
+                              <td className="py-2">{new Date(e.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
+                              <td className="py-2 text-right">{e.quantity} {p.unit}</td>
+                              <td className="py-2 text-right font-medium text-emerald-600">{e.remainingQuantity} {p.unit}</td>
+                              <td className="py-2">{e.isOpening ? <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] rounded-full">Opening</span> : 'Stock'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
                 )}
               </div>
@@ -419,7 +269,7 @@ export default function FinalProducts() {
         </div>
       </Modal>
 
-      <Modal isOpen={!!showStock} onClose={() => { setShowStock(null); setError(''); }} title={`Add Stock - ${showStock?.name || ''}${showStock?.size ? ` (${showStock.size})` : ''}`}>
+      <Modal isOpen={!!showStock} onClose={() => { setShowStock(null); setError(''); }} title={`Add Stock - ${showStock?.name || ''}`}>
         <div className="space-y-4">
           {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
