@@ -1258,6 +1258,40 @@ export async function deleteFinalProduct(
     `Deleted final product: ${product.name}${product.size ? ` (${product.size})` : ''}. Reason: ${reason}`);
 }
 
+const DEPARTMENT_PRODUCT_NAMES: Record<string, string> = {
+  welding: 'Finished Welding Material',
+  pressing: 'Pressed Material',
+  buffing: 'Buffed Product',
+  packaging: 'Packed Product',
+};
+
+async function getOrCreateDepartmentProduct(
+  fromDepartment: string,
+  unit: string,
+  createdBy: string,
+  creatorName: string,
+  size?: string,
+  productTypeId?: string,
+): Promise<string> {
+  const name = DEPARTMENT_PRODUCT_NAMES[fromDepartment];
+  if (!name) throw new Error(`No auto-product mapping for department: ${fromDepartment}`);
+
+  const trackBySize = fromDepartment !== 'welding';
+  const matchSize = trackBySize ? (size || undefined) : undefined;
+
+  const allProducts = await db.finalProducts.where('isActive').equals(1).toArray();
+  const match = allProducts.find(p =>
+    p.name === name &&
+    (trackBySize ? (p.size || '') === (matchSize || '') : true) &&
+    (trackBySize ? (p.productTypeId || '') === (productTypeId || '') : true)
+  );
+
+  if (match) return match.id;
+
+  const product = await createFinalProduct(name, unit, createdBy, creatorName, matchSize, trackBySize ? productTypeId : undefined);
+  return product.id;
+}
+
 export async function addFinalProductStock(
   productId: string,
   quantity: number,
@@ -1471,11 +1505,13 @@ export async function transferStock(
     finalProductId, finalSize,
   );
 
-  if (fromDepartment === 'packaging' && toDepartment === 'store' && finalProductId) {
-    const product = await db.finalProducts.get(finalProductId);
-    if (product && product.isActive) {
-      await addFinalProductStock(finalProductId, quantity, transferredBy, transferredByName);
-    }
+  if (toDepartment === 'store' && DEPARTMENT_PRODUCT_NAMES[fromDepartment]) {
+    const sourceProduct = finalProductId ? await db.finalProducts.get(finalProductId) : undefined;
+    const autoProductId = await getOrCreateDepartmentProduct(
+      fromDepartment, unit, transferredBy, transferredByName,
+      finalSize, sourceProduct?.productTypeId,
+    );
+    await addFinalProductStock(autoProductId, quantity, transferredBy, transferredByName);
   }
 
   const targetHod = targetHodId ? await db.users.get(targetHodId) : undefined;
