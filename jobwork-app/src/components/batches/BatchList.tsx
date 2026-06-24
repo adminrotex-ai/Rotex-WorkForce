@@ -19,6 +19,7 @@ export default function BatchList() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({ totalPieces: '', sizes: '' });
   const [filter, setFilter] = useState<'all' | 'created' | 'in_progress' | 'completed'>('all');
+  const [loaded, setLoaded] = useState(false);
 
   const isAdmin = currentUser?.role === 'admin';
   const isStoreHod = currentUser?.role === 'hod' && currentUser.department === 'store';
@@ -40,6 +41,7 @@ export default function BatchList() {
       const allBatches = await getActiveBatches();
       setBatches(allBatches);
     }
+    setLoaded(true);
   };
 
   const handleCreate = async () => {
@@ -140,7 +142,7 @@ export default function BatchList() {
             </div>
           </div>
         ))}
-        {filtered.length === 0 && (
+        {loaded && filtered.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <Package size={40} className="mx-auto mb-3 opacity-40" />
             <p>No batches found</p>

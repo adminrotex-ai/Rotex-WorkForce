@@ -38,6 +38,7 @@ export default function DepartmentStockDetail() {
   const [editForm, setEditForm] = useState({ quantity: '', reason: '', password: '' });
   const [deleteForm, setDeleteForm] = useState({ reason: '', password: '' });
   const [error, setError] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
   const isStore = department === 'store';
   const isPressing = department === 'pressing';
@@ -63,6 +64,7 @@ export default function DepartmentStockDetail() {
     setProductTypes(pt);
     setHods(users.filter(u => u.role === 'hod'));
     setDepartments(depts.filter(d => d.key !== department));
+    setLoaded(true);
   };
 
   const handleAdd = async () => {
@@ -190,12 +192,12 @@ export default function DepartmentStockDetail() {
         </div>
       </div>
 
-      {sortedStock.length === 0 ? (
+      {loaded && sortedStock.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Warehouse size={40} className="mx-auto mb-3 opacity-40" />
           <p>No stock in this department</p>
         </div>
-      ) : (
+      ) : sortedStock.length > 0 ? (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl overflow-hidden">
           <table className="w-full text-sm">
             <thead>
@@ -275,7 +277,7 @@ export default function DepartmentStockDetail() {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
 
       {showHistory && (
         <div className="mt-6">

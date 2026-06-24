@@ -9,17 +9,32 @@ import type {
 } from '../types';
 
 // ---------------------------------------------------------------------------
-// Shared cloud data layer (Supabase / Postgres).
-//
-// Every record is stored as a JSON document: each table is `id text` + `doc
-// jsonb`. This adapter exposes the small slice of the Dexie API the app relies
-// on (toArray / get / add / put / update / delete / where(...).equals() /
-// where({...}) / orderBy().reverse() / count), so data is now shared across
-// every device instead of living in each browser's IndexedDB.
+// In-memory cache — eliminates network round-trips on repeat reads.
+// Mutations (add/put/update/delete) invalidate the relevant table.
 // ---------------------------------------------------------------------------
 
-// Fields stored as booleans but sometimes queried with 1/0. Normalising them
-// keeps `where('isActive').equals(1)` matching a stored `true`.
+const _cache = new Map<string, any>();
+
+function _qKey(table: string, filters: Filter[], orderField?: string, descending?: boolean): string {
+  return `q:${table}:${JSON.stringify(filters)}:${orderField ?? ''}:${descending ? 'D' : 'A'}`;
+}
+
+function _gKey(table: string, id: string): string {
+  return `g:${table}:${id}`;
+}
+
+function _invalidate(table: string): void {
+  for (const key of [..._cache.keys()]) {
+    if (key.startsWith(`q:${table}:`) || key.startsWith(`g:${table}:`)) {
+      _cache.delete(key);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared cloud data layer (Supabase / Postgres).
+// ---------------------------------------------------------------------------
+
 const BOOLEAN_FIELDS = new Set(['isActive', 'confirmed', 'synced', 'isOpening']);
 
 function jsonCol(field: string): string {
@@ -63,9 +78,15 @@ class DocQuery<T> {
   }
 
   async toArray(): Promise<T[]> {
+    const key = _qKey(this.table, this.filters, this.orderField, this.descending);
+    const cached = _cache.get(key);
+    if (cached) return cached as T[];
+
     const { data, error } = await this.base();
     if (error) throw new Error(error.message);
-    return ((data ?? []) as DocRow<T>[]).map(r => r.doc);
+    const result = ((data ?? []) as DocRow<T>[]).map(r => r.doc);
+    _cache.set(key, result);
+    return result;
   }
 
   async first(): Promise<T | undefined> {
@@ -110,24 +131,32 @@ class DocTable<T extends { id: string }> {
   }
 
   async get(id: string): Promise<T | undefined> {
+    const key = _gKey(this.table, id);
+    const cached = _cache.get(key);
+    if (cached !== undefined) return cached as T;
+
     const { data, error } = await supabase
       .from(this.table)
       .select('doc')
       .eq('id', id)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return data ? (data as { doc: T }).doc : undefined;
+    const result = data ? (data as { doc: T }).doc : undefined;
+    if (result !== undefined) _cache.set(key, result);
+    return result;
   }
 
   async add(obj: T): Promise<string> {
     const { error } = await supabase.from(this.table).insert({ id: obj.id, doc: obj });
     if (error) throw new Error(error.message);
+    _invalidate(this.table);
     return obj.id;
   }
 
   async put(obj: T): Promise<string> {
     const { error } = await supabase.from(this.table).upsert({ id: obj.id, doc: obj });
     if (error) throw new Error(error.message);
+    _invalidate(this.table);
     return obj.id;
   }
 
@@ -137,12 +166,14 @@ class DocTable<T extends { id: string }> {
     const merged = { ...current, ...changes };
     const { error } = await supabase.from(this.table).update({ doc: merged }).eq('id', id);
     if (error) throw new Error(error.message);
+    _invalidate(this.table);
     return 1;
   }
 
   async delete(id: string): Promise<void> {
     const { error } = await supabase.from(this.table).delete().eq('id', id);
     if (error) throw new Error(error.message);
+    _invalidate(this.table);
   }
 }
 

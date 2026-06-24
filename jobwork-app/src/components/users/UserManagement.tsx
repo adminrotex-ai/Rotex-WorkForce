@@ -50,6 +50,7 @@ export default function UserManagement() {
 
   const isAdmin = currentUser?.role === 'admin';
   const isHod = currentUser?.role === 'hod';
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -63,6 +64,7 @@ export default function UserManagement() {
     } else if (isHod) {
       setUsers(await getUsersByCreator(currentUser.id));
     }
+    setLoaded(true);
   };
 
   const handleImageFile = (file: File) => {
@@ -341,7 +343,7 @@ export default function UserManagement() {
     return (
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-4">My Team Members</h2>
-        {myUsers.length === 0 ? (
+        {loaded && myUsers.length === 0 ? (
           <p className="text-gray-400 text-sm">No users created yet</p>
         ) : (
           <div className="space-y-3">

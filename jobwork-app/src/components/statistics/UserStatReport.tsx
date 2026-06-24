@@ -39,7 +39,7 @@ export default function UserStatReport() {
     }
   };
 
-  if (!user) return <div className="flex items-center justify-center h-64"><p className="text-gray-400">Loading...</p></div>;
+  if (!user) return null;
 
   const totalServiceCost = serviceCosts.reduce((s, c) => s + c.totalCost, 0);
 

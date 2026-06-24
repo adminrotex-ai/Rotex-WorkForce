@@ -10,6 +10,7 @@ export default function Reports() {
   const [serviceCosts, setServiceCosts] = useState<ServiceCost[]>([]);
   const [departments, setDepartments] = useState<Array<{ key: string; label: string }>>([]);
   const [deptFilter, setDeptFilter] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -24,6 +25,7 @@ export default function Reports() {
     setTransfers(t.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setServiceCosts(sc.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setDepartments(depts);
+    setLoaded(true);
   };
 
   const filteredTransfers = deptFilter
@@ -126,7 +128,7 @@ export default function Reports() {
       {/* Transfer History */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
         <h2 className="text-base font-semibold text-gray-900 mb-4">Transfer History</h2>
-        {filteredTransfers.length === 0 ? (
+        {loaded && filteredTransfers.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-4">No transfers found</p>
         ) : (
           <div className="overflow-x-auto">

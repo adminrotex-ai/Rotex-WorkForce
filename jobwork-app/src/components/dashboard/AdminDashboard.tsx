@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const [allStock, setAllStock] = useState<DepartmentStock[]>([]);
   const [departments, setDepartments] = useState<Array<{ key: string; label: string }>>([]);
   const [accounting, setAccounting] = useState<Awaited<ReturnType<typeof getAllAccountingSummary>>>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -31,6 +32,7 @@ export default function AdminDashboard() {
     setAccounting(a);
     setAllStock(s);
     setDepartments(depts);
+    setLoaded(true);
   };
 
   const totalOwedToAdmin = accounting.reduce((sum, a) => sum + a.hodOwesAdmin, 0);
@@ -105,7 +107,7 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
-            {accounting.length === 0 && (
+            {loaded && accounting.length === 0 && (
               <p className="text-sm text-gray-400 py-4 text-center">No HODs created yet</p>
             )}
           </div>
@@ -127,7 +129,7 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
-            {departments.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No departments found</p>}
+            {loaded && departments.length === 0 && <p className="text-sm text-gray-400 py-4 text-center">No departments found</p>}
           </div>
         </div>
       </div>

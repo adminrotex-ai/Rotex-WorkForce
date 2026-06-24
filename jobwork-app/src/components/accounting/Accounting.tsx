@@ -204,6 +204,7 @@ function HodAccounting() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentDesc, setPaymentDesc] = useState('');
   const [error, setError] = useState('');
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => { if (currentUser) loadData(); }, [currentUser]);
 
@@ -211,6 +212,7 @@ function HodAccounting() {
     if (!currentUser) return;
     setAccounting(await getAccountingForHod(currentUser.id));
     setPendingPayments(await getPendingPayments(currentUser.id));
+    setLoaded(true);
   };
 
   const handlePayAdmin = async () => {
@@ -267,7 +269,7 @@ function HodAccounting() {
       {/* Transaction History */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
         <h2 className="text-base font-semibold text-gray-900 mb-4">Transactions</h2>
-        {accounting.entries.length === 0 ? (
+        {loaded && accounting.entries.length === 0 ? (
           <p className="text-gray-400 text-sm">No transactions yet</p>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">

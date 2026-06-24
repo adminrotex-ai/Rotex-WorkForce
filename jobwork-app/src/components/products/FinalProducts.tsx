@@ -31,6 +31,7 @@ export default function FinalProducts() {
   const isAdmin = currentUser?.role === 'admin';
   const isStoreHod = currentUser?.role === 'hod' && currentUser.department === 'store';
   const canManage = isAdmin || isStoreHod;
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => { load(); }, []);
 
@@ -42,6 +43,7 @@ export default function FinalProducts() {
     const totals: Record<string, number> = {};
     for (const p of list) totals[p.id] = await getFinalProductStockTotal(p.id);
     setStockTotals(totals);
+    setLoaded(true);
   };
 
   const handleAddProduct = async () => {
@@ -119,12 +121,12 @@ export default function FinalProducts() {
         )}
       </div>
 
-      {products.length === 0 ? (
+      {loaded && products.length === 0 ? (
         <div className="text-center py-12 text-gray-400">
           <Boxes size={40} className="mx-auto mb-3 opacity-40" />
           <p>No final products yet</p>
         </div>
-      ) : (
+      ) : products.length > 0 ? (
         <div className="space-y-3">
           {products.map(p => {
             const total = stockTotals[p.id] ?? 0;
@@ -201,7 +203,7 @@ export default function FinalProducts() {
             );
           })}
         </div>
-      )}
+      ) : null}
 
       <Modal isOpen={showAdd} onClose={() => { setShowAdd(false); setError(''); }} title="Add Final Product">
         <div className="space-y-4">

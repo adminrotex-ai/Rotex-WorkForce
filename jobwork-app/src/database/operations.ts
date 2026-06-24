@@ -68,6 +68,31 @@ async function requireAdminPassword(password: string): Promise<void> {
   if (!ok) throw new Error('Invalid admin password');
 }
 
+// ---- PRELOAD (warm cache for instant tab switching) ----
+
+export async function preloadCommonData(): Promise<void> {
+  await Promise.all([
+    db.users.where('isActive').equals(1).toArray(),
+    db.customDepartments.where('isActive').equals(1).toArray(),
+    db.finalProducts.where('isActive').equals(1).toArray(),
+    db.finalProductTypes.where('isActive').equals(1).toArray(),
+    db.departmentStock.where('isActive').equals(1).toArray(),
+    db.stockTransfers.toArray(),
+    db.consumerGoodItems.where('isActive').equals(1).toArray(),
+    db.materialTypes.where('isActive').equals(1).toArray(),
+    db.materialEntries.toArray(),
+    db.consumerGoodInventory.toArray(),
+    db.batches.where('isActive').equals(1).toArray(),
+    db.batchStageRecords.toArray(),
+    db.pieceEntries.toArray(),
+    db.serviceCosts.toArray(),
+    db.accountingEntries.toArray(),
+    db.paymentRecords.toArray(),
+    db.consumerGoodReceipts.toArray(),
+    db.stockAdjustments.toArray(),
+  ]);
+}
+
 // ---- DEPARTMENT OPERATIONS ----
 
 export async function loadCustomDepartmentsIntoLabels(): Promise<CustomDepartment[]> {
