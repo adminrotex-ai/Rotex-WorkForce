@@ -1403,7 +1403,7 @@ export async function editDepartmentStock(
 export async function transferStock(
   fromDepartment: string,
   toDepartment: string,
-  targetHodId: string,
+  targetHodId: string | undefined,
   quantity: number,
   transferredBy: string,
   transferredByName: string,
@@ -1462,7 +1462,7 @@ export async function transferStock(
     }
   }
 
-  const targetHod = await db.users.get(targetHodId);
+  const targetHod = targetHodId ? await db.users.get(targetHodId) : undefined;
   const targetHodName = targetHod?.firstName || '';
 
   const transfer: StockTransfer = {
