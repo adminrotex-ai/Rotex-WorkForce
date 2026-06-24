@@ -1267,6 +1267,23 @@ export async function addFinalProductStock(
   isOpening?: boolean,
 ): Promise<FinalProductStockEntry> {
   ensurePositive(quantity, 'Quantity');
+  const product = await db.finalProducts.get(productId);
+
+  const existing = await db.finalProductStock.where('productId').equals(productId).toArray();
+  const match = existing.find(e => !isOpening === !e.isOpening);
+
+  if (match) {
+    const newQty = match.quantity + quantity;
+    const newRemaining = match.remainingQuantity + quantity;
+    await db.finalProductStock.update(match.id, {
+      quantity: newQty,
+      remainingQuantity: newRemaining,
+    });
+    await addAudit('PRODUCT_STOCK_ADDED', 'product', 'final_product_stock', match.id, enteredBy, entererName,
+      `Added stock for ${product?.name}: +${quantity} ${product?.unit}. Total: ${newRemaining}`);
+    return { ...match, quantity: newQty, remainingQuantity: newRemaining };
+  }
+
   const entry: FinalProductStockEntry = {
     id: generateId(),
     productId,
@@ -1278,7 +1295,6 @@ export async function addFinalProductStock(
     createdAt: now(),
   };
   await db.finalProductStock.add(entry);
-  const product = await db.finalProducts.get(productId);
   await addAudit(isOpening ? 'PRODUCT_OPENING_STOCK' : 'PRODUCT_STOCK_ADDED', 'product', 'final_product_stock', entry.id, enteredBy, entererName,
     `${isOpening ? 'Opening stock' : 'Added stock'} for ${product?.name}: ${quantity} ${product?.unit}`);
   return entry;
