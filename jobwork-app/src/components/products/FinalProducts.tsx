@@ -5,10 +5,10 @@ import type { FinalProduct, FinalProductType, FinalProductStockEntry } from '../
 import {
   getActiveFinalProducts, createFinalProduct, addFinalProductStock,
   getFinalProductStockEntries, getFinalProductStockTotal,
-  getActiveFinalProductTypes, createFinalProductType,
+  getActiveFinalProductTypes, createFinalProductType, deleteFinalProduct,
 } from '../../database/operations';
 import Modal from '../common/Modal';
-import { Boxes, Plus, Package, ChevronRight, FolderOpen } from 'lucide-react';
+import { Boxes, Plus, Package, ChevronRight, FolderOpen, Trash2 } from 'lucide-react';
 
 export default function FinalProducts() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -23,6 +23,9 @@ export default function FinalProducts() {
   const [productForm, setProductForm] = useState({ productTypeId: '', size: '', unit: 'pcs' });
   const [typeName, setTypeName] = useState('');
   const [stockForm, setStockForm] = useState({ quantity: '', isOpening: false });
+  const [showDeleteProduct, setShowDeleteProduct] = useState<FinalProduct | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [error, setError] = useState('');
 
   const isAdmin = currentUser?.role === 'admin';
@@ -62,6 +65,18 @@ export default function FinalProducts() {
       await createFinalProductType(typeName, currentUser.id, currentUser.firstName);
       setShowAddType(false);
       setTypeName('');
+      load();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!currentUser || !showDeleteProduct) return;
+    setError('');
+    try {
+      await deleteFinalProduct(showDeleteProduct.id, deleteReason, currentUser.id, currentUser.firstName, deletePassword);
+      setShowDeleteProduct(null);
+      setDeleteReason('');
+      setDeletePassword('');
       load();
     } catch (e: any) { setError(e.message); }
   };
@@ -135,12 +150,20 @@ export default function FinalProducts() {
                   </button>
                   <div className="flex items-center gap-2">
                     {canManage && (
-                      <button
-                        onClick={() => { setShowStock(p); setStockForm({ quantity: '', isOpening: false }); }}
-                        className="px-3 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
-                      >
-                        + Add Stock
-                      </button>
+                      <>
+                        <button
+                          onClick={() => { setShowStock(p); setStockForm({ quantity: '', isOpening: false }); }}
+                          className="px-3 py-1.5 text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-full cursor-pointer"
+                        >
+                          + Add Stock
+                        </button>
+                        <button
+                          onClick={() => { setShowDeleteProduct(p); setError(''); setDeleteReason(''); setDeletePassword(''); }}
+                          className="p-1.5 text-red-400 hover:text-red-600 cursor-pointer"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </>
                     )}
                     <ChevronRight size={16} className={`text-gray-400 transition-transform ${isExp ? 'rotate-90' : ''}`} />
                   </div>
@@ -268,6 +291,38 @@ export default function FinalProducts() {
           </label>
           <button onClick={handleAddStock} className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer">
             Add Stock
+          </button>
+        </div>
+      </Modal>
+
+      <Modal isOpen={!!showDeleteProduct} onClose={() => { setShowDeleteProduct(null); setError(''); }} title="Delete Final Product">
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-[11px] text-red-700">
+            This will deactivate <strong>{showDeleteProduct?.name}{showDeleteProduct?.size ? ` (${showDeleteProduct.size})` : ''}</strong> and hide it from the product list.
+          </div>
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Deletion *</label>
+            <textarea
+              value={deleteReason}
+              onChange={e => setDeleteReason(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              rows={2}
+              placeholder="Why is this product being deleted?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password *</label>
+            <input
+              type="password"
+              value={deletePassword}
+              onChange={e => setDeletePassword(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              placeholder="Enter admin password to confirm"
+            />
+          </div>
+          <button onClick={handleDeleteProduct} className="w-full bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 cursor-pointer">
+            Delete Product
           </button>
         </div>
       </Modal>
