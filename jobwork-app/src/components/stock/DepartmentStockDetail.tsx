@@ -92,7 +92,8 @@ export default function DepartmentStockDetail() {
     if (!Number.isFinite(qty) || qty <= 0) { setError('Enter a positive quantity'); return; }
     if (!transferForm.toDepartment) { setError('Select destination department'); return; }
 
-    if (!transferForm.targetHodId) { setError('Select target HOD'); return; }
+    const destHods = hodsForDept(transferForm.toDepartment);
+    if (destHods.length > 0 && !transferForm.targetHodId) { setError('Select target HOD'); return; }
 
     const isPressTransfer = transferForm.toDepartment === 'pressing';
     if (isPressTransfer && !transferForm.productTypeId) { setError('Select product type for pressing department'); return; }
@@ -104,7 +105,7 @@ export default function DepartmentStockDetail() {
         : undefined;
 
       await transferStock(
-        department, transferForm.toDepartment, transferForm.targetHodId,
+        department, transferForm.toDepartment, transferForm.targetHodId || undefined,
         qty, currentUser.id, currentUser.firstName,
         showTransfer.productId, showTransfer.size,
         transferForm.notes || undefined,
@@ -143,7 +144,7 @@ export default function DepartmentStockDetail() {
 
   const hodsForDept = (deptKey: string) => hods.filter(h => h.department === deptKey);
 
-  const transferHodDept = transferForm.toDepartment ? (isStore ? transferForm.toDepartment : department) : '';
+  const transferHodDept = transferForm.toDepartment || '';
   const transferHodList = transferHodDept ? hodsForDept(transferHodDept) : [];
 
   const productName = (pid?: string) => products.find(p => p.id === pid)?.name || '';
@@ -446,20 +447,23 @@ export default function DepartmentStockDetail() {
           </div>
           {transferForm.toDepartment && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Target HOD *</label>
-              <select
-                key={transferHodDept}
-                value={transferForm.targetHodId}
-                onChange={e => setTransferForm({ ...transferForm, targetHodId: e.target.value })}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              >
-                <option value="">Select HOD</option>
-                {transferHodList.map(h => (
-                  <option key={h.id} value={h.id}>{h.firstName} — {DEPARTMENT_LABELS[h.department] || h.department}</option>
-                ))}
-              </select>
-              {transferHodList.length === 0 && (
-                <p className="text-[11px] text-amber-600 mt-1">No HODs in {DEPARTMENT_LABELS[transferHodDept || ''] || transferHodDept}</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Target HOD {transferHodList.length > 0 ? '*' : ''}
+              </label>
+              {transferHodList.length > 0 ? (
+                <select
+                  key={transferHodDept}
+                  value={transferForm.targetHodId}
+                  onChange={e => setTransferForm({ ...transferForm, targetHodId: e.target.value })}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                >
+                  <option value="">Select HOD</option>
+                  {transferHodList.map(h => (
+                    <option key={h.id} value={h.id}>{h.firstName}</option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-[11px] text-amber-600 p-2 bg-amber-50 rounded-lg">No HODs in {DEPARTMENT_LABELS[transferHodDept] || transferHodDept}</p>
               )}
             </div>
           )}
