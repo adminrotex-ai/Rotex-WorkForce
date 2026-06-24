@@ -39,6 +39,7 @@ export default function DepartmentStockDetail() {
   const [error, setError] = useState('');
 
   const isPressing = department === 'pressing';
+  const isWelding = department === 'welding';
   const deptLabel = DEPARTMENT_LABELS[department || ''] || department || '';
 
   useEffect(() => { load(); }, [department]);
@@ -321,6 +322,7 @@ export default function DepartmentStockDetail() {
               </select>
             </div>
           )}
+          {!isWelding && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Size {isPressing ? '*' : <span className="text-gray-400 font-normal">(optional)</span>}
@@ -333,6 +335,7 @@ export default function DepartmentStockDetail() {
               placeholder="e.g. 12 inch, Large, 500ml"
             />
           </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Quantity *</label>

@@ -576,6 +576,9 @@ export async function addMaterialEntry(
   await addAudit(isOpening ? 'MATERIAL_OPENING_STOCK' : 'MATERIAL_ENTRY_ADDED', 'material', 'material_entry', entry.id, enteredBy, entererName,
     `${isOpening ? 'Opening stock' : 'Added entry'}: ${mt?.name} ${isOpening ? '' : `from ${supplierName}`}, qty: ${quantity} ${unit}, price: ₹${price}`,
     JSON.stringify({ materialTypeId, supplierName, price, quantity, isOpening }));
+
+  await addStockToDepartment('store', quantity, unit, enteredBy, entererName);
+
   return entry;
 }
 
@@ -1227,6 +1230,10 @@ export async function addStockToDepartment(
     throw new Error('Size is compulsory for pressing department stock');
   }
 
+  if (department === 'welding') {
+    size = undefined;
+  }
+
   const existing = await db.departmentStock.where({ department, isActive: 1 }).toArray();
   const match = existing.find(s =>
     (s.productId || '') === (productId || '') &&
@@ -1338,7 +1345,7 @@ export async function transferStock(
     lastUpdatedAt: now(),
   });
 
-  const inheritedSize = size || sourceMatch.size;
+  const inheritedSize = toDepartment === 'welding' ? undefined : (size || sourceMatch.size);
   const inheritedProductId = productId || sourceMatch.productId;
 
   await addStockToDepartment(
