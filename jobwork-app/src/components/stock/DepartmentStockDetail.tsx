@@ -142,6 +142,10 @@ export default function DepartmentStockDetail() {
   };
 
   const hodsForDept = (deptKey: string) => hods.filter(h => h.department === deptKey);
+
+  const transferHodDept = isStore ? transferForm.toDepartment : department;
+  const transferHodList = transferHodDept ? hodsForDept(transferHodDept) : [];
+
   const productName = (pid?: string) => products.find(p => p.id === pid)?.name || '';
   const productTypeName = (pid?: string) => {
     const prod = products.find(p => p.id === pid);
@@ -448,12 +452,11 @@ export default function DepartmentStockDetail() {
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
             >
               <option value="">Select HOD</option>
-              {(isStore ? (transferForm.toDepartment ? hodsForDept(transferForm.toDepartment) : []) : hodsForDept(department!)).map(h => (
-                <option key={h.id} value={h.id}>{h.firstName}</option>
+              {transferHodList.map(h => (
+                <option key={h.id} value={h.id}>{h.firstName} — {DEPARTMENT_LABELS[h.department] || h.department}</option>
               ))}
             </select>
-            {((isStore && transferForm.toDepartment && hodsForDept(transferForm.toDepartment).length === 0) ||
-              (!isStore && hodsForDept(department!).length === 0)) && (
+            {transferHodDept && transferHodList.length === 0 && (
               <p className="text-[11px] text-amber-600 mt-1">No HODs in this department</p>
             )}
           </div>
