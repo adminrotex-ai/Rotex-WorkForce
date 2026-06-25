@@ -213,6 +213,7 @@ export interface ServiceCost {
   size?: string;
   hodId?: string;
   productTypeId?: string;
+  transferId?: string;
   enteredBy: string;
   createdAt: string;
 }
@@ -349,6 +350,11 @@ export interface StockTransfer {
   transferredByName: string;
   notes?: string;
   createdAt: string;
+  isActive?: boolean;
+  deletedAt?: string;
+  deleteReason?: string;
+  deletedBy?: string;
+  deletedByName?: string;
 }
 
 export interface StockAdjustment {

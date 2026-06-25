@@ -7,9 +7,15 @@ import { DEPARTMENT_LABELS } from '../../types';
 import {
   getActiveUsers, getUsersByCreator, getDepartmentStock,
   getStockTransfers, getServiceCosts, getActiveDepartments,
+  getConsumerGoodsCostTotal, getCostPaymentStats,
+  getServiceCostsByHodBreakdown, getConsumerGoodsCostByDepartment,
+  getPeriodStatistics,
 } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
-import { BarChart3, Warehouse, ArrowRightLeft, DollarSign, Users, ChevronRight } from 'lucide-react';
+import {
+  BarChart3, Warehouse, ArrowRightLeft, DollarSign, Users,
+  ChevronRight, ShoppingCart, CheckCircle, TrendingUp,
+} from 'lucide-react';
 
 export default function Statistics() {
   const { currentUser } = useSelector((s: RootState) => s.auth);
@@ -18,6 +24,11 @@ export default function Statistics() {
   const [allStock, setAllStock] = useState<DepartmentStock[]>([]);
   const [transfers, setTransfers] = useState<StockTransfer[]>([]);
   const [totalServiceCost, setTotalServiceCost] = useState(0);
+  const [consumerGoodsCost, setConsumerGoodsCost] = useState(0);
+  const [paymentStats, setPaymentStats] = useState<{ totalConfirmed: number; totalPending: number; confirmedCount: number } | null>(null);
+  const [hodBreakdown, setHodBreakdown] = useState<Array<{ hodId: string; hodName: string; department: Department; totalServiceCost: number; totalPieces: number }>>([]);
+  const [consumerByDept, setConsumerByDept] = useState<Array<{ department: string; totalAmount: number; receiptCount: number }>>([]);
+  const [productionStats, setProductionStats] = useState<{ batchCount: number; totalPieces: number } | null>(null);
   const [departments, setDepartments] = useState<Array<{ key: string; label: string }>>([]);
   const [expandedDept, setExpandedDept] = useState<Department | null>(null);
   const [expandedHod, setExpandedHod] = useState<string | null>(null);
@@ -30,17 +41,27 @@ export default function Statistics() {
 
   const loadData = async () => {
     if (!currentUser) return;
-    const [u, s, t, costs, depts] = await Promise.all([
+    const [u, s, t, costs, depts, cgCost, pStats, hodBrk, cgByDept, prodStats] = await Promise.all([
       isAdmin ? getActiveUsers() : getUsersByCreator(currentUser.id),
       getDepartmentStock(),
       getStockTransfers(),
       getServiceCosts({}),
       getActiveDepartments(),
+      isAdmin ? getConsumerGoodsCostTotal() : Promise.resolve(0),
+      isAdmin ? getCostPaymentStats() : Promise.resolve(null),
+      isAdmin ? getServiceCostsByHodBreakdown() : Promise.resolve([]),
+      isAdmin ? getConsumerGoodsCostByDepartment() : Promise.resolve([]),
+      isAdmin ? getPeriodStatistics('all') : Promise.resolve(null),
     ]);
     setUsers(u);
     setAllStock(s);
     setTransfers(t);
     setTotalServiceCost(costs.reduce((sum, c) => sum + c.totalCost, 0));
+    setConsumerGoodsCost(cgCost);
+    setPaymentStats(pStats);
+    setHodBreakdown(hodBrk);
+    setConsumerByDept(cgByDept);
+    setProductionStats(prodStats ? { batchCount: prodStats.batchCount, totalPieces: prodStats.totalPieces } : null);
     setDepartments(depts);
     setLoaded(true);
   };
@@ -52,17 +73,18 @@ export default function Statistics() {
 
   const totalStockQty = allStock.reduce((s, item) => s + item.quantity, 0);
   const deptsWithStock = new Set(allStock.map(s => s.department)).size;
+  const activeHodCount = users.filter(u => u.role === 'hod').length;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-light text-gray-900">Statistics</h1>
-          <p className="text-sm text-gray-400 mt-1">Stock and cost overview</p>
+          <p className="text-sm text-gray-400 mt-1">Comprehensive overview of stock, costs, and production</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-gold-300 flex items-center justify-center shrink-0"><Warehouse size={20} className="text-dark-800" /></div>
           <div>
@@ -83,6 +105,42 @@ export default function Statistics() {
           <div>
             <p className="text-2xl font-light text-emerald-600">{formatCurrency(totalServiceCost)}</p>
             <p className="text-sm text-gray-600">Service Costs</p>
+          </div>
+        </div>
+        {isAdmin && (
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-orange-200 flex items-center justify-center shrink-0"><ShoppingCart size={20} className="text-dark-800" /></div>
+            <div>
+              <p className="text-2xl font-light text-orange-600">{formatCurrency(consumerGoodsCost)}</p>
+              <p className="text-sm text-gray-600">Consumer Goods Cost</p>
+            </div>
+          </div>
+        )}
+        {isAdmin && paymentStats && (
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-violet-200 flex items-center justify-center shrink-0"><CheckCircle size={20} className="text-dark-800" /></div>
+            <div>
+              <p className="text-2xl font-light text-violet-600">{formatCurrency(paymentStats.totalConfirmed)}</p>
+              <p className="text-sm text-gray-600">Confirmed Payments</p>
+              <p className="text-[11px] text-gray-400">{paymentStats.confirmedCount} confirmations</p>
+            </div>
+          </div>
+        )}
+        {isAdmin && productionStats && (
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-cyan-200 flex items-center justify-center shrink-0"><TrendingUp size={20} className="text-dark-800" /></div>
+            <div>
+              <p className="text-2xl font-light text-gray-900">{productionStats.totalPieces}</p>
+              <p className="text-sm text-gray-600">Total Production</p>
+              <p className="text-[11px] text-gray-400">{productionStats.batchCount} batches</p>
+            </div>
+          </div>
+        )}
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-200 flex items-center justify-center shrink-0"><Users size={20} className="text-dark-800" /></div>
+          <div>
+            <p className="text-2xl font-light text-gray-900">{isAdmin ? activeHodCount : users.length}</p>
+            <p className="text-sm text-gray-600">{isAdmin ? 'Active HODs' : 'Team Members'}</p>
           </div>
         </div>
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-5 flex items-start gap-4">
@@ -137,6 +195,75 @@ export default function Statistics() {
         </div>
       )}
 
+      {isAdmin && hodBreakdown.length > 0 && (
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">HOD-wise Service Cost Breakdown</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500 border-b border-gray-200">
+                  <th className="pb-2 font-medium">HOD</th>
+                  <th className="pb-2 font-medium">Department</th>
+                  <th className="pb-2 font-medium text-right">Total Pieces</th>
+                  <th className="pb-2 font-medium text-right">Total Service Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hodBreakdown.map(h => (
+                  <tr key={h.hodId} className="border-b border-gray-50">
+                    <td className="py-2.5 font-medium text-gray-900">{h.hodName}</td>
+                    <td className="py-2.5 text-gray-500">{DEPARTMENT_LABELS[h.department] || h.department}</td>
+                    <td className="py-2.5 text-right">{h.totalPieces}</td>
+                    <td className="py-2.5 text-right font-semibold text-emerald-600">{formatCurrency(h.totalServiceCost)}</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-gray-200">
+                  <td className="py-2.5 font-semibold text-gray-900" colSpan={2}>Total</td>
+                  <td className="py-2.5 text-right font-semibold">{hodBreakdown.reduce((s, h) => s + h.totalPieces, 0)}</td>
+                  <td className="py-2.5 text-right font-semibold text-emerald-600">{formatCurrency(hodBreakdown.reduce((s, h) => s + h.totalServiceCost, 0))}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && consumerByDept.length > 0 && (
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Consumer Goods Cost by Department</h2>
+          <div className="space-y-2">
+            {consumerByDept.map(d => (
+              <div key={d.department} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                <div>
+                  <span className="text-sm text-gray-900">{DEPARTMENT_LABELS[d.department] || d.department}</span>
+                  <span className="text-[11px] text-gray-400 ml-2">{d.receiptCount} receipts</span>
+                </div>
+                <span className="text-sm font-semibold text-orange-600">{formatCurrency(d.totalAmount)}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between py-2 border-t-2 border-gray-200">
+              <span className="text-sm font-semibold text-gray-900">Total</span>
+              <span className="text-sm font-semibold text-orange-600">{formatCurrency(consumerByDept.reduce((s, d) => s + d.totalAmount, 0))}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && paymentStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+          <div className="bg-emerald-50 rounded-2xl p-5">
+            <p className="text-sm text-emerald-600 mb-1">Total Confirmed</p>
+            <p className="text-2xl font-light text-emerald-700">{formatCurrency(paymentStats.totalConfirmed)}</p>
+            <p className="text-[11px] text-emerald-500">{paymentStats.confirmedCount} payment confirmations</p>
+          </div>
+          <div className="bg-amber-50 rounded-2xl p-5">
+            <p className="text-sm text-amber-600 mb-1">Pending Amount</p>
+            <p className="text-2xl font-light text-amber-700">{formatCurrency(paymentStats.totalPending)}</p>
+            <p className="text-[11px] text-amber-500">Across service costs & consumer goods</p>
+          </div>
+        </div>
+      )}
+
       {(isAdmin || isHod) && (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-4">
@@ -169,10 +296,16 @@ export default function Statistics() {
                           <p className="text-gray-400 text-[11px] p-2">No HODs</p>
                         ) : deptHods.map(hod => {
                           const hodUsers = usersByHod(hod.id);
+                          const hodCostData = hodBreakdown.find(h => h.hodId === hod.id);
                           return (
                             <div key={hod.id} className="border border-gray-100 rounded-xl">
                               <div className="flex items-center justify-between p-3">
-                                <span className="font-medium text-sm text-gray-900">{hod.firstName} (HOD)</span>
+                                <div>
+                                  <span className="font-medium text-sm text-gray-900">{hod.firstName} (HOD)</span>
+                                  {hodCostData && (
+                                    <span className="text-[11px] text-emerald-600 ml-2">{formatCurrency(hodCostData.totalServiceCost)}</span>
+                                  )}
+                                </div>
                                 <div className="flex gap-2">
                                   <button
                                     onClick={() => navigate(`/statistics/user/${hod.id}`)}
