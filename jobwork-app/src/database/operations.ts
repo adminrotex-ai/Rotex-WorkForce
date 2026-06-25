@@ -849,6 +849,7 @@ export async function recordServiceCost(
   size?: string,
   stageRecordId?: string,
   hodId?: string,
+  productTypeId?: string,
 ): Promise<ServiceCost> {
   ensurePositive(costPerPiece, 'Cost per piece');
   ensurePositive(totalPieces, 'Total pieces');
@@ -862,6 +863,8 @@ export async function recordServiceCost(
     totalPieces,
     totalCost: costPerPiece * totalPieces,
     size,
+    hodId,
+    productTypeId,
     enteredBy,
     createdAt: now(),
   };
@@ -910,6 +913,19 @@ export async function getServiceCosts(filters: {
     if (filters.enteredBy && s.enteredBy !== filters.enteredBy) return false;
     return true;
   });
+}
+
+export async function getServiceCostsForHod(hodId: string): Promise<ServiceCost[]> {
+  const entries = await db.accountingEntries.where('hodId').equals(hodId).toArray();
+  const costIds = entries
+    .filter(e => e.type === 'admin_owes_hod' && e.relatedCostId)
+    .map(e => e.relatedCostId!);
+  const costs: ServiceCost[] = [];
+  for (const id of costIds) {
+    const cost = await db.serviceCosts.get(id);
+    if (cost) costs.push(cost);
+  }
+  return costs.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 // ---- ACCOUNTING OPERATIONS ----
@@ -1600,6 +1616,7 @@ export async function transferStock(
       await recordServiceCost(
         '', fromDepartment, applicableRate, quantity,
         transferredBy, transferredByName, finalSize, undefined, targetHodId,
+        sourceProduct?.productTypeId,
       );
     }
   }
