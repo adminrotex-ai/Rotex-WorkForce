@@ -211,6 +211,8 @@ export interface ServiceCost {
   totalPieces: number;
   totalCost: number;
   size?: string;
+  hodId?: string;
+  productTypeId?: string;
   enteredBy: string;
   createdAt: string;
 }
