@@ -8,7 +8,7 @@ import {
   getActiveUsers, getUsersByCreator, createUser, deleteUser, getActiveDepartments,
   getServiceCosts, recordServiceCost, updateServiceCost, updateUserServiceCostRate,
   getServiceCostRatesForHod, addServiceCostRate, updateServiceCostRateEntry,
-  deleteServiceCostRateEntry, getActiveFinalProductTypes,
+  deleteServiceCostRateEntry, getActiveFinalProductTypes, getActiveFinalProducts,
 } from '../../database/operations';
 import Modal from '../common/Modal';
 import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil, Settings } from 'lucide-react';
@@ -38,6 +38,7 @@ export default function UserManagement() {
   const [showRateConfig, setShowRateConfig] = useState<User | null>(null);
   const [hodRates, setHodRates] = useState<ServiceCostRate[]>([]);
   const [productTypes, setProductTypes] = useState<FinalProductType[]>([]);
+  const [availableSizes, setAvailableSizes] = useState<string[]>([]);
   const [showAddRate, setShowAddRate] = useState(false);
   const [rateForm, setRateForm] = useState({ costPerPiece: '', size: '', productTypeId: '' });
   const [editingRate, setEditingRate] = useState<ServiceCostRate | null>(null);
@@ -199,12 +200,15 @@ export default function UserManagement() {
   const openRateConfig = async (hod: User) => {
     setShowRateConfig(hod);
     setError('');
-    const [rates, types] = await Promise.all([
+    const [rates, types, products] = await Promise.all([
       getServiceCostRatesForHod(hod.id),
       getActiveFinalProductTypes(),
+      getActiveFinalProducts(),
     ]);
     setHodRates(rates.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setProductTypes(types);
+    const sizes = [...new Set(products.map(p => p.size).filter((s): s is string => !!s))].sort();
+    setAvailableSizes(sizes);
   };
 
   const handleAddRate = async () => {
@@ -959,13 +963,16 @@ export default function UserManagement() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Size <span className="text-gray-400 font-normal">(optional)</span></label>
-            <input
-              type="text"
+            <select
               value={rateForm.size}
               onChange={e => setRateForm({ ...rateForm, size: e.target.value })}
               className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              placeholder="e.g. Large, 12 inch"
-            />
+            >
+              <option value="">All sizes</option>
+              {availableSizes.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Cost per Piece (₹) *</label>
