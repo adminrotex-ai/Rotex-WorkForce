@@ -11,7 +11,7 @@ import {
   deleteServiceCostRateEntry, getActiveFinalProductTypes, getActiveFinalProducts,
 } from '../../database/operations';
 import Modal from '../common/Modal';
-import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil, Settings } from 'lucide-react';
+import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil, IndianRupee } from 'lucide-react';
 import { formatCurrency } from '../../utils/helpers';
 
 export default function UserManagement() {
@@ -270,7 +270,7 @@ export default function UserManagement() {
                                   className="p-2 rounded-xl hover:bg-amber-50 text-amber-500 cursor-pointer"
                                   title="Configure Service Cost Rates"
                                 >
-                                  <Settings size={15} />
+                                  <IndianRupee size={15} />
                                 </button>
                               )}
                               <button
@@ -688,7 +688,7 @@ export default function UserManagement() {
 
           {hodRates.length === 0 ? (
             <div className="text-center py-6">
-              <Settings size={28} className="mx-auto mb-2 text-gray-300" />
+              <IndianRupee size={28} className="mx-auto mb-2 text-gray-300" />
               <p className="text-gray-400 text-sm">No specific rates configured</p>
               <p className="text-[11px] text-gray-300 mt-1">
                 {showRateConfig?.serviceCostRate && showRateConfig.serviceCostRate > 0
