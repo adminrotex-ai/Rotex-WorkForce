@@ -300,6 +300,13 @@ export async function deleteUser(
     await requireAdminPassword(adminPassword);
   }
   await db.users.update(userId, { isActive: false, deletedAt: now(), deleteReason: reason, deletedBy });
+
+  if (user.role === 'hod') {
+    const cleanup = await cleanupHodData(userId, deletedBy, deleterName);
+    await addAudit('HOD_CLEANUP', 'deletion', 'user', userId, deletedBy, deleterName,
+      `HOD cleanup for "${user.firstName}": reversed ${cleanup.reversedEntries} accounting entries, deactivated ${cleanup.deactivatedRates} service cost rates, ${cleanup.deactivatedConfirmations} payment confirmations`);
+  }
+
   await addAudit('USER_DELETED', 'deletion', 'user', userId, deletedBy, deleterName,
     `Deleted user "${user.firstName}" (${user.role}) from ${DEPARTMENT_LABELS[user.department] || user.department}. Reason: ${reason}`);
 }
@@ -850,6 +857,7 @@ export async function recordServiceCost(
   stageRecordId?: string,
   hodId?: string,
   productTypeId?: string,
+  transferId?: string,
 ): Promise<ServiceCost> {
   ensurePositive(costPerPiece, 'Cost per piece');
   ensurePositive(totalPieces, 'Total pieces');
@@ -865,6 +873,7 @@ export async function recordServiceCost(
     size,
     hodId,
     productTypeId,
+    transferId,
     enteredBy,
     createdAt: now(),
   };
@@ -1662,6 +1671,7 @@ export async function transferStock(
     transferredByName,
     notes: notes?.trim() || undefined,
     createdAt: now(),
+    isActive: true,
   };
   await db.stockTransfers.add(transfer);
 
@@ -1678,7 +1688,7 @@ export async function transferStock(
       await recordServiceCost(
         '', fromDepartment, applicableRate, quantity,
         transferredBy, transferredByName, finalSize, undefined, targetHodId,
-        sourceProduct?.productTypeId,
+        sourceProduct?.productTypeId, transfer.id,
       );
     }
   }
@@ -1691,8 +1701,9 @@ export async function getStockTransfers(filters?: {
   toDepartment?: string;
 }): Promise<StockTransfer[]> {
   const all = await db.stockTransfers.toArray();
-  if (!filters) return all;
-  return all.filter(t => {
+  const active = all.filter(t => t.isActive !== false);
+  if (!filters) return active;
+  return active.filter(t => {
     if (filters.fromDepartment && t.fromDepartment !== filters.fromDepartment) return false;
     if (filters.toDepartment && t.toDepartment !== filters.toDepartment) return false;
     return true;
@@ -1720,6 +1731,125 @@ export async function deleteDepartmentStock(
   await db.departmentStock.update(stockId, { isActive: false });
   await addAudit('STOCK_DELETED', 'deletion', 'department_stock', stockId, deletedBy, deleterName,
     `Deleted stock in ${DEPARTMENT_LABELS[stock.department] || stock.department}${stock.size ? ` (${stock.size})` : ''}, qty: ${stock.quantity}. Reason: ${reason}`);
+}
+
+export async function deleteStockTransfer(
+  transferId: string,
+  reason: string,
+  deletedBy: string,
+  deletedByName: string,
+  adminPassword: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Deletion reason is required');
+  await requireAdminPassword(adminPassword);
+
+  const transfer = await db.stockTransfers.get(transferId);
+  if (!transfer || transfer.isActive === false) throw new Error('Transfer not found or already deleted');
+
+  await db.departmentStock.where({ department: transfer.toDepartment, isActive: 1 }).toArray().then(async stocks => {
+    const match = stocks.find(s =>
+      (s.productId || '') === (transfer.productId || '') &&
+      (s.size || '') === (transfer.size || '')
+    );
+    if (match) {
+      const newQty = Math.max(0, match.quantity - transfer.quantity);
+      await db.departmentStock.update(match.id, {
+        quantity: newQty,
+        lastUpdatedBy: deletedBy,
+        lastUpdatedAt: now(),
+      });
+    }
+  });
+
+  await addStockToDepartment(
+    transfer.fromDepartment, transfer.quantity, transfer.unit,
+    deletedBy, deletedByName, transfer.productId, transfer.size,
+  );
+
+  if (transfer.toDepartment === 'store' && transfer.productId) {
+    const productStockEntries = await db.finalProductStock.where('productId').equals(transfer.productId).toArray();
+    for (const entry of productStockEntries) {
+      if (entry.remainingQuantity > 0) {
+        const deduct = Math.min(entry.remainingQuantity, transfer.quantity);
+        await db.finalProductStock.update(entry.id, {
+          remainingQuantity: entry.remainingQuantity - deduct,
+        });
+        break;
+      }
+    }
+  }
+
+  const allCosts = await db.serviceCosts.toArray();
+  const linkedCost = allCosts.find(c => c.transferId === transferId) ||
+    (transfer.targetHodId ? allCosts.find(c =>
+      c.hodId === transfer.targetHodId &&
+      c.department === transfer.fromDepartment &&
+      c.totalPieces === transfer.quantity &&
+      Math.abs(new Date(c.createdAt).getTime() - new Date(transfer.createdAt).getTime()) < 5000
+    ) : undefined);
+
+  if (linkedCost) {
+    const linkedEntries = await db.accountingEntries.where('relatedCostId').equals(linkedCost.id).toArray();
+    for (const entry of linkedEntries) {
+      await db.accountingEntries.delete(entry.id);
+    }
+    await db.serviceCosts.delete(linkedCost.id);
+  }
+
+  await db.stockTransfers.update(transferId, {
+    isActive: false,
+    deletedAt: now(),
+    deleteReason: reason.trim(),
+    deletedBy,
+    deletedByName,
+  });
+
+  await addAudit('TRANSFER_DELETED', 'deletion', 'stock_transfer', transferId, deletedBy, deletedByName,
+    `Deleted transfer of ${transfer.quantity} ${transfer.unit} from ${DEPARTMENT_LABELS[transfer.fromDepartment] || transfer.fromDepartment} to ${DEPARTMENT_LABELS[transfer.toDepartment] || transfer.toDepartment}${transfer.size ? ` (${transfer.size})` : ''}${linkedCost ? `. Service cost ₹${linkedCost.totalCost} reversed.` : ''}. Reason: ${reason.trim()}`);
+}
+
+async function cleanupHodData(
+  hodId: string,
+  deletedBy: string,
+  deletedByName: string,
+): Promise<{ reversedEntries: number; deactivatedRates: number; deactivatedConfirmations: number }> {
+  const rates = await db.serviceCostRates.where({ hodId, isActive: 1 }).toArray();
+  for (const rate of rates) {
+    await db.serviceCostRates.update(rate.id, { isActive: false });
+  }
+
+  const entries = await db.accountingEntries.where('hodId').equals(hodId).toArray();
+  const admin = await db.users.where('role').equals('admin').first();
+  const adminId = admin?.id || deletedBy;
+
+  let reversedCount = 0;
+  for (const entry of entries) {
+    const reversalType: 'hod_owes_admin' | 'admin_owes_hod' = entry.type === 'hod_owes_admin' ? 'admin_owes_hod' : 'hod_owes_admin';
+    await addAccountingEntry(
+      hodId, adminId, reversalType, entry.amount,
+      `Reversed (HOD deleted): ${entry.description}`,
+      entry.batchId, entry.relatedCostId,
+    );
+    reversedCount++;
+  }
+
+  const confirmations = await db.costPaymentConfirmations.where('hodId').equals(hodId).toArray();
+  const activeConfirmations = confirmations.filter(c => c.isActive);
+  for (const conf of activeConfirmations) {
+    await db.costPaymentConfirmations.update(conf.id, {
+      isActive: false,
+      deletedAt: now(),
+      deleteReason: 'HOD deleted',
+      deletedBy,
+      deletedByName,
+    });
+  }
+
+  return {
+    reversedEntries: reversedCount,
+    deactivatedRates: rates.length,
+    deactivatedConfirmations: activeConfirmations.length,
+  };
 }
 
 // ---- AUDIT OPERATIONS ----
@@ -1870,6 +2000,87 @@ export async function getPieceEntriesByUser(userId: string): Promise<PieceEntry[
 
 export async function getAllBatches(): Promise<Batch[]> {
   return db.batches.toArray();
+}
+
+export async function getServiceCostsByHodBreakdown(): Promise<Array<{
+  hodId: string;
+  hodName: string;
+  department: Department;
+  totalServiceCost: number;
+  totalPieces: number;
+}>> {
+  const costs = await db.serviceCosts.toArray();
+  const hodMap = new Map<string, { totalCost: number; totalPieces: number }>();
+  for (const c of costs) {
+    if (!c.hodId) continue;
+    const prev = hodMap.get(c.hodId) || { totalCost: 0, totalPieces: 0 };
+    prev.totalCost += c.totalCost;
+    prev.totalPieces += c.totalPieces;
+    hodMap.set(c.hodId, prev);
+  }
+
+  const results: Array<{ hodId: string; hodName: string; department: Department; totalServiceCost: number; totalPieces: number }> = [];
+  for (const [hodId, data] of hodMap) {
+    const hod = await db.users.get(hodId);
+    if (!hod?.isActive) continue;
+    results.push({
+      hodId,
+      hodName: hod.firstName,
+      department: hod.department,
+      totalServiceCost: data.totalCost,
+      totalPieces: data.totalPieces,
+    });
+  }
+  return results.sort((a, b) => b.totalServiceCost - a.totalServiceCost);
+}
+
+export async function getConsumerGoodsCostTotal(): Promise<number> {
+  const receipts = await db.consumerGoodReceipts.toArray();
+  return receipts.reduce((sum, r) => sum + r.totalAmount, 0);
+}
+
+export async function getCostPaymentStats(): Promise<{
+  totalConfirmed: number;
+  totalPending: number;
+  confirmedCount: number;
+}> {
+  const confirmations = await db.costPaymentConfirmations.toArray();
+  const active = confirmations.filter(c => c.isActive);
+  const totalConfirmed = active.reduce((sum, c) => sum + c.amount, 0);
+
+  const allCosts = await db.serviceCosts.toArray();
+  const totalServiceCost = allCosts.reduce((sum, c) => sum + c.totalCost, 0);
+  const allReceipts = await db.consumerGoodReceipts.toArray();
+  const totalConsumerCost = allReceipts.reduce((sum, r) => sum + r.totalAmount, 0);
+  const totalPending = Math.max(0, (totalServiceCost + totalConsumerCost) - totalConfirmed);
+
+  return { totalConfirmed, totalPending, confirmedCount: active.length };
+}
+
+export async function getTransfersForHod(hodId: string): Promise<StockTransfer[]> {
+  const all = await db.stockTransfers.toArray();
+  return all.filter(t => t.isActive !== false && t.targetHodId === hodId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function getConsumerGoodsCostByDepartment(): Promise<Array<{
+  department: string;
+  totalAmount: number;
+  receiptCount: number;
+}>> {
+  const receipts = await db.consumerGoodReceipts.toArray();
+  const deptMap = new Map<string, { totalAmount: number; receiptCount: number }>();
+  for (const r of receipts) {
+    const prev = deptMap.get(r.department) || { totalAmount: 0, receiptCount: 0 };
+    prev.totalAmount += r.totalAmount;
+    prev.receiptCount++;
+    deptMap.set(r.department, prev);
+  }
+  const results: Array<{ department: string; totalAmount: number; receiptCount: number }> = [];
+  for (const [department, data] of deptMap) {
+    results.push({ department, ...data });
+  }
+  return results.sort((a, b) => b.totalAmount - a.totalAmount);
 }
 
 // ---- DISPATCH OPERATIONS ----

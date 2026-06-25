@@ -8,6 +8,7 @@ import {
   getDepartmentStock, addStockToDepartment, editDepartmentStock,
   transferStock, getStockTransfers, getActiveFinalProducts, getActiveFinalProductTypes,
   getActiveUsers, getActiveDepartments, deleteDepartmentStock, dispatchProduct,
+  deleteStockTransfer,
 } from '../../database/operations';
 import Modal from '../common/Modal';
 import {
@@ -54,6 +55,8 @@ export default function DepartmentStockDetail() {
   const [deleteForm, setDeleteForm] = useState({ reason: '', password: '' });
   const [showDispatch, setShowDispatch] = useState<DepartmentStock | null>(null);
   const [dispatchForm, setDispatchForm] = useState({ quantity: '', partyName: '', notes: '' });
+  const [showDeleteTransfer, setShowDeleteTransfer] = useState<StockTransfer | null>(null);
+  const [deleteTransferForm, setDeleteTransferForm] = useState({ reason: '', password: '' });
   const [error, setError] = useState('');
   const [loaded, setLoaded] = useState(false);
 
@@ -173,6 +176,17 @@ export default function DepartmentStockDetail() {
       );
       setShowDispatch(null);
       setDispatchForm({ quantity: '', partyName: '', notes: '' });
+      load();
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleDeleteTransfer = async () => {
+    if (!currentUser || !showDeleteTransfer) return;
+    setError('');
+    try {
+      await deleteStockTransfer(showDeleteTransfer.id, deleteTransferForm.reason, currentUser.id, currentUser.firstName, deleteTransferForm.password);
+      setShowDeleteTransfer(null);
+      setDeleteTransferForm({ reason: '', password: '' });
       load();
     } catch (e: any) { setError(e.message); }
   };
@@ -491,6 +505,7 @@ export default function DepartmentStockDetail() {
                     <th className="px-4 py-2 font-medium">HOD</th>
                     <th className="px-4 py-2 font-medium">By</th>
                     <th className="px-4 py-2 font-medium">Notes</th>
+                    {currentUser?.role === 'admin' && <th className="px-4 py-2 font-medium"></th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -505,6 +520,17 @@ export default function DepartmentStockDetail() {
                       <td className="px-4 py-2">{t.targetHodName || hods.find(h => h.id === t.targetHodId)?.firstName || '—'}</td>
                       <td className="px-4 py-2">{t.transferredByName}</td>
                       <td className="px-4 py-2 text-gray-400">{t.notes || '—'}</td>
+                      {currentUser?.role === 'admin' && (
+                        <td className="px-4 py-2">
+                          <button
+                            onClick={() => { setShowDeleteTransfer(t); setError(''); setDeleteTransferForm({ reason: '', password: '' }); }}
+                            className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
+                            title="Delete transfer"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -858,6 +884,44 @@ export default function DepartmentStockDetail() {
           </div>
           <button onClick={handleDispatch} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer">
             Dispatch to Party
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete Transfer Modal */}
+      <Modal isOpen={!!showDeleteTransfer} onClose={() => { setShowDeleteTransfer(null); setError(''); }} title="Delete Stock Transfer">
+        <div className="space-y-4">
+          <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-[11px] text-red-700">
+            This will reverse the transfer of{' '}
+            <strong>{showDeleteTransfer?.quantity} {showDeleteTransfer?.unit}</strong>{' '}
+            from {showDeleteTransfer ? (DEPARTMENT_LABELS[showDeleteTransfer.fromDepartment] || showDeleteTransfer.fromDepartment) : ''}{' '}
+            to {showDeleteTransfer ? (DEPARTMENT_LABELS[showDeleteTransfer.toDepartment] || showDeleteTransfer.toDepartment) : ''}
+            {showDeleteTransfer?.size && <> ({showDeleteTransfer.size})</>}.
+            Stock will be returned and any associated service cost and accounting entry will be reversed.
+          </div>
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+            <textarea
+              value={deleteTransferForm.reason}
+              onChange={e => setDeleteTransferForm({ ...deleteTransferForm, reason: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              rows={2}
+              placeholder="Why is this transfer being reversed?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password *</label>
+            <input
+              type="password"
+              value={deleteTransferForm.password}
+              onChange={e => setDeleteTransferForm({ ...deleteTransferForm, password: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              placeholder="Enter admin password to confirm"
+            />
+          </div>
+          <button onClick={handleDeleteTransfer} className="w-full bg-red-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-red-700 cursor-pointer">
+            Delete Transfer & Reverse
           </button>
         </div>
       </Modal>
