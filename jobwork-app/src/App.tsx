@@ -23,6 +23,7 @@ import ConsumerGoods from './components/store-dept/ConsumerGoods';
 import Departments from './components/departments/Departments';
 import FinalProducts from './components/products/FinalProducts';
 import DispatchedPieces from './components/dispatch/DispatchedPieces';
+import AdminProfile from './components/auth/AdminProfile';
 import './index.css';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -65,6 +66,7 @@ function AppRoutes() {
         <Route path="/departments" element={<ProtectedRoute><AdminRoute><Departments /></AdminRoute></ProtectedRoute>} />
         <Route path="/products" element={<ProtectedRoute><FinalProducts /></ProtectedRoute>} />
         <Route path="/dispatched" element={<ProtectedRoute><AdminRoute><DispatchedPieces /></AdminRoute></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><AdminRoute><AdminProfile /></AdminRoute></ProtectedRoute>} />
         <Route path="*" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
       </Routes>
     </HashRouter>

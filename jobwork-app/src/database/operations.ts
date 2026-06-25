@@ -1,6 +1,6 @@
 import { db } from './db';
 import { generateId, generateBatchNumber, getDateRange } from '../utils/helpers';
-import { hashPassword } from '../utils/crypto';
+import { hashPassword, verifyPassword } from '../utils/crypto';
 import {
   DEPARTMENT_LABELS, DEFAULT_DEPARTMENT_LABELS,
 } from '../types';
@@ -232,6 +232,56 @@ export async function updateUserServiceCostRate(
   await db.users.update(userId, { serviceCostRate: rate });
   await addAudit('USER_RATE_UPDATED', 'user', 'user', userId, updatedBy, updaterName,
     `Updated service cost rate for ${user.firstName} to ₹${rate}/piece`);
+}
+
+export async function updateAdminUsername(
+  adminId: string,
+  newUsername: string,
+  currentPassword: string,
+  specialPassword: string,
+): Promise<void> {
+  if (!newUsername.trim()) throw new Error('New username is required');
+  const admin = await db.users.get(adminId);
+  if (!admin || admin.role !== 'admin') throw new Error('Admin not found');
+  if (!verifyPassword(currentPassword, admin.passwordHash))
+    throw new Error('Current password is incorrect');
+  if (specialPassword !== 'HVD@$SAC@$123')
+    throw new Error('Special password is incorrect');
+  const existing = await db.users.where('username').equals(newUsername.trim()).first();
+  if (existing && existing.id !== adminId) throw new Error('Username already taken');
+  await db.users.update(adminId, { username: newUsername.trim() });
+  await addAudit('ADMIN_USERNAME_CHANGED', 'user', 'user', adminId, adminId, admin.firstName,
+    `Admin username changed`);
+}
+
+export async function updateAdminPassword(
+  adminId: string,
+  currentPassword: string,
+  newPassword: string,
+  specialPassword: string,
+): Promise<void> {
+  if (!newPassword.trim()) throw new Error('New password is required');
+  if (newPassword.length < 4) throw new Error('Password must be at least 4 characters');
+  const admin = await db.users.get(adminId);
+  if (!admin || admin.role !== 'admin') throw new Error('Admin not found');
+  if (!verifyPassword(currentPassword, admin.passwordHash))
+    throw new Error('Current password is incorrect');
+  if (specialPassword !== 'HVD@$SAC@$123')
+    throw new Error('Special password is incorrect');
+  await db.users.update(adminId, { passwordHash: hashPassword(newPassword) });
+  await addAudit('ADMIN_PASSWORD_CHANGED', 'user', 'user', adminId, adminId, admin.firstName,
+    `Admin password changed`);
+}
+
+export async function updateAdminProfilePicture(
+  adminId: string,
+  profilePicture: string | undefined,
+): Promise<void> {
+  const admin = await db.users.get(adminId);
+  if (!admin || admin.role !== 'admin') throw new Error('Admin not found');
+  await db.users.update(adminId, { profilePicture });
+  await addAudit('ADMIN_PROFILE_UPDATED', 'user', 'user', adminId, adminId, admin.firstName,
+    profilePicture ? 'Admin profile picture updated' : 'Admin profile picture removed');
 }
 
 export async function deleteUser(

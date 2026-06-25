@@ -25,8 +25,12 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       localStorage.removeItem('jobwork_auth');
     },
+    setUser(state, action: PayloadAction<User>) {
+      state.currentUser = action.payload;
+      localStorage.setItem('jobwork_auth', JSON.stringify(state));
+    },
   },
 });
 
-export const { login, logout } = authSlice.actions;
+export const { login, logout, setUser } = authSlice.actions;
 export default authSlice.reducer;
