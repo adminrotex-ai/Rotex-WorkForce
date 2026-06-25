@@ -33,10 +33,6 @@ function AdminAccounting() {
   const navigate = useNavigate();
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof getAllAccountingSummary>>>([]);
   const [pendingPayments, setPendingPayments] = useState<PaymentRecord[]>([]);
-  const [showPayment, setShowPayment] = useState<{ hodId: string; hodName: string } | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentDesc, setPaymentDesc] = useState('');
-  const [error, setError] = useState('');
 
   useEffect(() => { loadData(); }, []);
 
@@ -50,22 +46,6 @@ function AdminAccounting() {
     if (!currentUser) return;
     await confirmPayment(paymentId, currentUser.id, currentUser.firstName);
     loadData();
-  };
-
-  const handleMakePayment = async () => {
-    if (!showPayment || !currentUser) return;
-    const amount = parseFloat(paymentAmount);
-    if (!amount || amount <= 0) { setError('Enter valid amount'); return; }
-    try {
-      await makePayment(currentUser.id, currentUser.firstName, showPayment.hodId, amount,
-        paymentDesc || `Payment from Admin to ${showPayment.hodName}`);
-      setShowPayment(null);
-      setPaymentAmount('');
-      setPaymentDesc('');
-      loadData();
-    } catch (e: any) {
-      setError(e.message);
-    }
   };
 
   const totalOwed = summary.reduce((s, a) => s + a.hodOwesAdmin, 0);
@@ -117,20 +97,12 @@ function AdminAccounting() {
                   <td className="py-3 text-right text-emerald-600">{formatCurrency(a.hodOwesAdmin)}</td>
                   <td className="py-3 text-right text-red-500">{formatCurrency(a.adminOwesHod)}</td>
                   <td className="py-3 text-right">
-                    <div className="flex gap-2 justify-end">
-                      <button
-                        onClick={() => navigate(`/accounting/${a.hodId}`)}
-                        className="text-[11px] px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 cursor-pointer"
-                      >
-                        Details
-                      </button>
-                      <button
-                        onClick={() => setShowPayment({ hodId: a.hodId, hodName: a.hodName })}
-                        className="text-[11px] px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-full hover:bg-emerald-100 cursor-pointer"
-                      >
-                        Pay
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => navigate(`/accounting/${a.hodId}`)}
+                      className="text-[11px] px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 cursor-pointer"
+                    >
+                      Details
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -163,37 +135,6 @@ function AdminAccounting() {
           </div>
         </div>
       )}
-
-      {/* Payment Modal */}
-      <Modal isOpen={!!showPayment} onClose={() => setShowPayment(null)} title={`Pay ${showPayment?.hodName}`}>
-        <div className="space-y-4">
-          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
-            <input
-              type="number"
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              min="0.01"
-              step="0.01"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <input
-              type="text"
-              value={paymentDesc}
-              onChange={e => setPaymentDesc(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              placeholder="Payment description"
-            />
-          </div>
-          <button onClick={handleMakePayment} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer">
-            Make Payment
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 }
