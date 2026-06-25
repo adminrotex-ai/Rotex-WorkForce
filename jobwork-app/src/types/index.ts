@@ -393,6 +393,22 @@ export interface ServiceCostRate {
   isActive: boolean;
 }
 
+export interface CostPaymentConfirmation {
+  id: string;
+  type: 'service_cost' | 'consumer_goods';
+  relatedId: string;
+  hodId: string;
+  amount: number;
+  confirmedBy: string;
+  confirmedByName: string;
+  createdAt: string;
+  deletedAt?: string;
+  deleteReason?: string;
+  deletedBy?: string;
+  deletedByName?: string;
+  isActive: boolean;
+}
+
 export interface SyncQueueItem {
   id: string;
   action: string;
