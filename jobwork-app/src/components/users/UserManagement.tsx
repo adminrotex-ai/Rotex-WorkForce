@@ -11,7 +11,7 @@ import {
   deleteServiceCostRateEntry, getActiveFinalProductTypes, getActiveFinalProducts,
 } from '../../database/operations';
 import Modal from '../common/Modal';
-import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil, IndianRupee } from 'lucide-react';
+import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, Pencil, IndianRupee } from 'lucide-react';
 import { formatCurrency } from '../../utils/helpers';
 
 export default function UserManagement() {
@@ -681,7 +681,7 @@ export default function UserManagement() {
                 onClick={() => { setShowAddRate(true); setError(''); setRateForm({ costPerPiece: '', size: '', productTypeId: '' }); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[11px] font-medium rounded-full hover:bg-emerald-700 cursor-pointer"
               >
-                <DollarSign size={12} /> Add Rate
+                <IndianRupee size={12} /> Add Rate
               </button>
             </div>
           </div>
