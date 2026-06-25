@@ -43,7 +43,7 @@ export default function DepartmentStockDetail() {
   const [showTransfer, setShowTransfer] = useState<DepartmentStock | null>(null);
   const [showEdit, setShowEdit] = useState<DepartmentStock | null>(null);
   const [showDelete, setShowDelete] = useState<DepartmentStock | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
 
   const [expandedName, setExpandedName] = useState<string | null>(null);
   const [expandedType, setExpandedType] = useState<string | null>(null);
