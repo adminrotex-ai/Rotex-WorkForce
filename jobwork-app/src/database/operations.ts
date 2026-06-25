@@ -12,7 +12,7 @@ import type {
   Department, BatchStage, UserRole, CustomDepartment,
   FinalProductType, FinalProduct, FinalProductStockEntry,
   DepartmentStock, StockTransfer, StockAdjustment, DispatchEntry,
-  ServiceCostRate,
+  ServiceCostRate, CostPaymentConfirmation,
 } from '../types';
 
 function now(): string {
@@ -1233,6 +1233,68 @@ export async function deleteReceipt(
 
   await addAudit('RECEIPT_DELETED', 'deletion', 'receipt', receiptId, deletedBy, deletedByName,
     `Deleted receipt ${receipt.receiptNumber} (₹${receipt.totalAmount}) issued to ${receipt.hodName}. Reason: ${reason}`);
+}
+
+// ---- COST PAYMENT CONFIRMATIONS ----
+
+export async function confirmCostPayment(
+  type: CostPaymentConfirmation['type'],
+  relatedId: string,
+  hodId: string,
+  amount: number,
+  confirmedBy: string,
+  confirmedByName: string,
+): Promise<CostPaymentConfirmation> {
+  ensurePositive(amount, 'Amount');
+  const confirmation: CostPaymentConfirmation = {
+    id: generateId(),
+    type,
+    relatedId,
+    hodId,
+    amount,
+    confirmedBy,
+    confirmedByName,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.costPaymentConfirmations.add(confirmation);
+  const label = type === 'service_cost' ? 'Service cost payment confirmed' : 'Consumer goods payment collected';
+  await addAudit('COST_PAYMENT_CONFIRMED', 'payment', 'cost_payment', confirmation.id, confirmedBy, confirmedByName,
+    `${label}: ₹${amount} for HOD ${hodId} (${type} entry ${relatedId})`);
+  return confirmation;
+}
+
+export async function getCostPaymentConfirmations(
+  hodId: string,
+  type?: CostPaymentConfirmation['type'],
+): Promise<CostPaymentConfirmation[]> {
+  const all = await db.costPaymentConfirmations.where('hodId').equals(hodId).toArray();
+  const active = all.filter(c => c.isActive);
+  if (type) return active.filter(c => c.type === type);
+  return active;
+}
+
+export async function deleteCostPaymentConfirmation(
+  confirmationId: string,
+  reason: string,
+  adminPassword: string,
+  deletedBy: string,
+  deletedByName: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error('Reason is required');
+  await requireAdminPassword(adminPassword);
+  const confirmation = await db.costPaymentConfirmations.get(confirmationId);
+  if (!confirmation) throw new Error('Confirmation not found');
+  await db.costPaymentConfirmations.update(confirmationId, {
+    isActive: false,
+    deletedAt: now(),
+    deleteReason: reason.trim(),
+    deletedBy,
+    deletedByName,
+  });
+  const label = confirmation.type === 'service_cost' ? 'Service cost payment' : 'Consumer goods payment';
+  await addAudit('COST_PAYMENT_DELETED', 'deletion', 'cost_payment', confirmationId, deletedBy, deletedByName,
+    `Deleted ${label} confirmation of ₹${confirmation.amount}. Reason: ${reason.trim()}`);
 }
 
 // ---- FINAL PRODUCT OPERATIONS ----

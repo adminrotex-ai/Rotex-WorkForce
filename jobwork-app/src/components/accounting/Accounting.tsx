@@ -2,17 +2,18 @@ import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { RootState } from '../../store';
-import type { AccountingEntry, PaymentRecord, User, ServiceCost, ConsumerGoodReceipt, FinalProductType } from '../../types';
+import type { AccountingEntry, PaymentRecord, User, ServiceCost, ConsumerGoodReceipt, FinalProductType, CostPaymentConfirmation } from '../../types';
 import { db } from '../../database/db';
 import { DEPARTMENT_LABELS } from '../../types';
 import {
   getAllAccountingSummary, getAccountingForHod, makePayment,
   confirmPayment, getPendingPayments, getUserById,
   getServiceCostsForHod, getReceiptsForHod, getActiveFinalProductTypes,
+  confirmCostPayment, getCostPaymentConfirmations, deleteCostPaymentConfirmation,
 } from '../../database/operations';
 import { formatCurrency } from '../../utils/helpers';
 import Modal from '../common/Modal';
-import { ArrowLeft, Send, Receipt, Wrench, CheckCircle, Printer } from 'lucide-react';
+import { ArrowLeft, Send, Receipt, Wrench, Printer, Trash2, Plus } from 'lucide-react';
 
 export default function Accounting() {
   const { hodId } = useParams<{ hodId: string }>();
@@ -348,32 +349,39 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
   const [serviceCosts, setServiceCosts] = useState<ServiceCost[]>([]);
   const [receipts, setReceipts] = useState<ConsumerGoodReceipt[]>([]);
   const [productTypes, setProductTypes] = useState<FinalProductType[]>([]);
+  const [confirmations, setConfirmations] = useState<CostPaymentConfirmation[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   const [selectedReceipt, setSelectedReceipt] = useState<ConsumerGoodReceipt | null>(null);
-  const [showPayModal, setShowPayModal] = useState(false);
-  const [showCollectModal, setShowCollectModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentDesc, setPaymentDesc] = useState('');
+  const [confirmTarget, setConfirmTarget] = useState<{ type: 'service_cost' | 'consumer_goods'; id: string; maxAmount: number } | null>(null);
+  const [confirmAmount, setConfirmAmount] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, [hodId]);
+  const [scTab, setScTab] = useState<'pending' | 'confirmed'>('pending');
+  const [cgTab, setCgTab] = useState<'pending' | 'confirmed'>('pending');
+
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'service_cost' | 'consumer_goods'; relatedId: string; instalments: CostPaymentConfirmation[] } | null>(null);
+  const [deleteSelections, setDeleteSelections] = useState<Set<string>>(new Set());
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+
+  useEffect(() => { loadData(); }, [hodId]);
 
   const loadData = async () => {
-    const [acc, user, costs, recs, pts] = await Promise.all([
+    const [acc, user, costs, recs, pts, confs] = await Promise.all([
       getAccountingForHod(hodId),
       getUserById(hodId),
       getServiceCostsForHod(hodId),
       getReceiptsForHod(hodId),
       getActiveFinalProductTypes(),
+      getCostPaymentConfirmations(hodId),
     ]);
     setAccounting(acc);
     setHod(user || null);
     setServiceCosts(costs);
     setReceipts(recs.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setProductTypes(pts);
+    setConfirmations(confs);
     setLoaded(true);
   };
 
@@ -385,37 +393,62 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
 
-  const totalServiceCost = serviceCosts.reduce((s, c) => s + c.totalCost, 0);
-  const totalConsumerGoods = receipts.reduce((s, r) => s + r.totalAmount, 0);
+  const confsForEntry = (id: string) => confirmations.filter(c => c.relatedId === id);
+  const totalConfirmed = (id: string) => confsForEntry(id).reduce((s, c) => s + c.amount, 0);
+  const hasConfirmation = (id: string) => confsForEntry(id).length > 0;
 
-  const handleConfirmPaid = async () => {
-    if (!currentUser || !hod) return;
-    const amount = parseFloat(paymentAmount);
+  const pendingSC = serviceCosts.filter(c => !hasConfirmation(c.id));
+  const confirmedSC = serviceCosts.filter(c => hasConfirmation(c.id));
+  const pendingCG = receipts.filter(r => !hasConfirmation(r.id));
+  const confirmedCG = receipts.filter(r => hasConfirmation(r.id));
+
+  const handleConfirm = async () => {
+    if (!currentUser || !confirmTarget) return;
+    const amount = parseFloat(confirmAmount);
     if (!amount || amount <= 0) { setError('Enter valid amount'); return; }
+    const remaining = confirmTarget.maxAmount - totalConfirmed(confirmTarget.id);
+    if (amount > remaining + 0.01) { setError(`Amount exceeds remaining balance of ${formatCurrency(remaining)}`); return; }
     try {
-      await makePayment(currentUser.id, currentUser.firstName, hodId, amount,
-        paymentDesc || `Service cost payment to ${hod.firstName}`);
-      setShowPayModal(false);
-      setPaymentAmount('');
-      setPaymentDesc('');
+      await confirmCostPayment(confirmTarget.type, confirmTarget.id, hodId, amount, currentUser.id, currentUser.firstName);
+      setConfirmTarget(null);
+      setConfirmAmount('');
       setError('');
       loadData();
     } catch (e: any) { setError(e.message); }
   };
 
-  const handleConfirmCollected = async () => {
-    if (!currentUser || !hod) return;
-    const amount = parseFloat(paymentAmount);
-    if (!amount || amount <= 0) { setError('Enter valid amount'); return; }
+  const handleDelete = async () => {
+    if (!currentUser || !deleteTarget) return;
+    if (deleteSelections.size === 0) { setError('Select at least one instalment to delete'); return; }
+    if (!deleteReason.trim()) { setError('Reason is required'); return; }
+    if (!deletePassword.trim()) { setError('Admin password is required'); return; }
     try {
-      await makePayment(hodId, hod.firstName, currentUser.id, amount,
-        paymentDesc || `Consumer goods payment from ${hod.firstName}`);
-      setShowCollectModal(false);
-      setPaymentAmount('');
-      setPaymentDesc('');
+      for (const id of deleteSelections) {
+        await deleteCostPaymentConfirmation(id, deleteReason.trim(), deletePassword, currentUser.id, currentUser.firstName);
+      }
+      setDeleteTarget(null);
+      setDeleteSelections(new Set());
+      setDeleteReason('');
+      setDeletePassword('');
       setError('');
       loadData();
     } catch (e: any) { setError(e.message); }
+  };
+
+  const openConfirm = (type: 'service_cost' | 'consumer_goods', id: string, maxAmount: number) => {
+    const remaining = maxAmount - totalConfirmed(id);
+    setConfirmTarget({ type, id, maxAmount });
+    setConfirmAmount(remaining > 0 ? remaining.toFixed(2) : '');
+    setError('');
+  };
+
+  const openDelete = (type: 'service_cost' | 'consumer_goods', relatedId: string) => {
+    const instalments = confsForEntry(relatedId);
+    setDeleteTarget({ type, relatedId, instalments });
+    setDeleteSelections(new Set());
+    setDeleteReason('');
+    setDeletePassword('');
+    setError('');
   };
 
   if (!accounting || !hod) return null;
@@ -448,55 +481,112 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
           <div className="flex items-center gap-2">
             <Wrench size={16} className="text-blue-500" />
             <h2 className="text-base font-semibold text-gray-900">Service Cost Log</h2>
-            <span className="text-[11px] text-gray-400">({serviceCosts.length} entries)</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-blue-600">Total: {formatCurrency(totalServiceCost)}</span>
-            <button
-              onClick={() => { setShowPayModal(true); setError(''); setPaymentAmount(''); setPaymentDesc(''); }}
-              className="text-[11px] px-3 py-1.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 cursor-pointer flex items-center gap-1"
-            >
-              <CheckCircle size={12} /> Confirm Paid
+          <div className="flex gap-2">
+            <button onClick={() => setScTab('pending')} className={`px-3 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer ${scTab === 'pending' ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'}`}>
+              Pending ({pendingSC.length})
+            </button>
+            <button onClick={() => setScTab('confirmed')} className={`px-3 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer ${scTab === 'confirmed' ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'}`}>
+              Confirmed ({confirmedSC.length})
             </button>
           </div>
         </div>
-        {loaded && serviceCosts.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-6">No service costs recorded</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Time</th>
-                  <th className="pb-3 font-medium text-right">Wages/Piece</th>
-                  <th className="pb-3 font-medium text-right">Pieces</th>
-                  <th className="pb-3 font-medium">Size</th>
-                  <th className="pb-3 font-medium">Product Type</th>
-                  <th className="pb-3 font-medium text-right">Total Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {serviceCosts.map(c => (
-                  <tr key={c.id} className="border-b border-gray-50">
-                    <td className="py-3 text-gray-700">{fmtDate(c.createdAt)}</td>
-                    <td className="py-3 text-gray-500">{fmtTime(c.createdAt)}</td>
-                    <td className="py-3 text-right text-gray-700">{formatCurrency(c.costPerPiece)}</td>
-                    <td className="py-3 text-right text-gray-700">{c.totalPieces}</td>
-                    <td className="py-3 text-gray-700">{c.size || '—'}</td>
-                    <td className="py-3 text-gray-700">{ptName(c.productTypeId)}</td>
-                    <td className="py-3 text-right font-medium text-gray-900">{formatCurrency(c.totalCost)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-gray-300">
-                  <td colSpan={6} className="py-3 text-right font-semibold text-gray-700">Grand Total</td>
-                  <td className="py-3 text-right font-semibold text-gray-900">{formatCurrency(totalServiceCost)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+
+        {scTab === 'pending' && (
+          <>
+            {loaded && pendingSC.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">No pending service costs</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm table-fixed">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b border-gray-200">
+                      <th className="pb-3 px-3 font-medium w-[100px]">Date</th>
+                      <th className="pb-3 px-3 font-medium w-[80px]">Time</th>
+                      <th className="pb-3 px-3 font-medium text-right w-[110px]">Wages/Piece</th>
+                      <th className="pb-3 px-3 font-medium text-right w-[80px]">Pieces</th>
+                      <th className="pb-3 px-3 font-medium w-[90px]">Size</th>
+                      <th className="pb-3 px-3 font-medium w-[130px]">Product Type</th>
+                      <th className="pb-3 px-3 font-medium text-right w-[120px]">Total</th>
+                      <th className="pb-3 px-3 font-medium text-center w-[110px]">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingSC.map(c => (
+                      <tr key={c.id} className="border-b border-gray-50">
+                        <td className="py-3 px-3 text-gray-700 whitespace-nowrap">{fmtDate(c.createdAt)}</td>
+                        <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{fmtTime(c.createdAt)}</td>
+                        <td className="py-3 px-3 text-right text-gray-700 whitespace-nowrap">{formatCurrency(c.costPerPiece)}</td>
+                        <td className="py-3 px-3 text-right text-gray-700">{c.totalPieces}</td>
+                        <td className="py-3 px-3 text-gray-700">{c.size || '—'}</td>
+                        <td className="py-3 px-3 text-gray-700 truncate">{ptName(c.productTypeId)}</td>
+                        <td className="py-3 px-3 text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(c.totalCost)}</td>
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            onClick={() => openConfirm('service_cost', c.id, c.totalCost)}
+                            className="text-[11px] px-2.5 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer whitespace-nowrap"
+                          >
+                            Confirm Paid
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+
+        {scTab === 'confirmed' && (
+          <>
+            {confirmedSC.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">No confirmed service costs</p>
+            ) : (
+              <div className="space-y-4">
+                {confirmedSC.map(c => {
+                  const confs = confsForEntry(c.id);
+                  const paid = totalConfirmed(c.id);
+                  const remaining = c.totalCost - paid;
+                  return (
+                    <div key={c.id} className="border border-blue-100 rounded-xl p-4 bg-blue-50/30">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm flex-1">
+                          <div><span className="text-[11px] text-gray-400">Date</span><p className="text-gray-800">{fmtDate(c.createdAt)}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Wages/Piece</span><p className="text-gray-800">{formatCurrency(c.costPerPiece)}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Pieces</span><p className="text-gray-800">{c.totalPieces}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Total</span><p className="font-medium text-gray-900">{formatCurrency(c.totalCost)}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Size</span><p className="text-gray-800">{c.size || '—'}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Product Type</span><p className="text-gray-800">{ptName(c.productTypeId)}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Paid</span><p className="text-emerald-600 font-medium">{formatCurrency(paid)}</p></div>
+                          {remaining > 0.01 && <div><span className="text-[11px] text-gray-400">Remaining</span><p className="text-red-500 font-medium">{formatCurrency(remaining)}</p></div>}
+                        </div>
+                        <div className="flex gap-1.5 ml-3">
+                          {remaining > 0.01 && (
+                            <button onClick={() => openConfirm('service_cost', c.id, c.totalCost)} className="p-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer" title="Add Instalment">
+                              <Plus size={14} />
+                            </button>
+                          )}
+                          <button onClick={() => openDelete('service_cost', c.id)} className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer" title="Delete Confirmation">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="border-t border-blue-100 pt-2 mt-2">
+                        <p className="text-[11px] text-gray-400 mb-1">Instalments</p>
+                        {confs.map(cf => (
+                          <div key={cf.id} className="flex items-center justify-between text-sm py-1">
+                            <span className="text-gray-600">{fmtDate(cf.createdAt)} {fmtTime(cf.createdAt)}</span>
+                            <span className="font-medium text-emerald-600">{formatCurrency(cf.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -506,131 +596,219 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
           <div className="flex items-center gap-2">
             <Receipt size={16} className="text-orange-500" />
             <h2 className="text-base font-semibold text-gray-900">Consumer Goods Log</h2>
-            <span className="text-[11px] text-gray-400">({receipts.length} receipts)</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-orange-600">Total: {formatCurrency(totalConsumerGoods)}</span>
-            <button
-              onClick={() => { setShowCollectModal(true); setError(''); setPaymentAmount(''); setPaymentDesc(''); }}
-              className="text-[11px] px-3 py-1.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 cursor-pointer flex items-center gap-1"
-            >
-              <CheckCircle size={12} /> Confirm Collected
+          <div className="flex gap-2">
+            <button onClick={() => setCgTab('pending')} className={`px-3 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer ${cgTab === 'pending' ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'}`}>
+              Pending ({pendingCG.length})
+            </button>
+            <button onClick={() => setCgTab('confirmed')} className={`px-3 py-1.5 rounded-xl text-[11px] font-medium cursor-pointer ${cgTab === 'confirmed' ? 'bg-[#2a2a2a] text-white' : 'bg-white/60 text-gray-600'}`}>
+              Confirmed ({confirmedCG.length})
             </button>
           </div>
         </div>
-        {loaded && receipts.length === 0 ? (
-          <p className="text-gray-400 text-sm text-center py-6">No consumer goods issued</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b border-gray-200">
-                  <th className="pb-3 font-medium">Goods Issued</th>
-                  <th className="pb-3 font-medium">Date</th>
-                  <th className="pb-3 font-medium">Time</th>
-                  <th className="pb-3 font-medium text-right">Price/Unit</th>
-                  <th className="pb-3 font-medium">Receipt No.</th>
-                  <th className="pb-3 font-medium text-right">Total Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {receipts.map(r => (
-                  <tr key={r.id} className="border-b border-gray-50">
-                    <td className="py-3 text-gray-700">
-                      {r.items.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}
-                    </td>
-                    <td className="py-3 text-gray-700">{fmtDate(r.createdAt)}</td>
-                    <td className="py-3 text-gray-500">{fmtTime(r.createdAt)}</td>
-                    <td className="py-3 text-right text-gray-700">
-                      {r.items.length === 1
-                        ? formatCurrency(r.items[0].pricePerUnit)
-                        : r.items.map(i => `${formatCurrency(i.pricePerUnit)}`).join(', ')}
-                    </td>
-                    <td className="py-3">
-                      <button
-                        onClick={() => setSelectedReceipt(r)}
-                        className="text-blue-600 hover:text-blue-800 underline cursor-pointer font-medium"
-                      >
-                        {r.receiptNumber}
-                      </button>
-                    </td>
-                    <td className="py-3 text-right font-medium text-gray-900">{formatCurrency(r.totalAmount)}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="border-t border-gray-300">
-                  <td colSpan={5} className="py-3 text-right font-semibold text-gray-700">Grand Total</td>
-                  <td className="py-3 text-right font-semibold text-gray-900">{formatCurrency(totalConsumerGoods)}</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+
+        {cgTab === 'pending' && (
+          <>
+            {loaded && pendingCG.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">No pending consumer goods</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm table-fixed">
+                  <thead>
+                    <tr className="text-left text-gray-500 border-b border-gray-200">
+                      <th className="pb-3 px-3 font-medium w-[200px]">Goods Issued</th>
+                      <th className="pb-3 px-3 font-medium w-[100px]">Date</th>
+                      <th className="pb-3 px-3 font-medium w-[80px]">Time</th>
+                      <th className="pb-3 px-3 font-medium text-right w-[100px]">Price/Unit</th>
+                      <th className="pb-3 px-3 font-medium w-[110px]">Receipt No.</th>
+                      <th className="pb-3 px-3 font-medium text-right w-[110px]">Total</th>
+                      <th className="pb-3 px-3 font-medium text-center w-[120px]">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingCG.map(r => (
+                      <tr key={r.id} className="border-b border-gray-50">
+                        <td className="py-3 px-3 text-gray-700 truncate" title={r.items.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}>
+                          {r.items.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}
+                        </td>
+                        <td className="py-3 px-3 text-gray-700 whitespace-nowrap">{fmtDate(r.createdAt)}</td>
+                        <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{fmtTime(r.createdAt)}</td>
+                        <td className="py-3 px-3 text-right text-gray-700 whitespace-nowrap">
+                          {r.items.length === 1 ? formatCurrency(r.items[0].pricePerUnit) : r.items.map(i => formatCurrency(i.pricePerUnit)).join(', ')}
+                        </td>
+                        <td className="py-3 px-3">
+                          <button onClick={() => setSelectedReceipt(r)} className="text-blue-600 hover:text-blue-800 underline cursor-pointer font-medium">
+                            {r.receiptNumber}
+                          </button>
+                        </td>
+                        <td className="py-3 px-3 text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(r.totalAmount)}</td>
+                        <td className="py-3 px-3 text-center">
+                          <button
+                            onClick={() => openConfirm('consumer_goods', r.id, r.totalAmount)}
+                            className="text-[11px] px-2.5 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 cursor-pointer whitespace-nowrap"
+                          >
+                            Confirm Collected
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+
+        {cgTab === 'confirmed' && (
+          <>
+            {confirmedCG.length === 0 ? (
+              <p className="text-gray-400 text-sm text-center py-6">No confirmed consumer goods</p>
+            ) : (
+              <div className="space-y-4">
+                {confirmedCG.map(r => {
+                  const confs = confsForEntry(r.id);
+                  const collected = totalConfirmed(r.id);
+                  const remaining = r.totalAmount - collected;
+                  return (
+                    <div key={r.id} className="border border-orange-100 rounded-xl p-4 bg-orange-50/30">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 text-sm flex-1">
+                          <div><span className="text-[11px] text-gray-400">Goods</span><p className="text-gray-800">{r.items.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Date</span><p className="text-gray-800">{fmtDate(r.createdAt)}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Receipt</span><p><button onClick={() => setSelectedReceipt(r)} className="text-blue-600 hover:text-blue-800 underline cursor-pointer font-medium">{r.receiptNumber}</button></p></div>
+                          <div><span className="text-[11px] text-gray-400">Total</span><p className="font-medium text-gray-900">{formatCurrency(r.totalAmount)}</p></div>
+                          <div><span className="text-[11px] text-gray-400">Collected</span><p className="text-emerald-600 font-medium">{formatCurrency(collected)}</p></div>
+                          {remaining > 0.01 && <div><span className="text-[11px] text-gray-400">Remaining</span><p className="text-red-500 font-medium">{formatCurrency(remaining)}</p></div>}
+                        </div>
+                        <div className="flex gap-1.5 ml-3">
+                          {remaining > 0.01 && (
+                            <button onClick={() => openConfirm('consumer_goods', r.id, r.totalAmount)} className="p-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 cursor-pointer" title="Add Instalment">
+                              <Plus size={14} />
+                            </button>
+                          )}
+                          <button onClick={() => openDelete('consumer_goods', r.id)} className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 cursor-pointer" title="Delete Confirmation">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="border-t border-orange-100 pt-2 mt-2">
+                        <p className="text-[11px] text-gray-400 mb-1">Instalments</p>
+                        {confs.map(cf => (
+                          <div key={cf.id} className="flex items-center justify-between text-sm py-1">
+                            <span className="text-gray-600">{fmtDate(cf.createdAt)} {fmtTime(cf.createdAt)}</span>
+                            <span className="font-medium text-emerald-600">{formatCurrency(cf.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* Confirm Paid Modal (Service Cost) */}
-      <Modal isOpen={showPayModal} onClose={() => setShowPayModal(false)} title="Confirm Service Cost Payment">
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">Record payment made to {hod.firstName} for service costs.</p>
-          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
-            <input
-              type="number"
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              min="0.01"
-              step="0.01"
-            />
+      {/* Confirm Payment Modal */}
+      <Modal
+        isOpen={!!confirmTarget}
+        onClose={() => { setConfirmTarget(null); setError(''); }}
+        title={confirmTarget?.type === 'service_cost' ? 'Confirm Service Cost Paid' : 'Confirm Payment Collected'}
+      >
+        {confirmTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              {confirmTarget.type === 'service_cost'
+                ? `Record payment made to ${hod.firstName}. Entry total: ${formatCurrency(confirmTarget.maxAmount)}`
+                : `Record payment collected from ${hod.firstName}. Entry total: ${formatCurrency(confirmTarget.maxAmount)}`}
+            </p>
+            {totalConfirmed(confirmTarget.id) > 0 && (
+              <p className="text-sm text-emerald-600">Already confirmed: {formatCurrency(totalConfirmed(confirmTarget.id))}</p>
+            )}
+            {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
+              <input
+                type="number"
+                value={confirmAmount}
+                onChange={e => setConfirmAmount(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                min="0.01"
+                step="0.01"
+              />
+            </div>
+            <button
+              onClick={handleConfirm}
+              className={`w-full py-2.5 rounded-xl text-sm font-medium cursor-pointer text-white ${
+                confirmTarget.type === 'service_cost' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'
+              }`}
+            >
+              {confirmTarget.type === 'service_cost' ? 'Confirm Paid' : 'Confirm Collected'}
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-            <input
-              type="text"
-              value={paymentDesc}
-              onChange={e => setPaymentDesc(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              placeholder="Payment description"
-            />
-          </div>
-          <button onClick={handleConfirmPaid} className="w-full bg-blue-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-blue-600 cursor-pointer">
-            Confirm Paid
-          </button>
-        </div>
+        )}
       </Modal>
 
-      {/* Confirm Collected Modal (Consumer Goods) */}
-      <Modal isOpen={showCollectModal} onClose={() => setShowCollectModal(false)} title="Confirm Payment Collected">
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500">Record payment collected from {hod.firstName} for consumer goods.</p>
-          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (INR)</label>
-            <input
-              type="number"
-              value={paymentAmount}
-              onChange={e => setPaymentAmount(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              min="0.01"
-              step="0.01"
-            />
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteTarget}
+        onClose={() => { setDeleteTarget(null); setError(''); }}
+        title="Delete Payment Confirmation"
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">Select the instalment(s) to delete. The entry will return to pending once all instalments are removed.</p>
+            {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {deleteTarget.instalments.map(inst => (
+                <label key={inst.id} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer ${deleteSelections.has(inst.id) ? 'bg-red-50 border border-red-200' : 'bg-gray-50 border border-gray-100'}`}>
+                  <input
+                    type="checkbox"
+                    checked={deleteSelections.has(inst.id)}
+                    onChange={e => {
+                      const next = new Set(deleteSelections);
+                      if (e.target.checked) next.add(inst.id); else next.delete(inst.id);
+                      setDeleteSelections(next);
+                    }}
+                    className="w-4 h-4 accent-red-500"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900">{formatCurrency(inst.amount)}</span>
+                    <span className="text-[11px] text-gray-400 ml-2">{fmtDate(inst.createdAt)} {fmtTime(inst.createdAt)}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+              <input
+                type="text"
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                placeholder="Reason for deletion"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Admin Password</label>
+              <input
+                type="password"
+                value={deletePassword}
+                onChange={e => setDeletePassword(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+                placeholder="Enter admin password"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setDeleteTarget(null); setError(''); }} className="flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={handleDelete} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 cursor-pointer">
+                Delete Selected
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-            <input
-              type="text"
-              value={paymentDesc}
-              onChange={e => setPaymentDesc(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              placeholder="Payment description"
-            />
-          </div>
-          <button onClick={handleConfirmCollected} className="w-full bg-orange-500 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-orange-600 cursor-pointer">
-            Confirm Collected
-          </button>
-        </div>
+        )}
       </Modal>
 
       {/* Receipt Detail Modal */}
@@ -659,28 +837,28 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-500 border-b border-gray-200">
-                    <th className="pb-2 font-medium">#</th>
-                    <th className="pb-2 font-medium">Item</th>
-                    <th className="pb-2 font-medium text-right">Qty</th>
-                    <th className="pb-2 font-medium text-right">Price/Unit</th>
-                    <th className="pb-2 font-medium text-right">Total</th>
+                    <th className="pb-2 px-2 font-medium">#</th>
+                    <th className="pb-2 px-2 font-medium">Item</th>
+                    <th className="pb-2 px-2 font-medium text-right">Qty</th>
+                    <th className="pb-2 px-2 font-medium text-right">Price/Unit</th>
+                    <th className="pb-2 px-2 font-medium text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {selectedReceipt.items.map((item, idx) => (
                     <tr key={idx} className="border-b border-gray-50">
-                      <td className="py-2 text-gray-500">{idx + 1}</td>
-                      <td className="py-2 text-gray-900">{item.consumerGoodName}</td>
-                      <td className="py-2 text-right text-gray-700">{item.quantity}</td>
-                      <td className="py-2 text-right text-gray-700">{formatCurrency(item.pricePerUnit)}</td>
-                      <td className="py-2 text-right font-medium text-gray-900">{formatCurrency(item.totalCost)}</td>
+                      <td className="py-2 px-2 text-gray-500">{idx + 1}</td>
+                      <td className="py-2 px-2 text-gray-900">{item.consumerGoodName}</td>
+                      <td className="py-2 px-2 text-right text-gray-700">{item.quantity}</td>
+                      <td className="py-2 px-2 text-right text-gray-700">{formatCurrency(item.pricePerUnit)}</td>
+                      <td className="py-2 px-2 text-right font-medium text-gray-900">{formatCurrency(item.totalCost)}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-gray-300">
-                    <td colSpan={4} className="py-2 text-right font-semibold text-gray-700">Total</td>
-                    <td className="py-2 text-right font-semibold text-lg text-gray-900">{formatCurrency(selectedReceipt.totalAmount)}</td>
+                    <td colSpan={4} className="py-2 px-2 text-right font-semibold text-gray-700">Total</td>
+                    <td className="py-2 px-2 text-right font-semibold text-lg text-gray-900">{formatCurrency(selectedReceipt.totalAmount)}</td>
                   </tr>
                 </tfoot>
               </table>
