@@ -1500,19 +1500,21 @@ export async function transferStock(
   const finalProductId = destProductId || productId || sourceMatch.productId;
   const finalSize = toDepartment === 'welding' ? undefined : (destSize || size || sourceMatch.size);
 
-  await addStockToDepartment(
-    toDepartment, quantity, unit, transferredBy, transferredByName,
-    finalProductId, finalSize,
-  );
+  let storeProductId = finalProductId;
 
   if (toDepartment === 'store' && DEPARTMENT_PRODUCT_NAMES[fromDepartment]) {
     const sourceProduct = finalProductId ? await db.finalProducts.get(finalProductId) : undefined;
-    const autoProductId = await getOrCreateDepartmentProduct(
+    storeProductId = await getOrCreateDepartmentProduct(
       fromDepartment, unit, transferredBy, transferredByName,
       finalSize, sourceProduct?.productTypeId,
     );
-    await addFinalProductStock(autoProductId, quantity, transferredBy, transferredByName);
+    await addFinalProductStock(storeProductId, quantity, transferredBy, transferredByName);
   }
+
+  await addStockToDepartment(
+    toDepartment, quantity, unit, transferredBy, transferredByName,
+    toDepartment === 'store' ? storeProductId : finalProductId, finalSize,
+  );
 
   const targetHod = targetHodId ? await db.users.get(targetHodId) : undefined;
   const targetHodName = targetHod?.firstName || '';
@@ -1523,7 +1525,7 @@ export async function transferStock(
     toDepartment,
     targetHodId,
     targetHodName,
-    productId: finalProductId,
+    productId: toDepartment === 'store' ? storeProductId : finalProductId,
     size: finalSize,
     quantity,
     unit,
