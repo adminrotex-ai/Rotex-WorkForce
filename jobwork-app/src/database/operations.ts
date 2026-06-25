@@ -250,7 +250,7 @@ export async function updateAdminUsername(
   const existing = await db.users.where('username').equals(newUsername.trim()).first();
   if (existing && existing.id !== adminId) throw new Error('Username already taken');
   await db.users.update(adminId, { username: newUsername.trim() });
-  await addAudit('ADMIN_USERNAME_CHANGED', 'user', 'user', adminId, adminId, admin.firstName,
+  await addAudit('ADMIN_USERNAME_CHANGED', 'profile', 'admin_profile', adminId, adminId, admin.firstName,
     `Admin username changed`);
 }
 
@@ -269,7 +269,7 @@ export async function updateAdminPassword(
   if (specialPassword !== 'HVD@$SAC@$123')
     throw new Error('Special password is incorrect');
   await db.users.update(adminId, { passwordHash: hashPassword(newPassword) });
-  await addAudit('ADMIN_PASSWORD_CHANGED', 'user', 'user', adminId, adminId, admin.firstName,
+  await addAudit('ADMIN_PASSWORD_CHANGED', 'profile', 'admin_profile', adminId, adminId, admin.firstName,
     `Admin password changed`);
 }
 
@@ -280,7 +280,7 @@ export async function updateAdminProfilePicture(
   const admin = await db.users.get(adminId);
   if (!admin || admin.role !== 'admin') throw new Error('Admin not found');
   await db.users.update(adminId, { profilePicture });
-  await addAudit('ADMIN_PROFILE_UPDATED', 'user', 'user', adminId, adminId, admin.firstName,
+  await addAudit('ADMIN_PROFILE_UPDATED', 'profile', 'admin_profile', adminId, adminId, admin.firstName,
     profilePicture ? 'Admin profile picture updated' : 'Admin profile picture removed');
 }
 
