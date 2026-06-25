@@ -1,0 +1,34 @@
+import { db } from './db';
+import { hashPassword } from '../utils/crypto';
+
+const ADMIN_ID = '00000000-0000-0000-0000-000000000001';
+const INIT_LOG_ID = '00000000-0000-0000-0000-000000000002';
+
+export async function seedDatabase() {
+  const admin = await db.users.get(ADMIN_ID);
+  if (admin) return;
+
+  await db.users.put({
+    id: ADMIN_ID,
+    username: 'Admin.office',
+    passwordHash: hashPassword('RHS@$123'),
+    firstName: 'Admin',
+    role: 'admin',
+    department: 'store',
+    createdBy: 'system',
+    createdAt: new Date().toISOString(),
+    isActive: true,
+  });
+
+  await db.auditLogs.put({
+    id: INIT_LOG_ID,
+    action: 'SYSTEM_INIT',
+    category: 'general',
+    entityType: 'system',
+    entityId: 'system',
+    userId: ADMIN_ID,
+    userName: 'System',
+    details: 'System initialized with admin account',
+    createdAt: new Date().toISOString(),
+  });
+}
