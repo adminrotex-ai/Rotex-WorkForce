@@ -498,33 +498,33 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
               <p className="text-gray-400 text-sm text-center py-6">No pending service costs</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm table-fixed">
+                <table className="w-full text-sm" style={{ minWidth: 820 }}>
                   <thead>
                     <tr className="text-left text-gray-500 border-b border-gray-200">
-                      <th className="pb-3 px-3 font-medium w-[100px]">Date</th>
-                      <th className="pb-3 px-3 font-medium w-[80px]">Time</th>
-                      <th className="pb-3 px-3 font-medium text-right w-[110px]">Wages/Piece</th>
-                      <th className="pb-3 px-3 font-medium text-right w-[80px]">Pieces</th>
-                      <th className="pb-3 px-3 font-medium w-[90px]">Size</th>
-                      <th className="pb-3 px-3 font-medium w-[130px]">Product Type</th>
-                      <th className="pb-3 px-3 font-medium text-right w-[120px]">Total</th>
-                      <th className="pb-3 px-3 font-medium text-center w-[110px]">Action</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Date</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Time</th>
+                      <th className="pb-3 py-2 pr-6 font-medium text-right whitespace-nowrap">Wages/Piece</th>
+                      <th className="pb-3 py-2 pr-6 font-medium text-right whitespace-nowrap">Pieces</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Size</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Product Type</th>
+                      <th className="pb-3 py-2 pr-6 font-medium text-right whitespace-nowrap">Total</th>
+                      <th className="pb-3 py-2 font-medium text-center whitespace-nowrap">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pendingSC.map(c => (
                       <tr key={c.id} className="border-b border-gray-50">
-                        <td className="py-3 px-3 text-gray-700 whitespace-nowrap">{fmtDate(c.createdAt)}</td>
-                        <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{fmtTime(c.createdAt)}</td>
-                        <td className="py-3 px-3 text-right text-gray-700 whitespace-nowrap">{formatCurrency(c.costPerPiece)}</td>
-                        <td className="py-3 px-3 text-right text-gray-700">{c.totalPieces}</td>
-                        <td className="py-3 px-3 text-gray-700">{c.size || '—'}</td>
-                        <td className="py-3 px-3 text-gray-700 truncate">{ptName(c.productTypeId)}</td>
-                        <td className="py-3 px-3 text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(c.totalCost)}</td>
-                        <td className="py-3 px-3 text-center">
+                        <td className="py-3.5 pr-6 text-gray-700 whitespace-nowrap">{fmtDate(c.createdAt)}</td>
+                        <td className="py-3.5 pr-6 text-gray-500 whitespace-nowrap">{fmtTime(c.createdAt)}</td>
+                        <td className="py-3.5 pr-6 text-right text-gray-700 whitespace-nowrap">{formatCurrency(c.costPerPiece)}</td>
+                        <td className="py-3.5 pr-6 text-right text-gray-700 whitespace-nowrap">{c.totalPieces}</td>
+                        <td className="py-3.5 pr-6 text-gray-700 whitespace-nowrap">{c.size || '—'}</td>
+                        <td className="py-3.5 pr-6 text-gray-700 whitespace-nowrap">{ptName(c.productTypeId)}</td>
+                        <td className="py-3.5 pr-6 text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(c.totalCost)}</td>
+                        <td className="py-3.5 text-center whitespace-nowrap">
                           <button
                             onClick={() => openConfirm('service_cost', c.id, c.totalCost)}
-                            className="text-[11px] px-2.5 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer whitespace-nowrap"
+                            className="text-[11px] px-3 py-1.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 cursor-pointer whitespace-nowrap"
                           >
                             Confirm Paid
                           </button>
@@ -613,39 +613,39 @@ function HodAccountingDetail({ hodId }: { hodId: string }) {
               <p className="text-gray-400 text-sm text-center py-6">No pending consumer goods</p>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm table-fixed">
+                <table className="w-full text-sm" style={{ minWidth: 860 }}>
                   <thead>
                     <tr className="text-left text-gray-500 border-b border-gray-200">
-                      <th className="pb-3 px-3 font-medium w-[200px]">Goods Issued</th>
-                      <th className="pb-3 px-3 font-medium w-[100px]">Date</th>
-                      <th className="pb-3 px-3 font-medium w-[80px]">Time</th>
-                      <th className="pb-3 px-3 font-medium text-right w-[100px]">Price/Unit</th>
-                      <th className="pb-3 px-3 font-medium w-[110px]">Receipt No.</th>
-                      <th className="pb-3 px-3 font-medium text-right w-[110px]">Total</th>
-                      <th className="pb-3 px-3 font-medium text-center w-[120px]">Action</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Goods Issued</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Date</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Time</th>
+                      <th className="pb-3 py-2 pr-6 font-medium text-right whitespace-nowrap">Price/Unit</th>
+                      <th className="pb-3 py-2 pr-6 font-medium whitespace-nowrap">Receipt No.</th>
+                      <th className="pb-3 py-2 pr-6 font-medium text-right whitespace-nowrap">Total</th>
+                      <th className="pb-3 py-2 font-medium text-center whitespace-nowrap">Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {pendingCG.map(r => (
                       <tr key={r.id} className="border-b border-gray-50">
-                        <td className="py-3 px-3 text-gray-700 truncate" title={r.items.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}>
+                        <td className="py-3.5 pr-6 text-gray-700" title={r.items.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}>
                           {r.items.map(i => `${i.consumerGoodName} x${i.quantity}`).join(', ')}
                         </td>
-                        <td className="py-3 px-3 text-gray-700 whitespace-nowrap">{fmtDate(r.createdAt)}</td>
-                        <td className="py-3 px-3 text-gray-500 whitespace-nowrap">{fmtTime(r.createdAt)}</td>
-                        <td className="py-3 px-3 text-right text-gray-700 whitespace-nowrap">
+                        <td className="py-3.5 pr-6 text-gray-700 whitespace-nowrap">{fmtDate(r.createdAt)}</td>
+                        <td className="py-3.5 pr-6 text-gray-500 whitespace-nowrap">{fmtTime(r.createdAt)}</td>
+                        <td className="py-3.5 pr-6 text-right text-gray-700 whitespace-nowrap">
                           {r.items.length === 1 ? formatCurrency(r.items[0].pricePerUnit) : r.items.map(i => formatCurrency(i.pricePerUnit)).join(', ')}
                         </td>
-                        <td className="py-3 px-3">
+                        <td className="py-3.5 pr-6 whitespace-nowrap">
                           <button onClick={() => setSelectedReceipt(r)} className="text-blue-600 hover:text-blue-800 underline cursor-pointer font-medium">
                             {r.receiptNumber}
                           </button>
                         </td>
-                        <td className="py-3 px-3 text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(r.totalAmount)}</td>
-                        <td className="py-3 px-3 text-center">
+                        <td className="py-3.5 pr-6 text-right font-medium text-gray-900 whitespace-nowrap">{formatCurrency(r.totalAmount)}</td>
+                        <td className="py-3.5 text-center whitespace-nowrap">
                           <button
                             onClick={() => openConfirm('consumer_goods', r.id, r.totalAmount)}
-                            className="text-[11px] px-2.5 py-1 bg-orange-500 text-white rounded-lg hover:bg-orange-600 cursor-pointer whitespace-nowrap"
+                            className="text-[11px] px-3 py-1.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 cursor-pointer whitespace-nowrap"
                           >
                             Confirm Collected
                           </button>
