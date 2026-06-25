@@ -13,6 +13,7 @@ const CATEGORIES: Array<{ value: AuditLog['category'] | 'all'; label: string }> 
   { value: 'consumer_goods', label: 'Consumer Goods' },
   { value: 'payment', label: 'Payments' },
   { value: 'deletion', label: 'Delete History' },
+  { value: 'profile', label: 'Admin Profile' },
   { value: 'general', label: 'General' },
 ];
 
@@ -25,6 +26,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   consumer_goods: 'bg-orange-100 text-orange-700',
   payment: 'bg-emerald-100 text-emerald-700',
   deletion: 'bg-red-100 text-red-700',
+  profile: 'bg-indigo-100 text-indigo-700',
   general: 'bg-gray-100 text-gray-700',
 };
 

@@ -242,7 +242,7 @@ export interface PaymentRecord {
 export interface AuditLog {
   id: string;
   action: string;
-  category: 'batch' | 'user' | 'cost' | 'transfer' | 'material' | 'consumer_goods' | 'payment' | 'deletion' | 'department' | 'product' | 'general';
+  category: 'batch' | 'user' | 'cost' | 'transfer' | 'material' | 'consumer_goods' | 'payment' | 'deletion' | 'department' | 'product' | 'profile' | 'general';
   entityType: string;
   entityId: string;
   userId: string;
