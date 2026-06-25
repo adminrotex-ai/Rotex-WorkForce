@@ -12,6 +12,7 @@ import type {
   Department, BatchStage, UserRole, CustomDepartment,
   FinalProductType, FinalProduct, FinalProductStockEntry,
   DepartmentStock, StockTransfer, StockAdjustment, DispatchEntry,
+  ServiceCostRate,
 } from '../types';
 
 function now(): string {
@@ -1540,11 +1541,17 @@ export async function transferStock(
     `Transferred ${quantity} ${unit} from ${DEPARTMENT_LABELS[fromDepartment] || fromDepartment} to ${DEPARTMENT_LABELS[toDepartment] || toDepartment}${finalSize ? ` (${finalSize})` : ''} (HOD: ${targetHodName})`,
     JSON.stringify({ fromDepartment, toDepartment, targetHodId, targetHodName, quantity, productId: finalProductId, size: finalSize }));
 
-  if (fromDepartment !== 'store' && toDepartment === 'store' && targetHod && targetHod.serviceCostRate && targetHod.serviceCostRate > 0) {
-    await recordServiceCost(
-      '', fromDepartment, targetHod.serviceCostRate, quantity,
-      transferredBy, transferredByName, finalSize, undefined, targetHodId,
-    );
+  if (fromDepartment !== 'store' && toDepartment === 'store' && targetHodId) {
+    const sourceProduct = finalProductId ? await db.finalProducts.get(finalProductId) : undefined;
+    const rate = await lookupServiceCostRate(targetHodId, finalSize, sourceProduct?.productTypeId);
+    const fallbackRate = targetHod?.serviceCostRate;
+    const applicableRate = rate ?? (fallbackRate && fallbackRate > 0 ? fallbackRate : null);
+    if (applicableRate && applicableRate > 0) {
+      await recordServiceCost(
+        '', fromDepartment, applicableRate, quantity,
+        transferredBy, transferredByName, finalSize, undefined, targetHodId,
+      );
+    }
   }
 
   return transfer;
@@ -1825,4 +1832,110 @@ export async function deleteDispatchEntry(
 
   await addAudit('DISPATCH_DELETED', 'deletion', 'dispatch_entry', entryId, deletedBy, deletedByName,
     `Deleted dispatch of ${entry.quantity} ${entry.unit} of ${entry.productName}${entry.size ? ` (${entry.size})` : ''} to ${entry.partyName}. Reason: ${reason.trim()}. Stock returned to store.`);
+}
+
+// ---- SERVICE COST RATE OPERATIONS ----
+
+export async function addServiceCostRate(
+  hodId: string,
+  costPerPiece: number,
+  createdBy: string,
+  creatorName: string,
+  size?: string,
+  productTypeId?: string,
+): Promise<ServiceCostRate> {
+  ensurePositive(costPerPiece, 'Cost per piece');
+  const hod = await db.users.get(hodId);
+  if (!hod) throw new Error('HOD not found');
+
+  const existing = await getServiceCostRatesForHod(hodId);
+  const duplicate = existing.find(r =>
+    (r.size || '') === (size || '') &&
+    (r.productTypeId || '') === (productTypeId || '')
+  );
+  if (duplicate) throw new Error('A rate already exists for this size and product type combination');
+
+  const rate: ServiceCostRate = {
+    id: generateId(),
+    hodId,
+    size: size || undefined,
+    productTypeId: productTypeId || undefined,
+    costPerPiece,
+    createdBy,
+    createdAt: now(),
+    isActive: true,
+  };
+  await db.serviceCostRates.add(rate);
+
+  const productType = productTypeId ? await db.finalProductTypes.get(productTypeId) : undefined;
+  await addAudit('SERVICE_RATE_ADDED', 'cost', 'service_cost_rate', rate.id, createdBy, creatorName,
+    `Added service cost rate for ${hod.firstName}: ₹${costPerPiece}/piece${size ? ` (Size: ${size})` : ''}${productType ? ` (Type: ${productType.name})` : ''}`);
+
+  return rate;
+}
+
+export async function updateServiceCostRateEntry(
+  rateId: string,
+  costPerPiece: number,
+  updatedBy: string,
+  updaterName: string,
+): Promise<void> {
+  ensurePositive(costPerPiece, 'Cost per piece');
+  const rate = await db.serviceCostRates.get(rateId);
+  if (!rate || !rate.isActive) throw new Error('Rate not found');
+  const oldRate = rate.costPerPiece;
+  await db.serviceCostRates.update(rateId, { costPerPiece });
+  const hod = await db.users.get(rate.hodId);
+  await addAudit('SERVICE_RATE_UPDATED', 'cost', 'service_cost_rate', rateId, updatedBy, updaterName,
+    `Updated service cost rate for ${hod?.firstName || 'Unknown'}: ₹${oldRate}/piece → ₹${costPerPiece}/piece`);
+}
+
+export async function deleteServiceCostRateEntry(
+  rateId: string,
+  deletedBy: string,
+  deleterName: string,
+): Promise<void> {
+  const rate = await db.serviceCostRates.get(rateId);
+  if (!rate || !rate.isActive) throw new Error('Rate not found');
+  await db.serviceCostRates.update(rateId, { isActive: false });
+  const hod = await db.users.get(rate.hodId);
+  await addAudit('SERVICE_RATE_DELETED', 'deletion', 'service_cost_rate', rateId, deletedBy, deleterName,
+    `Deleted service cost rate for ${hod?.firstName || 'Unknown'}: ₹${rate.costPerPiece}/piece`);
+}
+
+export async function getServiceCostRatesForHod(hodId: string): Promise<ServiceCostRate[]> {
+  return db.serviceCostRates.where({ hodId, isActive: 1 }).toArray();
+}
+
+export async function lookupServiceCostRate(
+  hodId: string,
+  size?: string,
+  productTypeId?: string,
+): Promise<number | null> {
+  const rates = await getServiceCostRatesForHod(hodId);
+  if (rates.length === 0) return null;
+
+  const exactMatch = rates.find(r =>
+    (r.size || '') === (size || '') &&
+    (r.productTypeId || '') === (productTypeId || '')
+  );
+  if (exactMatch) return exactMatch.costPerPiece;
+
+  if (size && productTypeId) {
+    const sizeOnly = rates.find(r => (r.size || '') === size && !r.productTypeId);
+    if (sizeOnly) return sizeOnly.costPerPiece;
+    const typeOnly = rates.find(r => !r.size && (r.productTypeId || '') === productTypeId);
+    if (typeOnly) return typeOnly.costPerPiece;
+  } else if (size) {
+    const sizeOnly = rates.find(r => (r.size || '') === size && !r.productTypeId);
+    if (sizeOnly) return sizeOnly.costPerPiece;
+  } else if (productTypeId) {
+    const typeOnly = rates.find(r => !r.size && (r.productTypeId || '') === productTypeId);
+    if (typeOnly) return typeOnly.costPerPiece;
+  }
+
+  const defaultRate = rates.find(r => !r.size && !r.productTypeId);
+  if (defaultRate) return defaultRate.costPerPiece;
+
+  return null;
 }
