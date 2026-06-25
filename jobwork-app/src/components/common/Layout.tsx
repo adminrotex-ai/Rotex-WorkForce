@@ -91,17 +91,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="p-3 border-t border-gray-200/30">
-            <div className={`flex items-center ${sidebarOpen ? 'gap-3' : 'justify-center'} px-2 py-2`}>
-              <div className="w-8 h-8 rounded-full bg-gold-300 flex items-center justify-center text-dark-800 font-bold text-xs shrink-0">
-                {currentUser.firstName?.[0] || 'U'}
-              </div>
+            <button
+              onClick={() => isAdmin ? navigate('/profile') : undefined}
+              className={`w-full flex items-center ${sidebarOpen ? 'gap-3' : 'justify-center'} px-2 py-2 rounded-xl ${isAdmin ? 'hover:bg-white/60 cursor-pointer' : ''} transition-colors`}
+            >
+              {currentUser.profilePicture ? (
+                <img src={currentUser.profilePicture} alt={currentUser.firstName} className="w-8 h-8 rounded-full object-cover shrink-0" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gold-300 flex items-center justify-center text-dark-800 font-bold text-xs shrink-0">
+                  {currentUser.firstName?.[0] || 'U'}
+                </div>
+              )}
               {sidebarOpen && (
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 text-left">
                   <p className="text-sm font-medium text-gray-900 truncate">{currentUser.firstName}</p>
                   <p className="text-[10px] text-gray-400 capitalize">{currentUser.role} · {DEPARTMENT_LABELS[currentUser.department] || currentUser.department}</p>
                 </div>
               )}
-            </div>
+            </button>
             <button
               onClick={handleLogout}
               className={`w-full flex items-center ${sidebarOpen ? 'gap-2 px-3' : 'justify-center'} py-2 text-sm text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors cursor-pointer mt-1`}
