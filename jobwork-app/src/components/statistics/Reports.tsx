@@ -33,9 +33,11 @@ export default function Reports() {
       getAllReceipts(),
       getActiveUsers(),
     ]);
+    const activeHodIds = new Set(u.filter(x => x.role === 'hod').map(x => x.id));
+    const activeCosts = sc.filter(c => c.hodId && activeHodIds.has(c.hodId));
     setAllStock(s);
     setTransfers(t.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-    setServiceCosts(sc.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    setServiceCosts(activeCosts.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setReceipts(recs);
     setUsers(u);
     setDepartments(depts);

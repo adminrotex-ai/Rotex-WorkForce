@@ -53,10 +53,12 @@ export default function Statistics() {
       isAdmin ? getConsumerGoodsCostByDepartment() : Promise.resolve([]),
       isAdmin ? getPeriodStatistics('all') : Promise.resolve(null),
     ]);
+    const activeHodIds = new Set(u.filter(x => x.role === 'hod').map(x => x.id));
+    const activeCosts = costs.filter(c => c.hodId && activeHodIds.has(c.hodId));
     setUsers(u);
     setAllStock(s);
     setTransfers(t);
-    setTotalServiceCost(costs.reduce((sum, c) => sum + c.totalCost, 0));
+    setTotalServiceCost(activeCosts.reduce((sum, c) => sum + c.totalCost, 0));
     setConsumerGoodsCost(cgCost);
     setPaymentStats(pStats);
     setHodBreakdown(hodBrk);

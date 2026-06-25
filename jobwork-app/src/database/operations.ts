@@ -2022,10 +2022,11 @@ export async function getServiceCostsByHodBreakdown(): Promise<Array<{
   const results: Array<{ hodId: string; hodName: string; department: Department; totalServiceCost: number; totalPieces: number }> = [];
   for (const [hodId, data] of hodMap) {
     const hod = await db.users.get(hodId);
+    if (!hod?.isActive) continue;
     results.push({
       hodId,
-      hodName: hod?.firstName || 'Unknown',
-      department: hod?.department || '',
+      hodName: hod.firstName,
+      department: hod.department,
       totalServiceCost: data.totalCost,
       totalPieces: data.totalPieces,
     });
