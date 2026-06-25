@@ -2,11 +2,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../store';
-import type { User, Department, ServiceCost, ServiceCostRate, FinalProductType } from '../../types';
-import { DEPARTMENT_LABELS } from '../../types';
+import type { User, Department, ServiceCostRate, FinalProductType } from '../../types';
+
 import {
   getActiveUsers, getUsersByCreator, createUser, deleteUser, getActiveDepartments,
-  getServiceCosts, recordServiceCost, updateServiceCost, updateUserServiceCostRate,
+  updateUserServiceCostRate,
   getServiceCostRatesForHod, addServiceCostRate, updateServiceCostRateEntry,
   deleteServiceCostRateEntry, getActiveFinalProductTypes, getActiveFinalProducts,
 } from '../../database/operations';
@@ -26,12 +26,6 @@ export default function UserManagement() {
   const [error, setError] = useState('');
   const [expandedDept, setExpandedDept] = useState<Department | null>(null);
   const [expandedHod, setExpandedHod] = useState<string | null>(null);
-  const [showServiceCosts, setShowServiceCosts] = useState<User | null>(null);
-  const [hodServiceCosts, setHodServiceCosts] = useState<ServiceCost[]>([]);
-  const [showAddServiceCost, setShowAddServiceCost] = useState(false);
-  const [showEditServiceCost, setShowEditServiceCost] = useState<ServiceCost | null>(null);
-  const [serviceCostForm, setServiceCostForm] = useState({ costPerPiece: '', pieces: '', size: '' });
-  const [editCostPerPiece, setEditCostPerPiece] = useState('');
   const [showEditRate, setShowEditRate] = useState<User | null>(null);
   const [editRateValue, setEditRateValue] = useState('');
 
@@ -144,45 +138,6 @@ export default function UserManagement() {
     }
   };
 
-  const openServiceCosts = async (hod: User) => {
-    setShowServiceCosts(hod);
-    setError('');
-    const costs = await getServiceCosts({ department: hod.department });
-    setHodServiceCosts(costs.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
-  };
-
-  const handleAddServiceCost = async () => {
-    if (!currentUser || !showServiceCosts) return;
-    setError('');
-    const cost = parseFloat(serviceCostForm.costPerPiece);
-    const pieces = parseInt(serviceCostForm.pieces);
-    if (!Number.isFinite(cost) || cost <= 0) { setError('Cost per piece must be positive'); return; }
-    if (!Number.isFinite(pieces) || pieces <= 0) { setError('Number of pieces must be positive'); return; }
-    try {
-      await recordServiceCost(
-        '', showServiceCosts.department, cost, pieces,
-        currentUser.id, currentUser.firstName,
-        serviceCostForm.size || undefined, undefined,
-        showServiceCosts.id,
-      );
-      setShowAddServiceCost(false);
-      setServiceCostForm({ costPerPiece: '', pieces: '', size: '' });
-      openServiceCosts(showServiceCosts);
-    } catch (e: any) { setError(e.message); }
-  };
-
-  const handleEditServiceCost = async () => {
-    if (!currentUser || !showEditServiceCost || !showServiceCosts) return;
-    setError('');
-    const cost = parseFloat(editCostPerPiece);
-    if (!Number.isFinite(cost) || cost <= 0) { setError('Cost per piece must be positive'); return; }
-    try {
-      await updateServiceCost(showEditServiceCost.id, cost, currentUser.id, currentUser.firstName);
-      setShowEditServiceCost(null);
-      setEditCostPerPiece('');
-      openServiceCosts(showServiceCosts);
-    } catch (e: any) { setError(e.message); }
-  };
 
   const handleEditRate = async () => {
     if (!currentUser || !showEditRate) return;
@@ -309,15 +264,6 @@ export default function UserManagement() {
                               </div>
                             </div>
                             <div className="flex gap-2">
-                              {isAdmin && (
-                                <button
-                                  onClick={() => openServiceCosts(hod)}
-                                  className="p-2 rounded-xl hover:bg-emerald-50 text-emerald-500 cursor-pointer"
-                                  title="Service Costs"
-                                >
-                                  <DollarSign size={16} />
-                                </button>
-                              )}
                               {isAdmin && (
                                 <button
                                   onClick={() => openRateConfig(hod)}
@@ -618,142 +564,6 @@ export default function UserManagement() {
             className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
           >
             Create User
-          </button>
-        </div>
-      </Modal>
-
-      {/* Service Costs Modal */}
-      <Modal
-        isOpen={!!showServiceCosts}
-        onClose={() => { setShowServiceCosts(null); setError(''); }}
-        title={`Service Costs — ${showServiceCosts?.firstName || ''} (${DEPARTMENT_LABELS[showServiceCosts?.department || ''] || showServiceCosts?.department || ''})`}
-        maxWidth="36rem"
-      >
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-[11px] text-gray-400">{hodServiceCosts.length} cost entries</p>
-            <button
-              onClick={() => { setShowAddServiceCost(true); setError(''); setServiceCostForm({ costPerPiece: '', pieces: '', size: '' }); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[11px] font-medium rounded-full hover:bg-emerald-700 cursor-pointer"
-            >
-              <DollarSign size={12} /> Add Service Cost
-            </button>
-          </div>
-
-          {hodServiceCosts.length === 0 ? (
-            <p className="text-center py-6 text-gray-400 text-sm">No service costs recorded</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left">
-                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold">Size</th>
-                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Cost/Piece</th>
-                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Pieces</th>
-                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Total</th>
-                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Date</th>
-                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-center"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {hodServiceCosts.map(sc => (
-                    <tr key={sc.id} className="border-b border-gray-50">
-                      <td className="py-2 text-gray-900">
-                        {sc.size || <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="py-2 text-right text-gray-900">{formatCurrency(sc.costPerPiece)}</td>
-                      <td className="py-2 text-right text-gray-900">{sc.totalPieces}</td>
-                      <td className="py-2 text-right font-semibold text-emerald-600">{formatCurrency(sc.totalCost)}</td>
-                      <td className="py-2 text-right text-[11px] text-gray-400 whitespace-nowrap">{new Date(sc.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</td>
-                      <td className="py-2 text-center">
-                        <button
-                          onClick={() => { setShowEditServiceCost(sc); setEditCostPerPiece(String(sc.costPerPiece)); setError(''); }}
-                          className="p-1 text-blue-500 hover:text-blue-700 cursor-pointer"
-                          title="Edit"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </Modal>
-
-      {/* Add Service Cost Modal */}
-      <Modal isOpen={showAddServiceCost} onClose={() => { setShowAddServiceCost(false); setError(''); }} title={`Add Service Cost — ${showServiceCosts?.firstName || ''}`}>
-        <div className="space-y-4">
-          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Cost per Piece (INR)</label>
-            <input
-              type="number"
-              min="0.01" step="0.01"
-              value={serviceCostForm.costPerPiece}
-              onChange={e => setServiceCostForm({ ...serviceCostForm, costPerPiece: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Number of Pieces</label>
-            <input
-              type="number"
-              min="1"
-              value={serviceCostForm.pieces}
-              onChange={e => setServiceCostForm({ ...serviceCostForm, pieces: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Size <span className="text-gray-400 font-normal">(optional)</span></label>
-            <input
-              type="text"
-              value={serviceCostForm.size}
-              onChange={e => setServiceCostForm({ ...serviceCostForm, size: e.target.value })}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-              placeholder="e.g. Large, 12 inch"
-            />
-          </div>
-          {serviceCostForm.costPerPiece && serviceCostForm.pieces && (
-            <p className="text-sm font-medium text-gray-900">
-              Total: {formatCurrency(parseFloat(serviceCostForm.costPerPiece) * parseInt(serviceCostForm.pieces))}
-            </p>
-          )}
-          <button onClick={handleAddServiceCost} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer">
-            Record Service Cost
-          </button>
-        </div>
-      </Modal>
-
-      {/* Edit Service Cost Modal */}
-      <Modal isOpen={!!showEditServiceCost} onClose={() => { setShowEditServiceCost(null); setError(''); }} title="Edit Service Cost">
-        <div className="space-y-4">
-          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div className="p-3 bg-gray-50 rounded-xl text-[11px] text-gray-600">
-            <p>Pieces: <strong>{showEditServiceCost?.totalPieces}</strong></p>
-            <p>Current cost/piece: <strong>{showEditServiceCost ? formatCurrency(showEditServiceCost.costPerPiece) : ''}</strong></p>
-            <p>Current total: <strong>{showEditServiceCost ? formatCurrency(showEditServiceCost.totalCost) : ''}</strong></p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">New Cost per Piece (INR)</label>
-            <input
-              type="number"
-              min="0.01" step="0.01"
-              value={editCostPerPiece}
-              onChange={e => setEditCostPerPiece(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
-            />
-          </div>
-          {editCostPerPiece && showEditServiceCost && (
-            <p className="text-sm font-medium text-gray-900">
-              New total: {formatCurrency(parseFloat(editCostPerPiece) * showEditServiceCost.totalPieces)}
-            </p>
-          )}
-          <button onClick={handleEditServiceCost} className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 cursor-pointer">
-            Update Cost
           </button>
         </div>
       </Modal>
