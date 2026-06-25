@@ -380,6 +380,17 @@ export interface DispatchEntry {
   isActive: boolean;
 }
 
+export interface ServiceCostRate {
+  id: string;
+  hodId: string;
+  size?: string;
+  productTypeId?: string;
+  costPerPiece: number;
+  createdBy: string;
+  createdAt: string;
+  isActive: boolean;
+}
+
 export interface SyncQueueItem {
   id: string;
   action: string;

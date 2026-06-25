@@ -2,14 +2,16 @@ import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../store';
-import type { User, Department, ServiceCost } from '../../types';
+import type { User, Department, ServiceCost, ServiceCostRate, FinalProductType } from '../../types';
 import { DEPARTMENT_LABELS } from '../../types';
 import {
   getActiveUsers, getUsersByCreator, createUser, deleteUser, getActiveDepartments,
   getServiceCosts, recordServiceCost, updateServiceCost, updateUserServiceCostRate,
+  getServiceCostRatesForHod, addServiceCostRate, updateServiceCostRateEntry,
+  deleteServiceCostRateEntry, getActiveFinalProductTypes,
 } from '../../database/operations';
 import Modal from '../common/Modal';
-import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil } from 'lucide-react';
+import { Trash2, BarChart3, ChevronRight, Eye, Users, UserPlus, Camera, ImageIcon, X, DollarSign, Pencil, Settings } from 'lucide-react';
 import { formatCurrency } from '../../utils/helpers';
 
 export default function UserManagement() {
@@ -32,6 +34,14 @@ export default function UserManagement() {
   const [editCostPerPiece, setEditCostPerPiece] = useState('');
   const [showEditRate, setShowEditRate] = useState<User | null>(null);
   const [editRateValue, setEditRateValue] = useState('');
+
+  const [showRateConfig, setShowRateConfig] = useState<User | null>(null);
+  const [hodRates, setHodRates] = useState<ServiceCostRate[]>([]);
+  const [productTypes, setProductTypes] = useState<FinalProductType[]>([]);
+  const [showAddRate, setShowAddRate] = useState(false);
+  const [rateForm, setRateForm] = useState({ costPerPiece: '', size: '', productTypeId: '' });
+  const [editingRate, setEditingRate] = useState<ServiceCostRate | null>(null);
+  const [editingRateValue, setEditingRateValue] = useState('');
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -186,6 +196,55 @@ export default function UserManagement() {
     } catch (e: any) { setError(e.message); }
   };
 
+  const openRateConfig = async (hod: User) => {
+    setShowRateConfig(hod);
+    setError('');
+    const [rates, types] = await Promise.all([
+      getServiceCostRatesForHod(hod.id),
+      getActiveFinalProductTypes(),
+    ]);
+    setHodRates(rates.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    setProductTypes(types);
+  };
+
+  const handleAddRate = async () => {
+    if (!currentUser || !showRateConfig) return;
+    setError('');
+    const cost = parseFloat(rateForm.costPerPiece);
+    if (!Number.isFinite(cost) || cost <= 0) { setError('Cost per piece must be positive'); return; }
+    try {
+      await addServiceCostRate(
+        showRateConfig.id, cost, currentUser.id, currentUser.firstName,
+        rateForm.size.trim() || undefined, rateForm.productTypeId || undefined,
+      );
+      setShowAddRate(false);
+      setRateForm({ costPerPiece: '', size: '', productTypeId: '' });
+      openRateConfig(showRateConfig);
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleUpdateRate = async () => {
+    if (!currentUser || !editingRate || !showRateConfig) return;
+    setError('');
+    const cost = parseFloat(editingRateValue);
+    if (!Number.isFinite(cost) || cost <= 0) { setError('Cost per piece must be positive'); return; }
+    try {
+      await updateServiceCostRateEntry(editingRate.id, cost, currentUser.id, currentUser.firstName);
+      setEditingRate(null);
+      setEditingRateValue('');
+      openRateConfig(showRateConfig);
+    } catch (e: any) { setError(e.message); }
+  };
+
+  const handleDeleteRate = async (rateId: string) => {
+    if (!currentUser || !showRateConfig) return;
+    setError('');
+    try {
+      await deleteServiceCostRateEntry(rateId, currentUser.id, currentUser.firstName);
+      openRateConfig(showRateConfig);
+    } catch (e: any) { setError(e.message); }
+  };
+
   const allUsers = users.filter(u => u.id !== currentUser?.id);
   const hodsByDept = (dept: Department) => allUsers.filter(u => u.department === dept && u.role === 'hod');
   const usersByHod = (hodId: string) => allUsers.filter(u => u.createdBy === hodId && u.role === 'user');
@@ -240,7 +299,7 @@ export default function UserManagement() {
                                     Username: {hod.username}
                                     {hod.phone && ` · Phone: ${hod.phone}`}
                                     {hod.openingBalance !== undefined && hod.openingBalance !== 0 && ` · Opening: ${formatCurrency(hod.openingBalance)}`}
-                                    {hod.serviceCostRate !== undefined && hod.serviceCostRate > 0 && ` · Rate: ₹${hod.serviceCostRate}/pc`}
+                                    {hod.serviceCostRate !== undefined && hod.serviceCostRate > 0 && ` · Default Rate: ₹${hod.serviceCostRate}/pc`}
                                   </p>
                                 )}
                               </div>
@@ -257,11 +316,11 @@ export default function UserManagement() {
                               )}
                               {isAdmin && (
                                 <button
-                                  onClick={() => { setShowEditRate(hod); setEditRateValue(hod.serviceCostRate?.toString() || ''); setError(''); }}
+                                  onClick={() => openRateConfig(hod)}
                                   className="p-2 rounded-xl hover:bg-amber-50 text-amber-500 cursor-pointer"
-                                  title="Edit Service Cost Rate"
+                                  title="Configure Service Cost Rates"
                                 >
-                                  <Pencil size={14} />
+                                  <Settings size={15} />
                                 </button>
                               )}
                               <button
@@ -746,12 +805,12 @@ export default function UserManagement() {
         </div>
       </Modal>
 
-      {/* Edit Service Cost Rate Modal */}
-      <Modal isOpen={!!showEditRate} onClose={() => { setShowEditRate(null); setError(''); }} title={`Edit Rate — ${showEditRate?.firstName}`} maxWidth="26rem">
+      {/* Edit Default Service Cost Rate Modal */}
+      <Modal isOpen={!!showEditRate} onClose={() => { setShowEditRate(null); setError(''); }} title={`Default Rate — ${showEditRate?.firstName}`} maxWidth="26rem">
         <div className="space-y-4">
           {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Service Cost Rate (₹/piece)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Default Service Cost Rate (₹/piece)</label>
             <input
               type="number"
               min="0"
@@ -762,7 +821,7 @@ export default function UserManagement() {
               placeholder="e.g. 5.00"
             />
             <p className="text-[11px] text-gray-400 mt-1">
-              This rate is auto-applied when stock is sent to this HOD. Set to 0 to disable.
+              Fallback rate when no specific size/product type rate is configured. Set to 0 to disable.
             </p>
           </div>
           <button
@@ -770,6 +829,184 @@ export default function UserManagement() {
             className="w-full bg-[#2a2a2a] text-white py-2.5 rounded-xl text-sm font-medium hover:bg-[#1a1a1a] cursor-pointer"
           >
             Save Rate
+          </button>
+        </div>
+      </Modal>
+
+      {/* Rate Configuration Modal */}
+      <Modal
+        isOpen={!!showRateConfig}
+        onClose={() => { setShowRateConfig(null); setShowAddRate(false); setEditingRate(null); setError(''); }}
+        title={`Service Cost Rates — ${showRateConfig?.firstName || ''}`}
+        maxWidth="40rem"
+      >
+        <div className="space-y-4">
+          <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl text-[11px] text-blue-700">
+            Configure per-piece rates for different size and product type combinations.
+            When this HOD sends completed stock back to store, the matching rate is auto-applied.
+          </div>
+
+          {error && !showAddRate && !editingRate && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] text-gray-400">{hodRates.length} rate{hodRates.length !== 1 ? 's' : ''} configured</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (showRateConfig) {
+                    setShowEditRate(showRateConfig);
+                    setEditRateValue(showRateConfig.serviceCostRate?.toString() || '');
+                    setError('');
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 text-[11px] font-medium rounded-full hover:bg-gray-300 cursor-pointer"
+              >
+                <Pencil size={11} /> Default Rate{showRateConfig?.serviceCostRate ? `: ₹${showRateConfig.serviceCostRate}/pc` : ''}
+              </button>
+              <button
+                onClick={() => { setShowAddRate(true); setError(''); setRateForm({ costPerPiece: '', size: '', productTypeId: '' }); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-[11px] font-medium rounded-full hover:bg-emerald-700 cursor-pointer"
+              >
+                <DollarSign size={12} /> Add Rate
+              </button>
+            </div>
+          </div>
+
+          {hodRates.length === 0 ? (
+            <div className="text-center py-6">
+              <Settings size={28} className="mx-auto mb-2 text-gray-300" />
+              <p className="text-gray-400 text-sm">No specific rates configured</p>
+              <p className="text-[11px] text-gray-300 mt-1">
+                {showRateConfig?.serviceCostRate && showRateConfig.serviceCostRate > 0
+                  ? `Using default rate: ₹${showRateConfig.serviceCostRate}/piece`
+                  : 'Add rates to auto-calculate service costs on stock transfers'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left">
+                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold">Product Type</th>
+                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold">Size</th>
+                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-right">Rate (₹/piece)</th>
+                    <th className="pb-2 text-[11px] text-gray-500 uppercase font-semibold text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hodRates.map(r => (
+                    <tr key={r.id} className="border-b border-gray-50">
+                      <td className="py-2.5">
+                        {r.productTypeId ? (
+                          <span className="text-[11px] px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full font-medium">
+                            {productTypes.find(pt => pt.id === r.productTypeId)?.name || 'Unknown'}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 text-[11px]">All types</span>
+                        )}
+                      </td>
+                      <td className="py-2.5">
+                        {r.size ? (
+                          <span className="text-[11px] px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-bold">{r.size}</span>
+                        ) : (
+                          <span className="text-gray-300 text-[11px]">All sizes</span>
+                        )}
+                      </td>
+                      <td className="py-2.5 text-right font-semibold text-emerald-600">₹{r.costPerPiece}</td>
+                      <td className="py-2.5 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => { setEditingRate(r); setEditingRateValue(String(r.costPerPiece)); setError(''); }}
+                            className="p-1 text-blue-500 hover:text-blue-700 cursor-pointer"
+                            title="Edit"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteRate(r.id)}
+                            className="p-1 text-red-400 hover:text-red-600 cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* Add Rate Modal */}
+      <Modal isOpen={showAddRate} onClose={() => { setShowAddRate(false); setError(''); }} title={`Add Rate — ${showRateConfig?.firstName || ''}`}>
+        <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Product Type <span className="text-gray-400 font-normal">(optional)</span></label>
+            <select
+              value={rateForm.productTypeId}
+              onChange={e => setRateForm({ ...rateForm, productTypeId: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+            >
+              <option value="">All product types</option>
+              {productTypes.map(pt => (
+                <option key={pt.id} value={pt.id}>{pt.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Size <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={rateForm.size}
+              onChange={e => setRateForm({ ...rateForm, size: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="e.g. Large, 12 inch"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cost per Piece (₹) *</label>
+            <input
+              type="number"
+              min="0.01" step="0.01"
+              value={rateForm.costPerPiece}
+              onChange={e => setRateForm({ ...rateForm, costPerPiece: e.target.value })}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+              placeholder="e.g. 5.00"
+            />
+          </div>
+          <button onClick={handleAddRate} className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 cursor-pointer">
+            Add Rate
+          </button>
+        </div>
+      </Modal>
+
+      {/* Edit Rate Value Modal */}
+      <Modal isOpen={!!editingRate} onClose={() => { setEditingRate(null); setError(''); }} title="Edit Rate">
+        <div className="space-y-4">
+          {error && <p className="text-red-500 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div className="p-3 bg-gray-50 rounded-xl text-[11px] text-gray-600">
+            {editingRate?.productTypeId && (
+              <p>Product Type: <strong>{productTypes.find(pt => pt.id === editingRate.productTypeId)?.name || 'Unknown'}</strong></p>
+            )}
+            {editingRate?.size && <p>Size: <strong>{editingRate.size}</strong></p>}
+            <p>Current rate: <strong>₹{editingRate?.costPerPiece}/piece</strong></p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Cost per Piece (₹)</label>
+            <input
+              type="number"
+              min="0.01" step="0.01"
+              value={editingRateValue}
+              onChange={e => setEditingRateValue(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gold-400"
+            />
+          </div>
+          <button onClick={handleUpdateRate} className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 cursor-pointer">
+            Update Rate
           </button>
         </div>
       </Modal>
