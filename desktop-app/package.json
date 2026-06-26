@@ -15,6 +15,7 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
+    "generate-icon": "node scripts/generate-icon.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -75,7 +76,6 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "build/icon.png",
       "publisherName": "Rotex AI",
       "requestedExecutionLevel": "asInvoker",
       "legalTrademarks": "Rotex WorkForce is a product of Rotex AI"
@@ -92,12 +92,10 @@
     },
     "mac": {
       "target": "dmg",
-      "icon": "build/icon.png",
       "category": "public.app-category.business"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "build/icon.png",
       "category": "Office"
     }
   }
