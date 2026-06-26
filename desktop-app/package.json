@@ -59,6 +59,7 @@
     "productName": "Rotex WorkForce",
     "copyright": "Copyright 2024-2025 Rotex AI",
     "artifactName": "Rotex-WorkForce-Setup-${version}.${ext}",
+    "asar": true,
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -74,23 +75,24 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "build/icon.ico",
-      "publisherName": "Rotex AI"
+      "icon": "build/icon.png",
+      "publisherName": "Rotex AI",
+      "requestedExecutionLevel": "asInvoker",
+      "legalTrademarks": "Rotex WorkForce is a product of Rotex AI"
     },
     "nsis": {
       "oneClick": false,
-      "perMachine": true,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerHeaderIcon": "build/icon.ico",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Rotex WorkForce"
+      "shortcutName": "Rotex WorkForce",
+      "menuCategory": "Rotex AI",
+      "deleteAppDataOnUninstall": false
     },
     "mac": {
       "target": "dmg",
-      "icon": "build/icon.icns",
+      "icon": "build/icon.png",
       "category": "public.app-category.business"
     },
     "linux": {

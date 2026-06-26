@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, session } from 'electron';
 import path from 'path';
 
 let mainWindow: BrowserWindow | null = null;
@@ -16,6 +16,9 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      experimentalFeatures: false,
     },
     autoHideMenuBar: true,
     show: false,
@@ -25,9 +28,37 @@ function createWindow() {
     mainWindow?.show();
   });
 
+  // Block all navigation away from the app
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const appUrl = process.env.VITE_DEV_SERVER_URL || `file://${path.join(__dirname, '../dist/index.html')}`;
+    if (!url.startsWith(appUrl) && !url.startsWith('file://')) {
+      event.preventDefault();
+    }
+  });
+
+  // Open external links in system browser, never in the app
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+    }
     return { action: 'deny' };
+  });
+
+  // Content Security Policy — only allow connections to the app's own Supabase backend
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self';"
+          + " script-src 'self' 'unsafe-inline' 'unsafe-eval';"
+          + " style-src 'self' 'unsafe-inline';"
+          + " img-src 'self' data: blob:;"
+          + " font-src 'self' data:;"
+          + " connect-src 'self' https://*.supabase.co;"
+        ],
+      },
+    });
   });
 
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -50,4 +81,11 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
+});
+
+// Prevent creating additional windows
+app.on('web-contents-created', (_event, contents) => {
+  contents.on('will-attach-webview', (event) => {
+    event.preventDefault();
+  });
 });
